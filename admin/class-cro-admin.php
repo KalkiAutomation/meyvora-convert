@@ -76,7 +76,7 @@ class CRO_Admin {
 		// Main menu
 		add_menu_page(
 			__( 'Meyvora Convert', 'meyvora-convert' ),
-			__( 'Meyvora', 'meyvora-convert' ),
+			__( 'Meyvora Convert', 'meyvora-convert' ),
 			'manage_meyvora_convert',
 			'meyvora-convert',
 			array( $this, 'render_dashboard' ),
