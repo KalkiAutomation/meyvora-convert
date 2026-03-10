@@ -2,7 +2,7 @@
 /**
  * Admin partial: Insights tab – actionable cards with Fix CTAs.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -39,13 +39,13 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 	<?php if ( $attribution !== null ) : ?>
 	<div class="cro-card cro-attribution-block">
 		<header class="cro-card__header">
-			<h2 class="cro-card__title"><?php esc_html_e( 'Attribution', 'cro-toolkit' ); ?></h2>
+			<h2 class="cro-card__title"><?php esc_html_e( 'Attribution', 'meyvora-convert' ); ?></h2>
 			<p class="cro-card__subtitle cro-muted">
 				<?php
 				echo esc_html(
 					sprintf(
 						/* translators: 1: number of days */
-						__( 'Last %1$d days', 'cro-toolkit' ),
+						__( 'Last %1$d days', 'meyvora-convert' ),
 						$attribution['window_days']
 					)
 				);
@@ -54,22 +54,22 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 		</header>
 		<div class="cro-card__body">
 			<?php if ( ! empty( $attribution['not_enough_data'] ) ) : ?>
-			<p class="cro-muted cro-attribution-not-enough"><?php esc_html_e( 'Not enough data yet.', 'cro-toolkit' ); ?></p>
+			<p class="cro-muted cro-attribution-not-enough"><?php esc_html_e( 'Not enough data yet.', 'meyvora-convert' ); ?></p>
 			<?php else : ?>
 			<div class="cro-attribution-totals">
 				<span class="cro-attribution-total">
 					<strong><?php echo esc_html( number_format_i18n( $attribution['total_conversions'] ) ); ?></strong>
-					<?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?>
 				</span>
 				<span class="cro-attribution-total">
 					<strong><?php echo esc_html( number_format_i18n( $attribution['total_impressions'] ) ); ?></strong>
-					<?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?>
 				</span>
 			</div>
 			<div class="cro-attribution-grid">
 				<?php if ( ! empty( $attribution['top_campaigns'] ) ) : ?>
 				<div class="cro-attribution-col">
-					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top campaigns', 'cro-toolkit' ); ?></h3>
+					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top campaigns', 'meyvora-convert' ); ?></h3>
 					<ol class="cro-attribution-list">
 						<?php foreach ( $attribution['top_campaigns'] as $i => $item ) : ?>
 						<li>
@@ -82,7 +82,7 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 				<?php endif; ?>
 				<?php if ( ! empty( $attribution['top_offers'] ) ) : ?>
 				<div class="cro-attribution-col">
-					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top offers', 'cro-toolkit' ); ?></h3>
+					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top offers', 'meyvora-convert' ); ?></h3>
 					<ol class="cro-attribution-list">
 						<?php foreach ( $attribution['top_offers'] as $item ) : ?>
 						<li>
@@ -90,13 +90,13 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 							<span class="cro-attribution-count">
 								<?php
 								echo esc_html( number_format_i18n( $item['conversions'] ?? 0 ) );
-								esc_html_e( ' conversions', 'cro-toolkit' );
+								esc_html_e( ' conversions', 'meyvora-convert' );
 								if ( ! empty( $item['applies'] ) ) {
 									echo ' · ';
 									echo esc_html( number_format_i18n( $item['applies'] ) );
-									esc_html_e( ' applies', 'cro-toolkit' );
+									esc_html_e( ' applies', 'meyvora-convert' );
 									if ( isset( $item['rate'] ) && $item['rate'] !== null ) {
-										echo ' (' . esc_html( number_format_i18n( $item['rate'] ) ) . '% ' . esc_html__( 'apply→convert', 'cro-toolkit' ) . ')';
+										echo ' (' . esc_html( number_format_i18n( $item['rate'] ) ) . '% ' . esc_html__( 'apply→convert', 'meyvora-convert' ) . ')';
 									}
 								}
 								?>
@@ -108,7 +108,7 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 				<?php endif; ?>
 				<?php if ( ! empty( $attribution['top_ab_tests'] ) ) : ?>
 				<div class="cro-attribution-col">
-					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top A/B tests', 'cro-toolkit' ); ?></h3>
+					<h3 class="cro-attribution-col__title"><?php esc_html_e( 'Top A/B tests', 'meyvora-convert' ); ?></h3>
 					<ol class="cro-attribution-list">
 						<?php foreach ( $attribution['top_ab_tests'] as $item ) : ?>
 						<li>
@@ -121,29 +121,29 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 				<?php endif; ?>
 			</div>
 			<?php if ( empty( $attribution['top_campaigns'] ) && empty( $attribution['top_offers'] ) && empty( $attribution['top_ab_tests'] ) ) : ?>
-			<p class="cro-muted"><?php esc_html_e( 'No attribution data yet. Conversions will appear here as you track campaigns, offers, and A/B tests.', 'cro-toolkit' ); ?></p>
+			<p class="cro-muted"><?php esc_html_e( 'No attribution data yet. Conversions will appear here as you track campaigns, offers, and A/B tests.', 'meyvora-convert' ); ?></p>
 			<?php endif; ?>
 			<?php endif; ?>
 			<div class="cro-attribution-export">
-				<p class="cro-export-range-label"><?php esc_html_e( 'Export range', 'cro-toolkit' ); ?></p>
+				<p class="cro-export-range-label"><?php esc_html_e( 'Export range', 'meyvora-convert' ); ?></p>
 				<div class="cro-export-quick-range">
-					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-7 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '7 days', 'cro-toolkit' ); ?></a>
-					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-30 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '30 days', 'cro-toolkit' ); ?></a>
-					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-90 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '90 days', 'cro-toolkit' ); ?></a>
+					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-7 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '7 days', 'meyvora-convert' ); ?></a>
+					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-30 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '30 days', 'meyvora-convert' ); ?></a>
+					<a href="<?php echo esc_url( add_query_arg( array( 'cro_export_from' => gmdate( 'Y-m-d', strtotime( '-90 days' ) ), 'cro_export_to' => gmdate( 'Y-m-d' ) ), admin_url( 'admin.php?page=cro-insights' ) ) ); ?>" class="button button-small"><?php esc_html_e( '90 days', 'meyvora-convert' ); ?></a>
 				</div>
 				<form method="get" class="cro-export-date-form" style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
 					<input type="hidden" name="page" value="cro-insights" />
-					<label class="screen-reader-text"><?php esc_html_e( 'From', 'cro-toolkit' ); ?></label>
+					<label class="screen-reader-text"><?php esc_html_e( 'From', 'meyvora-convert' ); ?></label>
 					<input type="date" name="cro_export_from" value="<?php echo esc_attr( $export_from ); ?>" />
-					<span><?php esc_html_e( 'to', 'cro-toolkit' ); ?></span>
-					<label class="screen-reader-text"><?php esc_html_e( 'To', 'cro-toolkit' ); ?></label>
+					<span><?php esc_html_e( 'to', 'meyvora-convert' ); ?></span>
+					<label class="screen-reader-text"><?php esc_html_e( 'To', 'meyvora-convert' ); ?></label>
 					<input type="date" name="cro_export_to" value="<?php echo esc_attr( $export_to ); ?>" />
-					<button type="submit" class="button button-small"><?php esc_html_e( 'Apply', 'cro-toolkit' ); ?></button>
+					<button type="submit" class="button button-small"><?php esc_html_e( 'Apply', 'meyvora-convert' ); ?></button>
 				</form>
 				<p class="cro-export-buttons" style="margin: 12px 0 0;">
-					<a href="<?php echo esc_url( $export_url_events ); ?>" class="button"><?php esc_html_e( 'Export events CSV', 'cro-toolkit' ); ?></a>
-					<a href="<?php echo esc_url( $export_url_daily ); ?>" class="button"><?php esc_html_e( 'Daily summary CSV', 'cro-toolkit' ); ?></a>
-					<span class="cro-muted" style="font-size: 12px;"><?php echo esc_html( sprintf( __( 'Max %d days.', 'cro-toolkit' ), $export_max_days ) ); ?></span>
+					<a href="<?php echo esc_url( $export_url_events ); ?>" class="button"><?php esc_html_e( 'Export events CSV', 'meyvora-convert' ); ?></a>
+					<a href="<?php echo esc_url( $export_url_daily ); ?>" class="button"><?php esc_html_e( 'Daily summary CSV', 'meyvora-convert' ); ?></a>
+					<span class="cro-muted" style="font-size: 12px;"><?php echo esc_html( sprintf( __( 'Max %d days.', 'meyvora-convert' ), $export_max_days ) ); ?></span>
 				</p>
 			</div>
 		</div>
@@ -152,23 +152,23 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 
 	<div class="cro-card">
 		<header class="cro-card__header">
-			<h2 class="cro-card__title"><?php esc_html_e( 'Insights', 'cro-toolkit' ); ?></h2>
+			<h2 class="cro-card__title"><?php esc_html_e( 'Insights', 'meyvora-convert' ); ?></h2>
 		</header>
 		<div class="cro-card__body">
 			<p class="cro-muted" style="margin-bottom: 16px;">
-				<?php esc_html_e( 'Rule-based recommendations from your tracking data. Use the Fix links to improve performance.', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Rule-based recommendations from your tracking data. Use the Fix links to improve performance.', 'meyvora-convert' ); ?>
 			</p>
 
 			<?php if ( empty( $insights ) ) : ?>
 				<div class="cro-empty-state">
 					<span class="cro-empty-state__icon" aria-hidden="true"><?php echo class_exists( 'CRO_Icons' ) ? CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico cro-ico--lg' ) ) : ''; ?></span>
-					<h3 class="cro-empty-state__title"><?php esc_html_e( 'No insights yet', 'cro-toolkit' ); ?></h3>
+					<h3 class="cro-empty-state__title"><?php esc_html_e( 'No insights yet', 'meyvora-convert' ); ?></h3>
 					<p class="cro-empty-state__text">
-						<?php esc_html_e( 'As impressions and conversions are tracked, we’ll show top performers, underperforming campaigns, and next best actions here.', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'As impressions and conversions are tracked, we’ll show top performers, underperforming campaigns, and next best actions here.', 'meyvora-convert' ); ?>
 					</p>
 					<p class="cro-empty-state__actions">
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-campaigns' ) ); ?>" class="button button-primary"><?php esc_html_e( 'Campaigns', 'cro-toolkit' ); ?></a>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-offers' ) ); ?>" class="button"><?php esc_html_e( 'Offers', 'cro-toolkit' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-campaigns' ) ); ?>" class="button button-primary"><?php esc_html_e( 'Campaigns', 'meyvora-convert' ); ?></a>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-offers' ) ); ?>" class="button"><?php esc_html_e( 'Offers', 'meyvora-convert' ); ?></a>
 					</p>
 				</div>
 			<?php else : ?>
@@ -188,7 +188,7 @@ $export_url_daily   = add_query_arg( array_merge( $export_base, array( 'format' 
 									<span class="<?php echo esc_attr( $badge_class ); ?>">
 										<?php
 										echo esc_html(
-											$item['type'] === 'top' ? __( 'Top', 'cro-toolkit' ) : ( $item['type'] === 'underperforming' ? __( 'Underperforming', 'cro-toolkit' ) : __( 'Action', 'cro-toolkit' ) )
+											$item['type'] === 'top' ? __( 'Top', 'meyvora-convert' ) : ( $item['type'] === 'underperforming' ? __( 'Underperforming', 'meyvora-convert' ) : __( 'Action', 'meyvora-convert' ) )
 										);
 										?>
 									</span>

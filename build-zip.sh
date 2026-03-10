@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Build a client-ready distribution zip: staging dir with only runtime files.
-# Output: dist/cro-toolkit.zip with root entry cro-toolkit/
+# Output: dist/meyvora-convert.zip with root entry meyvora-convert/
 #
 # INCLUDE (copied into staging):
-#   cro-toolkit.php, readme.txt, uninstall.php
-#   includes/, admin/, public/, templates/, languages/
+#   meyvora-convert.php, readme.txt, uninstall.php
+#   includes/, admin/, public/, templates/, languages/, assets/
 #   blocks/cart-checkout-extension/build/*   (build assets only)
 #   blocks/campaign/*
 #
@@ -14,16 +14,17 @@
 #   blocks/cart-checkout-extension/src/
 #   blocks/cart-checkout-extension/package.json, package-lock.json
 #   blocks/cart-checkout-extension/webpack.config.js, *.config.js
+#   assets/README.md
 #   __MACOSX, .DS_Store, ._*
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$SCRIPT_DIR"
-STAGING_DIR="${PLUGIN_ROOT}/.release/cro-toolkit"
-ZIP_NAME="cro-toolkit.zip"
+STAGING_DIR="${PLUGIN_ROOT}/.release/meyvora-convert"
+ZIP_NAME="meyvora-convert.zip"
 DIST_DIR="${PLUGIN_ROOT}/dist"
 
-echo "=== CRO Toolkit build-zip ==="
+echo "=== Meyvora Convert build-zip ==="
 echo "Plugin root: $PLUGIN_ROOT"
 echo "Staging:     $STAGING_DIR"
 echo ""
@@ -34,11 +35,11 @@ mkdir -p "$STAGING_DIR"
 cd "$PLUGIN_ROOT"
 
 # 2) Copy ONLY runtime plugin files (see INCLUDE/EXCLUDE at top of script)
-[ -f "$PLUGIN_ROOT/cro-toolkit.php" ] && cp "$PLUGIN_ROOT/cro-toolkit.php" "$STAGING_DIR/"
+[ -f "$PLUGIN_ROOT/meyvora-convert.php" ] && cp "$PLUGIN_ROOT/meyvora-convert.php" "$STAGING_DIR/"
 [ -f "$PLUGIN_ROOT/readme.txt" ]      && cp "$PLUGIN_ROOT/readme.txt" "$STAGING_DIR/"
 [ -f "$PLUGIN_ROOT/uninstall.php" ]   && cp "$PLUGIN_ROOT/uninstall.php" "$STAGING_DIR/"
 
-for dir in includes admin public templates languages; do
+for dir in includes admin public templates languages assets; do
   if [ -d "$PLUGIN_ROOT/$dir" ]; then
     cp -R "$PLUGIN_ROOT/$dir" "$STAGING_DIR/"
   fi
@@ -56,7 +57,35 @@ if [ -d "$PLUGIN_ROOT/blocks/campaign" ]; then
   cp "$PLUGIN_ROOT/blocks/campaign/"* "$STAGING_DIR/blocks/campaign/" 2>/dev/null || true
 fi
 
-# 3) Delete Mac junk inside staging
+# 3) Verify screenshots referenced in readme.txt are present
+echo "--- Screenshot check ---"
+SCREENSHOTS_MISSING=0
+for i in 1 2 3 4 5 6; do
+  FOUND=""
+  for ext in png jpg jpeg; do
+    if [ -f "$STAGING_DIR/assets/screenshot-${i}.${ext}" ]; then
+      FOUND="screenshot-${i}.${ext}"
+      break
+    fi
+  done
+  if [ -n "$FOUND" ]; then
+    echo "  [OK] assets/$FOUND"
+  else
+    echo "  [WARN] assets/screenshot-${i}.png missing"
+    SCREENSHOTS_MISSING=$((SCREENSHOTS_MISSING + 1))
+  fi
+done
+if [ "$SCREENSHOTS_MISSING" -gt 0 ]; then
+  echo "  $SCREENSHOTS_MISSING screenshot(s) missing — add them to assets/ before final release."
+else
+  echo "  All 6 screenshots present."
+fi
+echo ""
+
+# 4) Remove dev-only files from staging (assets/README.md is for contributors, not distribution)
+rm -f "$STAGING_DIR/assets/README.md"
+
+# 5) Delete Mac junk inside staging
 echo "--- Removing Mac junk from staging ---"
 find "$STAGING_DIR" -type d -name '__MACOSX' -exec rm -rf {} + 2>/dev/null || true
 find "$STAGING_DIR" -type f -name '._*' -delete 2>/dev/null || true
@@ -65,17 +94,17 @@ find "$STAGING_DIR" -type d -name '__MACOSX' 2>/dev/null | while read -r d; do r
 echo "Done."
 echo ""
 
-# 4) Create zip from .release/ so zip root is cro-toolkit/
+# 6) Create zip from .release/ so zip root is meyvora-convert/
 mkdir -p "$DIST_DIR"
 rm -f "$DIST_DIR/$ZIP_NAME"
 cd "${PLUGIN_ROOT}/.release"
-zip -r "${DIST_DIR}/${ZIP_NAME}" cro-toolkit
+zip -r "${DIST_DIR}/${ZIP_NAME}" meyvora-convert
 cd "$PLUGIN_ROOT"
 
 echo "Built: $DIST_DIR/$ZIP_NAME"
 echo ""
 
-# 5) ZIP CONTENTS SUMMARY
+# 7) ZIP CONTENTS SUMMARY
 echo "--- ZIP CONTENTS SUMMARY ---"
 echo "Top-level list (first 50 entries):"
 unzip -l "$DIST_DIR/$ZIP_NAME" | head -n 55

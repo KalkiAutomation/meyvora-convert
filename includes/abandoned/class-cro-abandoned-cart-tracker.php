@@ -6,7 +6,7 @@
  * Updates last_activity_at on cart change. For logged-in users, stores user_id and email.
  * Guest email is captured only when provided (e.g. checkout field – see separate task).
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -47,6 +47,8 @@ class CRO_Abandoned_Cart_Tracker {
 		add_action( 'wp_ajax_cro_save_abandoned_cart_email', array( __CLASS__, 'ajax_save_email_consent' ) );
 		add_action( 'wp_ajax_nopriv_cro_save_abandoned_cart_email', array( __CLASS__, 'ajax_save_email_consent' ) );
 		add_action( 'woocommerce_checkout_order_created', array( __CLASS__, 'on_order_created' ), 10, 1 );
+		add_action( 'init', array( __CLASS__, 'handle_unsubscribe_request' ) );
+		add_action( 'wp_footer', array( __CLASS__, 'unsubscribe_notice' ) );
 	}
 
 	/**
@@ -84,28 +86,31 @@ class CRO_Abandoned_Cart_Tracker {
 	public static function ajax_save_email_consent() {
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_cart_email' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Security check failed. Please refresh and try again.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Security check failed. Please refresh and try again.', 'meyvora-convert' ) ) );
+		}
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 		if ( ! function_exists( 'cro_settings' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Settings not available.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Settings not available.', 'meyvora-convert' ) ) );
 		}
 		$opts = cro_settings()->get_abandoned_cart_settings();
 		if ( empty( $opts['enable_abandoned_cart_emails'] ) ) {
-			wp_send_json_error( array( 'message' => __( 'Abandoned cart reminders are not enabled.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Abandoned cart reminders are not enabled.', 'meyvora-convert' ) ) );
 		}
 		$consent = ! empty( $_POST['consent'] );
 		if ( ! empty( $opts['require_opt_in'] ) && ! $consent ) {
-			wp_send_json_error( array( 'message' => __( 'Consent is required to save your email for reminders.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Consent is required to save your email for reminders.', 'meyvora-convert' ) ) );
 		}
 		$email = isset( $_POST['email'] ) ? sanitize_text_field( wp_unslash( $_POST['email'] ) ) : '';
 		if ( $consent && ! is_email( $email ) ) {
-			wp_send_json_error( array( 'message' => __( 'Please enter a valid email address.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Please enter a valid email address.', 'meyvora-convert' ) ) );
 		}
 		$updated = self::update_email_and_consent_for_session( $email, $consent );
 		if ( $updated ) {
-			wp_send_json_success( array( 'message' => __( 'Saved.', 'cro-toolkit' ) ) );
+			wp_send_json_success( array( 'message' => __( 'Saved.', 'meyvora-convert' ) ) );
 		}
-		wp_send_json_error( array( 'message' => __( 'Could not save. You may need to add an item to your cart first.', 'cro-toolkit' ) ) );
+		wp_send_json_error( array( 'message' => __( 'Could not save. You may need to add an item to your cart first.', 'meyvora-convert' ) ) );
 	}
 
 	/**
@@ -121,6 +126,15 @@ class CRO_Abandoned_Cart_Tracker {
 	 * Called when cart is updated (add/remove/coupon). Track only if cart has at least 1 item; update last_activity_at.
 	 */
 	public function maybe_track_cart() {
+		// Skip WooCommerce Subscriptions renewal carts — don't treat as abandoned.
+		if ( function_exists( 'WC' ) && WC()->cart && class_exists( 'WC_Subscriptions_Cart' ) ) {
+			foreach ( WC()->cart->get_cart() as $item ) {
+				if ( ! empty( $item['subscription_renewal'] ) ) {
+					return;
+				}
+			}
+		}
+
 		if ( ! $this->is_woo_ready() ) {
 			return;
 		}
@@ -586,5 +600,68 @@ class CRO_Abandoned_Cart_Tracker {
 		);
 
 		return array( 'items' => $items ? $items : array(), 'total' => $total );
+	}
+
+	/**
+	 * Handle one-click unsubscribe from cart recovery emails (GDPR / CAN-SPAM).
+	 * Validates a signed token, sets cart status to 'unsubscribed', and redirects.
+	 */
+	public static function handle_unsubscribe_request() {
+		if ( empty( $_GET['cro_action'] ) || 'unsubscribe_cart' !== $_GET['cro_action'] ) {
+			return;
+		}
+
+		$cart_id = absint( $_GET['cart_id'] ?? 0 );
+		$token   = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
+
+		if ( ! $cart_id || ! $token ) {
+			return;
+		}
+
+		global $wpdb;
+		$table = self::get_table_name();
+
+		if ( ! class_exists( 'CRO_Database' ) || ! CRO_Database::table_exists( $table ) ) {
+			return;
+		}
+
+		$cart = $wpdb->get_row( $wpdb->prepare(
+			"SELECT id, email FROM {$table} WHERE id = %d",
+			$cart_id
+		) );
+
+		if ( ! $cart ) {
+			return;
+		}
+
+		$expected = wp_hash( $cart->email . '|' . $cart->id . '|unsubscribe' );
+		if ( ! hash_equals( $expected, $token ) ) {
+			return;
+		}
+
+		$wpdb->update(
+			$table,
+			array( 'status' => self::STATUS_UNSUBSCRIBED, 'updated_at' => current_time( 'mysql' ) ),
+			array( 'id' => $cart_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
+
+		self::cancel_scheduled_reminders( $cart_id );
+
+		wp_safe_redirect( add_query_arg( 'cro_unsubscribed', '1', home_url( '/' ) ) );
+		exit;
+	}
+
+	/**
+	 * Show a front-end confirmation banner after unsubscribing.
+	 */
+	public static function unsubscribe_notice() {
+		if ( empty( $_GET['cro_unsubscribed'] ) ) {
+			return;
+		}
+		echo '<div style="background:#d4edda;color:#155724;padding:12px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:14px;">'
+			. esc_html__( "You've been unsubscribed from cart recovery emails.", 'meyvora-convert' )
+			. '</div>';
 	}
 }

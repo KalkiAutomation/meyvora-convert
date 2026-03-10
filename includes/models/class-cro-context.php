@@ -6,7 +6,7 @@
  * behavioral placeholders (updated from JS). Supports get() with dot notation
  * and matches() for rule evaluation.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

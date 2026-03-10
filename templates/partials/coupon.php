@@ -15,7 +15,7 @@ if ( empty( $coupon_code ) ) {
 ?>
 <div class="cro-popup__coupon<?php echo $inline ? ' cro-popup__coupon--inline' : ''; ?>">
     <?php if ( ! $inline ) : ?>
-    <span class="cro-popup__coupon-label"><?php esc_html_e( 'Your code', 'cro-toolkit' ); ?></span>
+    <span class="cro-popup__coupon-label"><?php esc_html_e( 'Your code', 'meyvora-convert' ); ?></span>
     <?php endif; ?>
     <code class="cro-popup__coupon-code" data-code="<?php echo esc_attr( $coupon_code ); ?>">
         <?php echo esc_html( $coupon_code ); ?>

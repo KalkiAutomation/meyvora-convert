@@ -4,7 +4,7 @@
  * Trust strip, offer banner, and shipping progress are rendered by Cart_Optimizer, Checkout_Optimizer,
  * CRO_Offer_Banner, and CRO_Shipping_Bar; this class ensures shared CSS loads only when needed.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

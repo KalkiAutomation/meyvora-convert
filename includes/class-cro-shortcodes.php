@@ -1,10 +1,10 @@
 <?php
 /**
- * Shortcodes for CRO Toolkit
+ * Shortcodes for Meyvora Convert
  *
  * [cro_campaign id="123"] – Renders a campaign by ID anywhere.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -49,25 +49,25 @@ class CRO_Shortcodes {
 
 		$id = absint( $atts['id'] );
 		if ( $id <= 0 ) {
-			return self::maybe_admin_notice( __( 'Invalid campaign ID.', 'cro-toolkit' ), true );
+			return self::maybe_admin_notice( __( 'Invalid campaign ID.', 'meyvora-convert' ), true );
 		}
 
 		if ( ! class_exists( 'CRO_Campaign' ) || ! class_exists( 'CRO_Templates' ) ) {
-			return self::maybe_admin_notice( __( 'Campaign system not available.', 'cro-toolkit' ), true );
+			return self::maybe_admin_notice( __( 'Campaign system not available.', 'meyvora-convert' ), true );
 		}
 
 		$row = CRO_Campaign::get( $id );
 		if ( ! $row || ! is_array( $row ) ) {
 			return self::maybe_admin_notice(
 				/* translators: %d: campaign ID */
-				sprintf( __( 'Campaign #%d not found.', 'cro-toolkit' ), $id ),
+				sprintf( __( 'Campaign #%d not found.', 'meyvora-convert' ), $id ),
 				true
 			);
 		}
 
 		// Only show active campaigns to non-admins; admins can see drafts with a notice.
 		$status = isset( $row['status'] ) ? (string) $row['status'] : 'draft';
-		$is_admin = current_user_can( 'manage_woocommerce' );
+		$is_admin = current_user_can( 'manage_meyvora_convert' );
 		if ( $status !== 'active' && ! $is_admin ) {
 			return '';
 		}
@@ -103,7 +103,7 @@ class CRO_Shortcodes {
 
 		$html = CRO_Templates::render( $template_key, $campaign );
 		if ( $html === '' ) {
-			return self::maybe_admin_notice( __( 'Campaign could not be rendered.', 'cro-toolkit' ), $is_admin );
+			return self::maybe_admin_notice( __( 'Campaign could not be rendered.', 'meyvora-convert' ), $is_admin );
 		}
 
 		// Wrap in container so we can show it inline (visible) and scope shortcode-only CSS.
@@ -113,7 +113,7 @@ class CRO_Shortcodes {
 
 		if ( $status !== 'active' && $is_admin ) {
 			$wrapper = '<p class="cro-shortcode-notice" style="margin-bottom:0.5em;font-size:12px;color:#856404;background:#fff3cd;padding:6px 10px;border-radius:4px;">'
-				. esc_html__( 'Campaign is not active. Only admins see this.', 'cro-toolkit' )
+				. esc_html__( 'Campaign is not active. Only admins see this.', 'meyvora-convert' )
 				. '</p>' . $wrapper;
 		}
 
@@ -124,11 +124,11 @@ class CRO_Shortcodes {
 	 * Return empty string for non-admins, or a small admin-only notice.
 	 *
 	 * @param string $message Notice text.
-	 * @param bool   $admin_only If true, show only to users with manage_woocommerce.
+	 * @param bool   $admin_only If true, show only to users with manage_meyvora_convert.
 	 * @return string
 	 */
 	private static function maybe_admin_notice( $message, $admin_only = true ) {
-		if ( $admin_only && ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( $admin_only && ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return '';
 		}
 		return '<p class="cro-shortcode-notice" style="font-size:12px;color:#856404;background:#fff3cd;padding:6px 10px;border-radius:4px;">' . esc_html( $message ) . '</p>';

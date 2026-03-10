@@ -2,7 +2,7 @@
  * CRO UX Detector – client-side UX state (typing, form focus, reduced motion).
  * Used before showing popups to avoid interrupting checkout or form input.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function() {
 	'use strict';

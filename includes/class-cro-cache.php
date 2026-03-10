@@ -4,7 +4,7 @@
  *
  * Multi-layer caching for optimal performance
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -12,7 +12,7 @@ defined( 'ABSPATH' ) || exit;
 class CRO_Cache {
 
 	/** @var string Cache group */
-	const GROUP = 'cro_toolkit';
+	const GROUP = 'meyvora_convert';
 
 	/** @var int Default TTL (1 hour) */
 	const DEFAULT_TTL = 3600;

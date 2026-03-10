@@ -4,7 +4,7 @@
  *
  * Replace placeholders with real data (cart, user, product, store, coupon, time).
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -149,37 +149,37 @@ class CRO_Placeholders {
 	 */
 	public static function get_available() {
 		return array(
-			__( 'Cart', 'cro-toolkit' )         => array(
-				'{cart_total}'              => __( 'Cart total with currency (e.g., $125.00)', 'cro-toolkit' ),
-				'{cart_subtotal}'           => __( 'Cart subtotal before discounts', 'cro-toolkit' ),
-				'{cart_items}'               => __( 'Number of items in cart', 'cro-toolkit' ),
-				'{cart_savings}'             => __( 'Amount saved with applied coupon', 'cro-toolkit' ),
-				'{amount_to_free_shipping}'  => __( 'Amount needed for free shipping', 'cro-toolkit' ),
+			__( 'Cart', 'meyvora-convert' )         => array(
+				'{cart_total}'              => __( 'Cart total with currency (e.g., $125.00)', 'meyvora-convert' ),
+				'{cart_subtotal}'           => __( 'Cart subtotal before discounts', 'meyvora-convert' ),
+				'{cart_items}'               => __( 'Number of items in cart', 'meyvora-convert' ),
+				'{cart_savings}'             => __( 'Amount saved with applied coupon', 'meyvora-convert' ),
+				'{amount_to_free_shipping}'  => __( 'Amount needed for free shipping', 'meyvora-convert' ),
 			),
-			__( 'User', 'cro-toolkit' )         => array(
-				'{first_name}'               => __( 'User first name (or "Friend" if unknown)', 'cro-toolkit' ),
-				'{last_name}'                => __( 'User last name', 'cro-toolkit' ),
-				'{user_name}'                => __( 'User display name', 'cro-toolkit' ),
-				'{user_email}'               => __( 'User email address', 'cro-toolkit' ),
+			__( 'User', 'meyvora-convert' )         => array(
+				'{first_name}'               => __( 'User first name (or "Friend" if unknown)', 'meyvora-convert' ),
+				'{last_name}'                => __( 'User last name', 'meyvora-convert' ),
+				'{user_name}'                => __( 'User display name', 'meyvora-convert' ),
+				'{user_email}'               => __( 'User email address', 'meyvora-convert' ),
 			),
-			__( 'Product', 'cro-toolkit' )      => array(
-				'{product_name}'             => __( 'Current product name (on product pages)', 'cro-toolkit' ),
-				'{product_price}'            => __( 'Current product price', 'cro-toolkit' ),
-				'{product_sale_price}'       => __( 'Product sale price', 'cro-toolkit' ),
-				'{product_discount}'         => __( 'Product discount percentage', 'cro-toolkit' ),
+			__( 'Product', 'meyvora-convert' )      => array(
+				'{product_name}'             => __( 'Current product name (on product pages)', 'meyvora-convert' ),
+				'{product_price}'            => __( 'Current product price', 'meyvora-convert' ),
+				'{product_sale_price}'       => __( 'Product sale price', 'meyvora-convert' ),
+				'{product_discount}'         => __( 'Product discount percentage', 'meyvora-convert' ),
 			),
-			__( 'Store', 'cro-toolkit' )        => array(
-				'{store_name}'               => __( 'Your store name', 'cro-toolkit' ),
-				'{currency}'                 => __( 'Currency symbol (e.g., $)', 'cro-toolkit' ),
+			__( 'Store', 'meyvora-convert' )        => array(
+				'{store_name}'               => __( 'Your store name', 'meyvora-convert' ),
+				'{currency}'                 => __( 'Currency symbol (e.g., $)', 'meyvora-convert' ),
 			),
-			__( 'Coupon', 'cro-toolkit' )       => array(
-				'{coupon_code}'              => __( 'The coupon code being offered', 'cro-toolkit' ),
-				'{coupon_discount}'           => __( 'Coupon discount (e.g., 10% or $5)', 'cro-toolkit' ),
+			__( 'Coupon', 'meyvora-convert' )       => array(
+				'{coupon_code}'              => __( 'The coupon code being offered', 'meyvora-convert' ),
+				'{coupon_discount}'           => __( 'Coupon discount (e.g., 10% or $5)', 'meyvora-convert' ),
 			),
-			__( 'Conditionals', 'cro-toolkit' ) => array(
-				'{if:cart_has_items}...{/if}' => __( 'Show content only if cart has items', 'cro-toolkit' ),
-				'{if:logged_in}...{/if}'      => __( 'Show content only to logged in users', 'cro-toolkit' ),
-				'{if:has_coupon}...{/if}'     => __( 'Show content only if campaign has coupon', 'cro-toolkit' ),
+			__( 'Conditionals', 'meyvora-convert' ) => array(
+				'{if:cart_has_items}...{/if}' => __( 'Show content only if cart has items', 'meyvora-convert' ),
+				'{if:logged_in}...{/if}'      => __( 'Show content only to logged in users', 'meyvora-convert' ),
+				'{if:has_coupon}...{/if}'     => __( 'Show content only if campaign has coupon', 'meyvora-convert' ),
 			),
 		);
 	}
@@ -265,7 +265,7 @@ class CRO_Placeholders {
 		$remaining     = max( 0.0, $threshold - $cart_subtotal );
 
 		if ( $remaining <= 0 ) {
-			return __( 'You qualify for free shipping!', 'cro-toolkit' );
+			return __( 'You qualify for free shipping!', 'meyvora-convert' );
 		}
 
 		return function_exists( 'wc_price' ) ? wc_price( $remaining ) : (string) $remaining;
@@ -323,7 +323,7 @@ class CRO_Placeholders {
 	 */
 	private static function get_user_first_name() {
 		if ( ! is_user_logged_in() ) {
-			return __( 'Friend', 'cro-toolkit' );
+			return __( 'Friend', 'meyvora-convert' );
 		}
 
 		$user       = wp_get_current_user();
@@ -331,7 +331,7 @@ class CRO_Placeholders {
 		if ( $first_name === '' && ! empty( $user->ID ) ) {
 			$first_name = trim( (string) get_user_meta( $user->ID, 'billing_first_name', true ) );
 		}
-		return $first_name !== '' ? $first_name : ( isset( $user->display_name ) ? (string) $user->display_name : __( 'Friend', 'cro-toolkit' ) );
+		return $first_name !== '' ? $first_name : ( isset( $user->display_name ) ? (string) $user->display_name : __( 'Friend', 'meyvora-convert' ) );
 	}
 
 	/**
@@ -354,10 +354,10 @@ class CRO_Placeholders {
 	 */
 	private static function get_user_display_name() {
 		if ( ! is_user_logged_in() ) {
-			return __( 'Guest', 'cro-toolkit' );
+			return __( 'Guest', 'meyvora-convert' );
 		}
 		$user = wp_get_current_user();
-		return isset( $user->display_name ) ? (string) $user->display_name : __( 'Guest', 'cro-toolkit' );
+		return isset( $user->display_name ) ? (string) $user->display_name : __( 'Guest', 'meyvora-convert' );
 	}
 
 	/**

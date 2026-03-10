@@ -2,7 +2,7 @@
 /**
  * Cart optimizer
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -25,6 +25,8 @@ class CRO_Cart_Optimizer {
 		add_filter( 'woocommerce_cart_item_quantity', array( $this, 'optimize_quantity_input' ), 10, 3 );
 		add_action( 'woocommerce_after_cart_table', array( $this, 'render_benefits_bottom' ), 20 );
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_exit_nudge' ), 25 );
+		add_action( 'cro_cart_upsells', array( $this, 'render_cart_upsells' ) );
+		add_action( 'cro_cart_cross_sells', array( $this, 'render_cart_cross_sells' ) );
 	}
 
 	/**
@@ -75,7 +77,7 @@ class CRO_Cart_Optimizer {
 			if ( $can_show ) {
 				$msg   = isset( $settings['trust_message'] ) && (string) $settings['trust_message'] !== ''
 					? (string) $settings['trust_message']
-					: __( 'Secure payment - Fast shipping - Easy returns', 'cro-toolkit' );
+					: __( 'Secure payment - Fast shipping - Easy returns', 'meyvora-convert' );
 				$parts[] = '<div class="cro-cart-trust cro-blocks-trust"><p>' . esc_html( $msg ) . '</p></div>';
 				if ( $visitor ) {
 					$visitor->record_banner_show( 'trust' );
@@ -88,7 +90,7 @@ class CRO_Cart_Optimizer {
 			if ( $can_show ) {
 				$msg   = isset( $settings['urgency_message'] ) && (string) $settings['urgency_message'] !== ''
 					? (string) $settings['urgency_message']
-					: __( 'Items in your cart are in high demand!', 'cro-toolkit' );
+					: __( 'Items in your cart are in high demand!', 'meyvora-convert' );
 				$parts[] = '<div class="cro-cart-urgency cro-blocks-urgency"><p>' . esc_html( $msg ) . '</p></div>';
 				if ( $visitor ) {
 					$visitor->record_banner_show( 'urgency' );
@@ -157,10 +159,10 @@ class CRO_Cart_Optimizer {
 
 		$message = isset( $settings['exit_intent_message'] ) && (string) $settings['exit_intent_message'] !== ''
 			? (string) $settings['exit_intent_message']
-			: __( 'Complete your order now — your discount is ready', 'cro-toolkit' );
+			: __( 'Complete your order now — your discount is ready', 'meyvora-convert' );
 		$cta     = isset( $settings['exit_intent_cta'] ) && (string) $settings['exit_intent_cta'] !== ''
 			? (string) $settings['exit_intent_cta']
-			: __( 'Complete order', 'cro-toolkit' );
+			: __( 'Complete order', 'meyvora-convert' );
 
 		wp_localize_script(
 			'cro-cart-exit-nudge',
@@ -177,5 +179,89 @@ class CRO_Cart_Optimizer {
 		wp_enqueue_style( 'cro-cart-exit-nudge' );
 		$css = '.cro-exit-nudge{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.4);opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease}.cro-exit-nudge--visible{opacity:1;visibility:visible}.cro-exit-nudge__box{position:relative;max-width:360px;margin:1rem;padding:1.5rem;background:#fff;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.15);text-align:center}.cro-exit-nudge__message{margin:0 0 1rem;font-size:1.1rem;line-height:1.4;color:#333}.cro-exit-nudge__cta{display:inline-block;margin-bottom:.5rem;padding:.6rem 1.2rem;font-size:1rem;text-decoration:none;color:#fff;background:#333;border-radius:4px;border:none;cursor:pointer}.cro-exit-nudge__cta:hover{color:#fff;background:#555}.cro-exit-nudge__close{position:absolute;top:.5rem;right:.5rem;width:32px;height:32px;padding:0;font-size:1.5rem;line-height:1;color:#666;background:none;border:none;cursor:pointer}.cro-exit-nudge__close:hover{color:#333}';
 		wp_add_inline_style( 'cro-cart-exit-nudge', $css );
+	}
+
+	/**
+	 * Render upsell products on the cart page.
+	 */
+	public function render_cart_upsells() {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return;
+		}
+		$settings = function_exists( 'cro_settings' )
+			? cro_settings()->get( 'cart_optimizer', 'upsells', array() )
+			: array();
+		if ( empty( $settings['enabled'] ) ) {
+			return;
+		}
+		$upsell_ids = array();
+		foreach ( WC()->cart->get_cart() as $item ) {
+			$product = $item['data'] ?? null;
+			if ( $product && method_exists( $product, 'get_upsell_ids' ) ) {
+				$upsell_ids = array_merge( $upsell_ids, $product->get_upsell_ids() );
+			}
+		}
+		$upsell_ids = array_unique( array_filter( $upsell_ids ) );
+		if ( empty( $upsell_ids ) ) {
+			return;
+		}
+		$limit   = max( 1, (int) ( $settings['limit'] ?? 3 ) );
+		$upsells = array_slice( $upsell_ids, 0, $limit );
+		$heading = ! empty( $settings['heading'] )
+			? sanitize_text_field( $settings['heading'] )
+			: __( 'You might also like', 'meyvora-convert' );
+		echo '<div class="cro-cart-upsells">';
+		echo '<h3 class="cro-cart-upsells__heading">' . esc_html( $heading ) . '</h3>';
+		echo '<ul class="cro-cart-upsells__list products">';
+		foreach ( $upsells as $product_id ) {
+			$product = wc_get_product( $product_id );
+			if ( ! $product || ! $product->is_visible() || ! $product->is_purchasable() ) {
+				continue;
+			}
+			wc_get_template_part( 'content', 'product' );
+		}
+		echo '</ul></div>';
+	}
+
+	/**
+	 * Render cross-sell products on the cart page.
+	 */
+	public function render_cart_cross_sells() {
+		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+			return;
+		}
+		$settings = function_exists( 'cro_settings' )
+			? cro_settings()->get( 'cart_optimizer', 'cross_sells', array() )
+			: array();
+		if ( empty( $settings['enabled'] ) ) {
+			return;
+		}
+		$cross_sell_ids = array();
+		foreach ( WC()->cart->get_cart() as $item ) {
+			$product = $item['data'] ?? null;
+			if ( $product && method_exists( $product, 'get_cross_sell_ids' ) ) {
+				$cross_sell_ids = array_merge( $cross_sell_ids, $product->get_cross_sell_ids() );
+			}
+		}
+		$cross_sell_ids = array_unique( array_filter( $cross_sell_ids ) );
+		if ( empty( $cross_sell_ids ) ) {
+			return;
+		}
+		$limit       = max( 1, (int) ( $settings['limit'] ?? 3 ) );
+		$cross_sells = array_slice( $cross_sell_ids, 0, $limit );
+		$heading     = ! empty( $settings['heading'] )
+			? sanitize_text_field( $settings['heading'] )
+			: __( 'Customers also bought', 'meyvora-convert' );
+		echo '<div class="cro-cart-cross-sells">';
+		echo '<h3 class="cro-cart-cross-sells__heading">' . esc_html( $heading ) . '</h3>';
+		echo '<ul class="cro-cart-cross-sells__list products">';
+		foreach ( $cross_sells as $product_id ) {
+			$product = wc_get_product( $product_id );
+			if ( ! $product || ! $product->is_visible() || ! $product->is_purchasable() ) {
+				continue;
+			}
+			wc_get_template_part( 'content', 'product' );
+		}
+		echo '</ul></div>';
 	}
 }

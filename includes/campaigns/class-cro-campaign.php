@@ -2,7 +2,7 @@
 /**
  * Campaign CRUD operations
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -252,14 +252,14 @@ class CRO_Campaign {
 		$campaign = self::get( $id );
 
 		if ( ! $campaign ) {
-			return new WP_Error( 'not_found', __( 'Campaign not found', 'cro-toolkit' ) );
+			return new WP_Error( 'not_found', __( 'Campaign not found', 'meyvora-convert' ) );
 		}
 
 		$table_name = $wpdb->prefix . 'cro_campaigns';
 
 		// Prepare new campaign data.
 		$new_data = array(
-			'name'              => ( $campaign['name'] ?? __( 'Unnamed Campaign', 'cro-toolkit' ) ) . ' (Copy)',
+			'name'              => ( $campaign['name'] ?? __( 'Unnamed Campaign', 'meyvora-convert' ) ) . ' (Copy)',
 			'status'            => 'draft',
 			'campaign_type'     => $campaign['campaign_type'] ?? $campaign['type'] ?? 'exit_intent',
 			'template_type'     => $campaign['template_type'] ?? 'centered',
@@ -276,7 +276,7 @@ class CRO_Campaign {
 		$result = $wpdb->insert( $table_name, $new_data );
 
 		if ( false === $result ) {
-			return new WP_Error( 'db_error', __( 'Failed to duplicate campaign', 'cro-toolkit' ) );
+			return new WP_Error( 'db_error', __( 'Failed to duplicate campaign', 'meyvora-convert' ) );
 		}
 
 		return $wpdb->insert_id;

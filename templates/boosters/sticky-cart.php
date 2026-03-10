@@ -2,7 +2,7 @@
 /**
  * Sticky cart template
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -26,7 +26,7 @@ $cart_count = $cart->get_cart_contents_count();
 				<?php
 				printf(
 					/* translators: %d: cart item count */
-					esc_html( _n( '%d item', '%d items', $cart_count, 'cro-toolkit' ) ),
+					esc_html( _n( '%d item', '%d items', $cart_count, 'meyvora-convert' ) ),
 					$cart_count
 				);
 				?>
@@ -36,7 +36,7 @@ $cart_count = $cart->get_cart_contents_count();
 			</span>
 		</div>
 		<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="cro-sticky-cart-button">
-			<?php esc_html_e( 'View Cart', 'cro-toolkit' ); ?>
+			<?php esc_html_e( 'View Cart', 'meyvora-convert' ); ?>
 		</a>
 	</div>
 </div>

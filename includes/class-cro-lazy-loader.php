@@ -4,7 +4,7 @@
  *
  * Deferred loading of heavy components
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;

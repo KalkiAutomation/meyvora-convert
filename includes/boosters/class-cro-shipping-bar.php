@@ -2,7 +2,7 @@
 /**
  * Shipping bar booster
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -216,8 +216,11 @@ class CRO_Shipping_Bar {
 	public function ajax_get_cart_total() {
 		check_ajax_referer( 'cro_shipping_bar', 'nonce' );
 
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
+		}
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-			wp_send_json_error( array( 'message' => __( 'Cart not available.', 'cro-toolkit' ), 'total' => 0 ) );
+			wp_send_json_error( array( 'message' => __( 'Cart not available.', 'meyvora-convert' ), 'total' => 0 ) );
 		}
 
 		$total = floatval( WC()->cart->get_subtotal() );
@@ -281,10 +284,10 @@ class CRO_Shipping_Bar {
 		$tone = isset( $this->settings['tone'] ) ? $this->settings['tone'] : 'neutral';
 		$progress_msg  = isset( $this->settings['message_progress'] ) && (string) $this->settings['message_progress'] !== ''
 			? (string) $this->settings['message_progress']
-			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'shipping_bar', $tone, 'progress' ) : __( 'Add {amount} more for free shipping', 'cro-toolkit' ) );
+			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'shipping_bar', $tone, 'progress' ) : __( 'Add {amount} more for free shipping', 'meyvora-convert' ) );
 		$achieved_msg  = isset( $this->settings['message_achieved'] ) && (string) $this->settings['message_achieved'] !== ''
 			? (string) $this->settings['message_achieved']
-			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'shipping_bar', $tone, 'achieved' ) : __( 'You\'ve got free shipping', 'cro-toolkit' ) );
+			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'shipping_bar', $tone, 'achieved' ) : __( 'You\'ve got free shipping', 'meyvora-convert' ) );
 		$message = $achieved
 			? $achieved_msg
 			: str_replace( '{amount}', wc_price( $remaining ), $progress_msg );

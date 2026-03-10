@@ -9,7 +9,7 @@
  * Revenue: we use the order total (WC_Order::get_total()), i.e. the final amount
  * paid including tax, shipping, and discounts—not the cart subtotal.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

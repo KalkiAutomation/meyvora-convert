@@ -3,7 +3,7 @@
  * Fired when the plugin is uninstalled (deleted).
  * Removes all plugin data only if the option cro_remove_data_on_uninstall is set to 'yes'.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
@@ -27,6 +27,7 @@ $tables = array(
 	$wpdb->prefix . 'cro_daily_stats',
 	$wpdb->prefix . 'cro_offers',
 	$wpdb->prefix . 'cro_offer_logs',
+	$wpdb->prefix . 'cro_abandoned_carts',
 );
 
 foreach ( $tables as $table ) {
@@ -42,3 +43,5 @@ wp_clear_scheduled_hook( 'cro_daily_cleanup' );
 wp_clear_scheduled_hook( 'cro_process_background_queue' );
 wp_clear_scheduled_hook( 'cro_cleanup_old_events' );
 wp_clear_scheduled_hook( 'cro_aggregate_daily_stats' );
+wp_clear_scheduled_hook( 'cro_check_ab_winners' );
+wp_clear_scheduled_hook( 'cro_send_abandoned_cart_reminders' );

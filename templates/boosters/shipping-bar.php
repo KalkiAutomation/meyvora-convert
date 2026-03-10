@@ -2,7 +2,7 @@
 /**
  * Shipping bar template
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -32,7 +32,7 @@ $percentage = ( $cart_total / $free_shipping_threshold ) * 100;
 		if ( $remaining > 0 ) {
 			printf(
 				/* translators: %s: remaining amount */
-				esc_html__( 'Add %s more to get free shipping!', 'cro-toolkit' ),
+				esc_html__( 'Add %s more to get free shipping!', 'meyvora-convert' ),
 				wp_kses_post( wc_price( $remaining ) )
 			);
 		}

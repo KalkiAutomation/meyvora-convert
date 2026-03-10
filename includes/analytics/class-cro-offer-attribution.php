@@ -2,7 +2,7 @@
 /**
  * Offer conversion attribution: record conversion when order uses CRO offer coupon or offer banner.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

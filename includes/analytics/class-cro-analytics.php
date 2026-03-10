@@ -21,8 +21,8 @@ class CRO_Analytics {
      * @return array
      */
     public static function get_overview_stats( $days = 30 ) {
-        $date_to   = date( 'Y-m-d' );
-        $date_from = date( 'Y-m-d', strtotime( "-{$days} days" ) );
+        $date_to   = wp_date( 'Y-m-d' );
+        $date_from = wp_date( 'Y-m-d', strtotime( "-{$days} days" ) );
         $analytics = new self();
         $summary   = $analytics->get_summary( $date_from, $date_to );
 
@@ -57,8 +57,8 @@ class CRO_Analytics {
      * @return array
      */
     public static function get_top_campaigns( $days = 30, $limit = 5 ) {
-        $date_to   = date( 'Y-m-d' );
-        $date_from = date( 'Y-m-d', strtotime( "-{$days} days" ) );
+        $date_to   = wp_date( 'Y-m-d' );
+        $date_from = wp_date( 'Y-m-d', strtotime( "-{$days} days" ) );
         $analytics = new self();
         $rows      = $analytics->get_campaign_performance( $date_from, $date_to, $limit );
         $out       = array();
@@ -93,8 +93,8 @@ class CRO_Analytics {
             return $this->empty_summary();
         }
 
-        $date_from = $date_from ?: date( 'Y-m-d', strtotime( '-30 days' ) );
-        $date_to   = $date_to ?: date( 'Y-m-d' );
+        $date_from = $date_from ?: wp_date( 'Y-m-d', strtotime( '-30 days' ) );
+        $date_to   = $date_to ?: wp_date( 'Y-m-d' );
         return $this->get_summary_internal( $date_from, $date_to, $campaign_id );
     }
 
@@ -120,6 +120,10 @@ class CRO_Analytics {
             'rpv_formatted' => function_exists( 'wc_price' ) ? wc_price( 0 ) : '0',
             'sticky_cart_adds' => 0,
             'shipping_bar_interactions' => 0,
+            'prev_conversions' => 0,
+            'prev_impressions' => 0,
+            'prev_revenue'     => 0,
+            'prev_emails'      => 0,
         );
     }
 
@@ -181,8 +185,8 @@ class CRO_Analytics {
         $rpv = $impressions > 0 ? $revenue / $impressions : 0;
 
         $days = ( strtotime( $date_to ) - strtotime( $date_from ) ) / 86400;
-        $prev_from = date( 'Y-m-d', strtotime( $date_from . " -{$days} days" ) );
-        $prev_to   = date( 'Y-m-d', strtotime( $date_from . ' -1 day' ) );
+        $prev_from = wp_date( 'Y-m-d', strtotime( $date_from . " -{$days} days" ) );
+        $prev_to   = wp_date( 'Y-m-d', strtotime( $date_from . ' -1 day' ) );
         $prev_where = $wpdb->prepare(
             "WHERE DATE(created_at) BETWEEN %s AND %s",
             $prev_from,
@@ -191,12 +195,15 @@ class CRO_Analytics {
         $prev_campaign_where = $campaign_id !== null && $campaign_id > 0 ? $wpdb->prepare( " AND source_type = 'campaign' AND source_id = %d", $campaign_id ) : '';
         $prev_impressions = (int) $wpdb->get_var(
             "SELECT COUNT(*) FROM {$this->events_table} {$prev_where} AND event_type = 'impression' {$prev_campaign_where}"
-        ) ?: 1;
+        );
         $prev_conversions = (int) $wpdb->get_var(
             "SELECT COUNT(*) FROM {$this->events_table} {$prev_where} AND event_type = 'conversion' {$prev_campaign_where}"
         );
         $prev_revenue = (float) $wpdb->get_var(
             "SELECT COALESCE(SUM(order_value), 0) FROM {$this->events_table} {$prev_where} AND event_type = 'conversion' {$prev_campaign_where}"
+        );
+        $prev_emails = (int) $wpdb->get_var(
+            "SELECT COUNT(*) FROM {$this->events_table} {$prev_where} AND event_type = 'conversion' AND email IS NOT NULL {$prev_campaign_where}"
         );
 
         return array(
@@ -215,6 +222,10 @@ class CRO_Analytics {
             'rpv_formatted' => function_exists( 'wc_price' ) ? wc_price( $rpv ) : (string) $rpv,
             'sticky_cart_adds' => $sticky_cart_adds,
             'shipping_bar_interactions' => $shipping_bar_interactions,
+            'prev_conversions' => $prev_conversions,
+            'prev_impressions' => $prev_impressions,
+            'prev_revenue'     => $prev_revenue,
+            'prev_emails'      => $prev_emails,
         );
     }
 

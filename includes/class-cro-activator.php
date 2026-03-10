@@ -2,7 +2,7 @@
 /**
  * Fired during plugin activation
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -30,8 +30,8 @@ class CRO_Activator {
 		} elseif ( ! class_exists( 'WooCommerce' ) ) {
 			deactivate_plugins( CRO_PLUGIN_BASENAME );
 			wp_die(
-				esc_html__( 'CRO Toolkit for WooCommerce requires WooCommerce to be installed and active.', 'cro-toolkit' ),
-				esc_html__( 'Plugin Activation Error', 'cro-toolkit' ),
+				esc_html__( 'Meyvora Convert for WooCommerce requires WooCommerce to be installed and active.', 'meyvora-convert' ),
+				esc_html__( 'Plugin Activation Error', 'meyvora-convert' ),
 				array( 'back_link' => true )
 			);
 		}
@@ -53,6 +53,8 @@ class CRO_Activator {
 		// Set default options
 		self::set_default_options();
 
+		self::ensure_capability();
+
 		// Flag for post-activation redirect to onboarding (only when onboarding not already completed).
 		if ( ! get_option( 'cro_onboarding_completed', false ) ) {
 			set_transient( 'cro_activation_redirect', true, 30 );
@@ -60,6 +62,20 @@ class CRO_Activator {
 
 		// Flush rewrite rules
 		flush_rewrite_rules();
+	}
+
+	/**
+	 * Ensure administrator and shop_manager have manage_meyvora_convert. Call on activation and on plugin load
+	 * so existing installs (updated without reactivation) get the capability and the admin menu appears.
+	 */
+	public static function ensure_capability() {
+		foreach ( array( 'administrator', 'shop_manager' ) as $role_name ) {
+			$role = get_role( $role_name );
+			if ( $role ) {
+				$role->add_cap( 'manage_meyvora_convert' );
+				$role->remove_cap( 'manage_cro_toolkit' );
+			}
+		}
 	}
 
 	/**
@@ -465,22 +481,22 @@ class CRO_Activator {
 		$neutral = isset( $exit[ $tone ] ) ? $exit[ $tone ] : array();
 		return array(
 			'tone'                => $tone,
-			'headline'            => isset( $neutral['headline'] ) ? $neutral['headline'] : __( 'Before you go', 'cro-toolkit' ),
-			'subheadline'         => isset( $neutral['subheadline'] ) ? $neutral['subheadline'] : __( 'Here\'s a small thank-you for visiting', 'cro-toolkit' ),
+			'headline'            => isset( $neutral['headline'] ) ? $neutral['headline'] : __( 'Before you go', 'meyvora-convert' ),
+			'subheadline'         => isset( $neutral['subheadline'] ) ? $neutral['subheadline'] : __( 'Here\'s a small thank-you for visiting', 'meyvora-convert' ),
 			'body'                => '',
 			'image_url'           => '',
-			'cta_text'            => isset( $neutral['cta_text'] ) ? $neutral['cta_text'] : __( 'Claim offer', 'cro-toolkit' ),
+			'cta_text'            => isset( $neutral['cta_text'] ) ? $neutral['cta_text'] : __( 'Claim offer', 'meyvora-convert' ),
 			'cta_url'             => '',
 			'show_email_field'    => true,
-			'email_placeholder'   => __( 'Enter your email', 'cro-toolkit' ),
+			'email_placeholder'   => __( 'Enter your email', 'meyvora-convert' ),
 			'show_coupon'         => true,
 			'coupon_code'         => 'SAVE10',
-			'coupon_display_text' => __( 'Use code at checkout', 'cro-toolkit' ),
+			'coupon_display_text' => __( 'Use code at checkout', 'meyvora-convert' ),
 			'show_dismiss_link'   => true,
-			'dismiss_text'        => isset( $neutral['dismiss_text'] ) ? $neutral['dismiss_text'] : __( 'No thanks', 'cro-toolkit' ),
+			'dismiss_text'        => isset( $neutral['dismiss_text'] ) ? $neutral['dismiss_text'] : __( 'No thanks', 'meyvora-convert' ),
 			'show_countdown'      => false,
 			'countdown_minutes'   => 15,
-			'success_message'     => __( 'Check your email for your code.', 'cro-toolkit' ),
+			'success_message'     => __( 'Check your email for your code.', 'meyvora-convert' ),
 		);
 	}
 

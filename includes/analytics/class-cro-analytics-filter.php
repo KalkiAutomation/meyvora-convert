@@ -2,7 +2,7 @@
 /**
  * Filter bad analytics data
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -110,7 +110,7 @@ class CRO_Analytics_Filter {
 			return false;
 		}
 
-		return current_user_can( 'manage_woocommerce' );
+		return current_user_can( 'manage_meyvora_convert' );
 	}
 
 	/**

@@ -5,7 +5,7 @@
  * Compact cookie-based visitor state (vid, fs, sc, ls, etc.). Tracks sessions,
  * campaigns shown/dismissed/converted, email capture, and coupon use.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

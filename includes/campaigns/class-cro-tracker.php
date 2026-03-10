@@ -2,7 +2,7 @@
 /**
  * Campaign tracking
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -120,7 +120,7 @@ class CRO_Tracker {
 		// Rate limit by IP to prevent abuse (30 requests per 60 seconds per IP).
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_track_' . $ip, 30, 60 ) ) {
-			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'cro-toolkit' ) ), 429 );
+			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'meyvora-convert' ) ), 429 );
 		}
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
@@ -137,10 +137,10 @@ class CRO_Tracker {
 		$event_data = $this->sanitize_event_data( $event_data );
 
 		if ( empty( $event_type ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid data.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid data.', 'meyvora-convert' ) ) );
 		}
 		if ( $source_type === 'campaign' && empty( $campaign_id ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid data.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid data.', 'meyvora-convert' ) ) );
 		}
 
 		$result = $this->save_event( $campaign_id, $event_type, $event_data, $source_type, $source_id );
@@ -159,9 +159,9 @@ class CRO_Tracker {
 		}
 
 		if ( $result ) {
-			wp_send_json_success( array( 'message' => __( 'Event tracked.', 'cro-toolkit' ) ) );
+			wp_send_json_success( array( 'message' => __( 'Event tracked.', 'meyvora-convert' ) ) );
 		} else {
-			wp_send_json_error( array( 'message' => __( 'Failed to track event.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Failed to track event.', 'meyvora-convert' ) ) );
 		}
 	}
 

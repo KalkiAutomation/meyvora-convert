@@ -2,7 +2,7 @@
 /**
  * Human-readable summaries for offers (conditions, reward). Max 80 chars, safe for output.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -117,20 +117,20 @@ class CRO_Offer_Presenter {
 		if ( $min_cart > 0 && $max_cart > 0 ) {
 			$parts[] = sprintf(
 				/* translators: 1: min price, 2: max price */
-				__( 'Cart %1$s–%2$s', 'cro-toolkit' ),
+				__( 'Cart %1$s–%2$s', 'meyvora-convert' ),
 				self::format_price( $min_cart ),
 				self::format_price( $max_cart )
 			);
 		} elseif ( $min_cart > 0 ) {
 			$parts[] = sprintf(
 				/* translators: %s: minimum price */
-				__( 'Cart ≥ %s', 'cro-toolkit' ),
+				__( 'Cart ≥ %s', 'meyvora-convert' ),
 				self::format_price( $min_cart )
 			);
 		} elseif ( $max_cart > 0 ) {
 			$parts[] = sprintf(
 				/* translators: %s: maximum price */
-				__( 'Cart ≤ %s', 'cro-toolkit' ),
+				__( 'Cart ≤ %s', 'meyvora-convert' ),
 				self::format_price( $max_cart )
 			);
 		}
@@ -139,20 +139,20 @@ class CRO_Offer_Presenter {
 		if ( $min_items > 0 ) {
 			$parts[] = sprintf(
 				/* translators: %d: number of items */
-				_n( '%d item', '%d items', $min_items, 'cro-toolkit' ),
+				_n( '%d item', '%d items', $min_items, 'meyvora-convert' ),
 				$min_items
 			);
 		}
 
 		if ( ! empty( $c['first_time_customer'] ) ) {
-			$parts[] = __( 'First-time customer', 'cro-toolkit' );
+			$parts[] = __( 'First-time customer', 'meyvora-convert' );
 		}
 
 		$returning = isset( $c['returning_customer_min_orders'] ) ? (int) $c['returning_customer_min_orders'] : 0;
 		if ( $returning > 0 ) {
 			$parts[] = sprintf(
 				/* translators: %d: minimum order count */
-				__( 'Returning customer (≥%d orders)', 'cro-toolkit' ),
+				__( 'Returning customer (≥%d orders)', 'meyvora-convert' ),
 				$returning
 			);
 		}
@@ -161,7 +161,7 @@ class CRO_Offer_Presenter {
 		if ( $lifetime > 0 ) {
 			$parts[] = sprintf(
 				/* translators: %s: minimum spend amount */
-				__( 'VIP spend ≥ %s', 'cro-toolkit' ),
+				__( 'VIP spend ≥ %s', 'meyvora-convert' ),
 				self::format_price( $lifetime )
 			);
 		}
@@ -169,42 +169,42 @@ class CRO_Offer_Presenter {
 		$allowed = isset( $c['allowed_roles'] ) && is_array( $c['allowed_roles'] ) ? array_filter( $c['allowed_roles'] ) : array();
 		$excluded = isset( $c['excluded_roles'] ) && is_array( $c['excluded_roles'] ) ? array_filter( $c['excluded_roles'] ) : array();
 		if ( ! empty( $allowed ) && ! in_array( 'guest', array_map( 'strtolower', $allowed ), true ) ) {
-			$parts[] = __( 'Logged-in only', 'cro-toolkit' );
+			$parts[] = __( 'Logged-in only', 'meyvora-convert' );
 		} elseif ( ! empty( $excluded ) ) {
-			$parts[] = __( 'Role restrictions', 'cro-toolkit' );
+			$parts[] = __( 'Role restrictions', 'meyvora-convert' );
 		}
 
 		$inc_cats = isset( $c['include_categories'] ) && is_array( $c['include_categories'] ) ? array_filter( array_map( 'absint', $c['include_categories'] ) ) : array();
 		if ( ! empty( $inc_cats ) ) {
-			$parts[] = sprintf( __( 'Categories only (%d)', 'cro-toolkit' ), count( $inc_cats ) );
+			$parts[] = sprintf( __( 'Categories only (%d)', 'meyvora-convert' ), count( $inc_cats ) );
 		}
 		$exc_cats = isset( $c['exclude_categories'] ) && is_array( $c['exclude_categories'] ) ? array_filter( array_map( 'absint', $c['exclude_categories'] ) ) : array();
 		if ( ! empty( $exc_cats ) ) {
-			$parts[] = sprintf( __( 'Excl. categories (%d)', 'cro-toolkit' ), count( $exc_cats ) );
+			$parts[] = sprintf( __( 'Excl. categories (%d)', 'meyvora-convert' ), count( $exc_cats ) );
 		}
 		$inc_prod = isset( $c['include_products'] ) && is_array( $c['include_products'] ) ? array_filter( array_map( 'absint', $c['include_products'] ) ) : array();
 		if ( ! empty( $inc_prod ) ) {
-			$parts[] = sprintf( __( 'Products only (%d)', 'cro-toolkit' ), count( $inc_prod ) );
+			$parts[] = sprintf( __( 'Products only (%d)', 'meyvora-convert' ), count( $inc_prod ) );
 		}
 		$exc_prod = isset( $c['exclude_products'] ) && is_array( $c['exclude_products'] ) ? array_filter( array_map( 'absint', $c['exclude_products'] ) ) : array();
 		if ( ! empty( $exc_prod ) ) {
-			$parts[] = sprintf( __( 'Excl. products (%d)', 'cro-toolkit' ), count( $exc_prod ) );
+			$parts[] = sprintf( __( 'Excl. products (%d)', 'meyvora-convert' ), count( $exc_prod ) );
 		}
 		if ( ! empty( $c['exclude_sale_items'] ) ) {
-			$parts[] = __( 'No sale items', 'cro-toolkit' );
+			$parts[] = __( 'No sale items', 'meyvora-convert' );
 		}
 		$min_qty_cat = isset( $c['min_qty_for_category'] ) && is_array( $c['min_qty_for_category'] ) ? $c['min_qty_for_category'] : array();
 		if ( ! empty( $min_qty_cat ) ) {
 			$n = count( $min_qty_cat );
-			$parts[] = sprintf( _n( 'Min qty for category (%d)', 'Min qty for categories (%d)', $n, 'cro-toolkit' ), $n );
+			$parts[] = sprintf( _n( 'Min qty for category (%d)', 'Min qty for categories (%d)', $n, 'meyvora-convert' ), $n );
 		}
 		$cart_cat = isset( $c['cart_contains_category'] ) && is_array( $c['cart_contains_category'] ) ? array_filter( array_map( 'absint', $c['cart_contains_category'] ) ) : array();
 		if ( ! empty( $cart_cat ) ) {
-			$parts[] = sprintf( __( 'Cart has category (%d)', 'cro-toolkit' ), count( $cart_cat ) );
+			$parts[] = sprintf( __( 'Cart has category (%d)', 'meyvora-convert' ), count( $cart_cat ) );
 		}
 
 		if ( empty( $parts ) ) {
-			return __( 'Any cart', 'cro-toolkit' );
+			return __( 'Any cart', 'meyvora-convert' );
 		}
 
 		$sep = ' • ';
@@ -232,41 +232,41 @@ class CRO_Offer_Presenter {
 
 		$reward_part = '';
 		if ( $type === 'free_shipping' ) {
-			$reward_part = __( 'Free shipping', 'cro-toolkit' );
+			$reward_part = __( 'Free shipping', 'meyvora-convert' );
 		} elseif ( $type === 'percent' ) {
 			$reward_part = sprintf(
 				/* translators: %s: percentage number */
-				__( '%s%% off', 'cro-toolkit' ),
+				__( '%s%% off', 'meyvora-convert' ),
 				number_format_i18n( $amount, 0 )
 			);
 		} elseif ( $type === 'fixed' ) {
 			$reward_part = sprintf(
 				/* translators: %s: fixed amount (e.g. $5) */
-				__( '%s off', 'cro-toolkit' ),
+				__( '%s off', 'meyvora-convert' ),
 				self::format_price( $amount )
 			);
 		} else {
-			$reward_part = __( 'Discount', 'cro-toolkit' );
+			$reward_part = __( 'Discount', 'meyvora-convert' );
 		}
 
 		$extra = array();
 		if ( $ttl > 0 ) {
 			$extra[] = sprintf(
 				/* translators: %d: hours */
-				__( 'Expires in %dh', 'cro-toolkit' ),
+				__( 'Expires in %dh', 'meyvora-convert' ),
 				$ttl
 			);
 		}
 		if ( $single ) {
-			$extra[] = __( 'Single-use', 'cro-toolkit' );
+			$extra[] = __( 'Single-use', 'meyvora-convert' );
 		}
 		$apply_cats = isset( $offer['apply_to_categories'] ) && is_array( $offer['apply_to_categories'] ) ? array_filter( array_map( 'absint', $offer['apply_to_categories'] ) ) : array();
 		$apply_prod = isset( $offer['apply_to_products'] ) && is_array( $offer['apply_to_products'] ) ? array_filter( array_map( 'absint', $offer['apply_to_products'] ) ) : array();
 		if ( ! empty( $apply_cats ) ) {
-			$extra[] = sprintf( _n( 'Applies to %d category', 'Applies to %d categories', count( $apply_cats ), 'cro-toolkit' ), count( $apply_cats ) );
+			$extra[] = sprintf( _n( 'Applies to %d category', 'Applies to %d categories', count( $apply_cats ), 'meyvora-convert' ), count( $apply_cats ) );
 		}
 		if ( ! empty( $apply_prod ) ) {
-			$extra[] = sprintf( _n( 'Applies to %d product', 'Applies to %d products', count( $apply_prod ), 'cro-toolkit' ), count( $apply_prod ) );
+			$extra[] = sprintf( _n( 'Applies to %d product', 'Applies to %d products', count( $apply_prod ), 'meyvora-convert' ), count( $apply_prod ) );
 		}
 
 		if ( ! empty( $extra ) ) {

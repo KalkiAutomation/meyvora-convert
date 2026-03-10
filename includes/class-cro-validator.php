@@ -4,7 +4,7 @@
  *
  * Comprehensive input validation for all user inputs
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -24,20 +24,20 @@ class CRO_Validator {
 		self::$errors = array();
 
 		if ( empty( $data['name'] ) ) {
-			self::$errors['name'] = __( 'Campaign name is required', 'cro-toolkit' );
+			self::$errors['name'] = __( 'Campaign name is required', 'meyvora-convert' );
 		} elseif ( strlen( $data['name'] ) > 255 ) {
-			self::$errors['name'] = __( 'Campaign name is too long (max 255 characters)', 'cro-toolkit' );
+			self::$errors['name'] = __( 'Campaign name is too long (max 255 characters)', 'meyvora-convert' );
 		}
 
 		$valid_statuses = array( 'draft', 'active', 'paused', 'archived' );
 		if ( ! empty( $data['status'] ) && ! in_array( $data['status'], $valid_statuses, true ) ) {
-			self::$errors['status'] = __( 'Invalid campaign status', 'cro-toolkit' );
+			self::$errors['status'] = __( 'Invalid campaign status', 'meyvora-convert' );
 		}
 
 		if ( isset( $data['priority'] ) ) {
 			$priority = (int) $data['priority'];
 			if ( $priority < 1 || $priority > 100 ) {
-				self::$errors['priority'] = __( 'Priority must be between 1 and 100', 'cro-toolkit' );
+				self::$errors['priority'] = __( 'Priority must be between 1 and 100', 'meyvora-convert' );
 			}
 		}
 
@@ -47,20 +47,20 @@ class CRO_Validator {
 			if ( $content ) {
 				if ( ! empty( $content['coupon_code'] ) ) {
 					if ( ! self::is_valid_coupon_code( $content['coupon_code'] ) ) {
-						self::$errors['coupon_code'] = __( 'Invalid coupon code format', 'cro-toolkit' );
+						self::$errors['coupon_code'] = __( 'Invalid coupon code format', 'meyvora-convert' );
 					}
 				}
 
 				if ( isset( $content['countdown_minutes'] ) ) {
 					$minutes = (int) $content['countdown_minutes'];
 					if ( $minutes < 1 || $minutes > 1440 ) {
-						self::$errors['countdown_minutes'] = __( 'Countdown must be between 1 and 1440 minutes', 'cro-toolkit' );
+						self::$errors['countdown_minutes'] = __( 'Countdown must be between 1 and 1440 minutes', 'meyvora-convert' );
 					}
 				}
 
 				if ( ! empty( $content['cta_url'] ) && ( $content['cta_action'] ?? '' ) === 'url' ) {
 					if ( ! filter_var( $content['cta_url'], FILTER_VALIDATE_URL ) ) {
-						self::$errors['cta_url'] = __( 'Invalid URL format', 'cro-toolkit' );
+						self::$errors['cta_url'] = __( 'Invalid URL format', 'meyvora-convert' );
 					}
 				}
 			}
@@ -73,14 +73,14 @@ class CRO_Validator {
 				$color_fields = array( 'bg_color', 'text_color', 'headline_color', 'button_bg_color', 'button_text_color' );
 				foreach ( $color_fields as $field ) {
 					if ( ! empty( $styling[ $field ] ) && ! self::is_valid_color( $styling[ $field ] ) ) {
-						self::$errors[ $field ] = sprintf( __( 'Invalid color format for %s', 'cro-toolkit' ), $field );
+						self::$errors[ $field ] = sprintf( __( 'Invalid color format for %s', 'meyvora-convert' ), $field );
 					}
 				}
 
 				if ( isset( $styling['border_radius'] ) ) {
 					$radius = (int) $styling['border_radius'];
 					if ( $radius < 0 || $radius > 50 ) {
-						self::$errors['border_radius'] = __( 'Border radius must be between 0 and 50', 'cro-toolkit' );
+						self::$errors['border_radius'] = __( 'Border radius must be between 0 and 50', 'meyvora-convert' );
 					}
 				}
 			}
@@ -99,24 +99,24 @@ class CRO_Validator {
 		self::$errors = array();
 
 		if ( empty( $data['name'] ) ) {
-			self::$errors['name'] = __( 'Test name is required', 'cro-toolkit' );
+			self::$errors['name'] = __( 'Test name is required', 'meyvora-convert' );
 		}
 
 		if ( empty( $data['campaign_id'] ) || ! is_numeric( $data['campaign_id'] ) ) {
-			self::$errors['campaign_id'] = __( 'Valid campaign is required', 'cro-toolkit' );
+			self::$errors['campaign_id'] = __( 'Valid campaign is required', 'meyvora-convert' );
 		}
 
 		if ( isset( $data['min_sample_size'] ) ) {
 			$sample = (int) $data['min_sample_size'];
 			if ( $sample < 10 || $sample > 100000 ) {
-				self::$errors['min_sample_size'] = __( 'Sample size must be between 10 and 100,000', 'cro-toolkit' );
+				self::$errors['min_sample_size'] = __( 'Sample size must be between 10 and 100,000', 'meyvora-convert' );
 			}
 		}
 
 		if ( isset( $data['confidence_level'] ) ) {
 			$valid_levels = array( 80, 85, 90, 95, 99 );
 			if ( ! in_array( (int) $data['confidence_level'], $valid_levels, true ) ) {
-				self::$errors['confidence_level'] = __( 'Invalid confidence level', 'cro-toolkit' );
+				self::$errors['confidence_level'] = __( 'Invalid confidence level', 'meyvora-convert' );
 			}
 		}
 

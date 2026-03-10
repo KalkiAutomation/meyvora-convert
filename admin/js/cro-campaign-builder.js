@@ -1396,7 +1396,7 @@
       }
 
       wp.apiFetch({
-        path: "cro-toolkit/v1/preview",
+        path: "meyvora-convert/v1/preview",
         method: "POST",
         data: { campaign_data: this.campaignData },
       })
@@ -1468,7 +1468,7 @@
       }
 
       wp.apiFetch({
-        path: "cro-toolkit/v1/preview",
+        path: "meyvora-convert/v1/preview",
         method: "POST",
         data: { campaign_data: this.campaignData },
       })

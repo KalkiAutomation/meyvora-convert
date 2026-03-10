@@ -2,7 +2,7 @@
 /**
  * Centralized settings management
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -59,16 +59,16 @@ class CRO_Settings {
 		$this->load_settings();
 	}
 
+	// Loads all settings at once to avoid per-key queries (N+1 prevention).
 	/**
-	 * Load autoloaded settings from database.
+	 * Load all settings from database.
 	 */
 	private function load_settings() {
 		global $wpdb;
 
 		$results = $wpdb->get_results(
 			"SELECT setting_group, setting_key, setting_value 
-			FROM {$this->table_name} 
-			WHERE autoload = 'yes'",
+			FROM {$this->table_name}",
 			OBJECT
 		);
 
@@ -102,24 +102,15 @@ class CRO_Settings {
 			return $this->settings[ $group ][ $key ];
 		}
 
-		// Try loading from DB if not in cache.
-		global $wpdb;
-		$value = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT setting_value FROM {$this->table_name} 
-				WHERE setting_group = %s AND setting_key = %s",
-				$group,
-				$key
-			)
-		);
-
-		if ( null !== $value && '' !== $value ) {
-			$unserialized = maybe_unserialize( $value );
-			$this->settings[ $group ][ $key ] = $unserialized;
-			return $unserialized;
-		}
-
 		return $default;
+	}
+
+	/**
+	 * Reload all settings from the database (clears in-memory cache and loads again).
+	 */
+	public function reload() {
+		$this->settings = array();
+		$this->load_settings();
 	}
 
 	/**
@@ -273,16 +264,16 @@ class CRO_Settings {
 	private function get_cart_optimizer_defaults() {
 		return array(
 			'show_trust_under_total' => false,
-			'trust_message'         => __( 'Secure payment - Fast shipping - Easy returns', 'cro-toolkit' ),
+			'trust_message'         => __( 'Secure payment - Fast shipping - Easy returns', 'meyvora-convert' ),
 			'show_urgency'           => false,
-			'urgency_message'        => __( 'Items in your cart are in high demand!', 'cro-toolkit' ),
+			'urgency_message'        => __( 'Items in your cart are in high demand!', 'meyvora-convert' ),
 			'show_benefits'          => false,
 			'benefits_list'          => array(),
 			'sticky_checkout_button'  => false,
-			'checkout_button_text'   => __( 'Proceed to Checkout', 'cro-toolkit' ),
+			'checkout_button_text'   => __( 'Proceed to Checkout', 'meyvora-convert' ),
 			'exit_intent_nudge'       => false,
-			'exit_intent_message'     => __( 'Complete your order now — your discount is ready', 'cro-toolkit' ),
-			'exit_intent_cta'         => __( 'Complete order', 'cro-toolkit' ),
+			'exit_intent_message'     => __( 'Complete your order now — your discount is ready', 'meyvora-convert' ),
+			'exit_intent_cta'         => __( 'Complete order', 'meyvora-convert' ),
 		);
 	}
 
@@ -369,10 +360,10 @@ class CRO_Settings {
 			'move_coupon_to_top'       => false,
 			'add_trust_message'        => false,
 			'show_trust_message'       => false,
-			'trust_message_text'       => __( 'Secure checkout - Your data is protected', 'cro-toolkit' ),
+			'trust_message_text'       => __( 'Secure checkout - Your data is protected', 'meyvora-convert' ),
 			'show_secure_badge'        => false,
 			'show_guarantee'            => false,
-			'guarantee_text'            => __( '30-day money-back guarantee', 'cro-toolkit' ),
+			'guarantee_text'            => __( '30-day money-back guarantee', 'meyvora-convert' ),
 			'autofocus_first_field'    => true,
 			'inline_field_validation'  => true,
 			'inline_validation'        => true,
@@ -470,7 +461,7 @@ class CRO_Settings {
 			'per_category_discount'          => array(),
 			'generate_coupon_for_email'     => 1,
 			'per_product_custom_discount'   => array(),
-			'email_subject_template'        => __( 'You left something in your cart – {store_name}', 'cro-toolkit' ),
+			'email_subject_template'        => __( 'You left something in your cart – {store_name}', 'meyvora-convert' ),
 			'email_body_template'           => '',
 		);
 	}

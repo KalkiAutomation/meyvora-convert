@@ -2,7 +2,7 @@
  * CRO Admin UI – Design system for Dashboard, Offers, Abandoned Carts, etc.
  * Uses WP admin styles (card, notice, button) with tokens and reusable classes.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 /* -------------------------------------------------------------------------
@@ -439,6 +439,10 @@ table.cro-table {
 .cro-table-actions,
 .cro-table .cro-table-actions {
   white-space: nowrap;
+}
+
+.cro-inline-form {
+  display: inline;
 }
 
 .cro-table-action-link,

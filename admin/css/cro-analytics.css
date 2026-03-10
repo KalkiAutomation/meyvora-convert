@@ -94,6 +94,16 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
+.cro-kpi-card--revenue .cro-kpi-change--up {
+  background: rgba(212, 237, 218, 0.25);
+  color: #a3d9b1;
+}
+
+.cro-kpi-card--revenue .cro-kpi-change--down {
+  background: rgba(248, 215, 218, 0.25);
+  color: #f5a3a8;
+}
+
 .cro-kpi-icon {
   font-size: 28px;
   line-height: 1;
@@ -122,19 +132,24 @@
 
 .cro-kpi-change {
   display: inline-block;
-  font-size: 11px;
-  margin-top: 6px;
-  padding: 2px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  padding: 2px 8px;
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.06);
 }
 
-.cro-kpi-change.positive {
-  color: #00a32a;
+.cro-kpi-change.positive,
+.cro-kpi-change--up {
+  background: #d4edda;
+  color: #155724;
 }
 
-.cro-kpi-change.negative {
-  color: #d63638;
+.cro-kpi-change.negative,
+.cro-kpi-change--down {
+  background: #f8d7da;
+  color: #721c24;
 }
 
 /* Stats Grid (secondary) */

@@ -1,11 +1,11 @@
 <?php
 /**
- * CRO Toolkit Hooks Reference
+ * Meyvora Convert Hooks Reference
  *
  * Documents all action and filter hooks. Use these to extend functionality
  * without modifying core code.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -35,7 +35,7 @@ class CRO_Hooks {
 				// Admin/UI.
 				'cro_admin_before_page' => array(
 					'description' => 'Fires before a CRO admin page content is rendered (after layout wrapper opens).',
-					'params'      => array( '$page_slug' => 'Current admin page slug (e.g. cro-toolkit, cro-offers, cro-ab-tests).' ),
+					'params'      => array( '$page_slug' => 'Current admin page slug (e.g. meyvora-convert, cro-offers, cro-ab-tests).' ),
 				),
 				'cro_admin_after_page' => array(
 					'description' => 'Fires after a CRO admin page content is rendered (before layout wrapper closes).',

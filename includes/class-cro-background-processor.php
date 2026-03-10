@@ -4,7 +4,7 @@
  *
  * Handles heavy tasks in background via WP Cron
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -21,6 +21,7 @@ class CRO_Background_Processor {
 		add_action( 'cro_process_background_queue', array( __CLASS__, 'process_queue' ) );
 		add_action( 'cro_cleanup_old_events', array( __CLASS__, 'cleanup_old_events' ) );
 		add_action( 'cro_aggregate_daily_stats', array( __CLASS__, 'aggregate_daily_stats' ) );
+		add_action( 'cro_check_ab_winners', array( __CLASS__, 'check_ab_winners' ) );
 
 		if ( ! wp_next_scheduled( 'cro_process_background_queue' ) ) {
 			wp_schedule_event( time(), 'every_minute', 'cro_process_background_queue' );
@@ -31,8 +32,25 @@ class CRO_Background_Processor {
 		if ( ! wp_next_scheduled( 'cro_aggregate_daily_stats' ) ) {
 			wp_schedule_event( time(), 'daily', 'cro_aggregate_daily_stats' );
 		}
+		if ( ! wp_next_scheduled( 'cro_check_ab_winners' ) ) {
+			wp_schedule_event( time(), 'daily', 'cro_check_ab_winners' );
+		}
 
 		add_filter( 'cron_schedules', array( __CLASS__, 'add_cron_interval' ) );
+	}
+
+	/**
+	 * Check running A/B tests for a statistically significant winner and auto-apply if enabled.
+	 */
+	public static function check_ab_winners() {
+		if ( ! class_exists( 'CRO_AB_Test' ) ) {
+			return;
+		}
+		$ab             = new CRO_AB_Test();
+		$running_tests  = $ab->get_all_by_status( 'running' );
+		foreach ( $running_tests as $test ) {
+			$ab->maybe_auto_apply_winner( $test->id );
+		}
 	}
 
 	/**
@@ -44,7 +62,7 @@ class CRO_Background_Processor {
 	public static function add_cron_interval( $schedules ) {
 		$schedules['every_minute'] = array(
 			'interval' => 60,
-			'display'  => __( 'Every Minute', 'cro-toolkit' ),
+			'display'  => __( 'Every Minute', 'meyvora-convert' ),
 		);
 		return $schedules;
 	}

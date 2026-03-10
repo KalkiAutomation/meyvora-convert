@@ -1,19 +1,19 @@
 <?php
 /**
- * Plugin Name: CRO Toolkit for WooCommerce
- * Plugin URI: 
- * Description: Lightweight conversion rate optimization toolkit for WooCommerce - sticky CTAs, exit intent popups, cart optimizers, and checkout improvements.
+ * Plugin Name: Meyvora Convert
+ * Plugin URI:
+ * Description: Complete conversion rate optimization for WooCommerce — exit intent popups, abandoned cart recovery, sticky cart, shipping bar, trust badges, dynamic offers, A/B testing, and analytics. Built for Meyvora stores and beyond.
  * Version: 1.0.0
  * Author: Your Name
- * Author URI: 
+ * Author URI:
  * License: GPL v2 or later
- * Text Domain: cro-toolkit
+ * Text Domain: meyvora-convert
  * Domain Path: /languages
- * Requires at least: 5.8
+ * Requires at least: 6.2
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  * WC requires at least: 5.0
- * WC tested up to: 9.0
+ * WC tested up to: 9.4
  */
 
 // If this file is called directly, abort.
@@ -28,6 +28,7 @@ define( 'CRO_VERSION', '1.0.0' );
 define( 'CRO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CRO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'CRO_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
+define( 'MEYVORA_CONVERT_VERSION', '1.0.0' );
 
 // Error handler (load early so plugin errors are caught)
 require_once CRO_PLUGIN_DIR . 'includes/class-cro-error-handler.php';
@@ -41,6 +42,7 @@ require_once CRO_PLUGIN_DIR . 'includes/models/class-cro-campaign-model.php';
 require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-rule-engine.php';
 require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-intent-scorer.php';
 require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-decision.php';
+// Canonical decision engine — do not re-add includes/class-cro-decision-engine.php
 require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-decision-engine.php';
 
 // A/B Testing
@@ -49,7 +51,7 @@ require_once CRO_PLUGIN_DIR . 'includes/ab-testing/class-cro-ab-statistics.php';
 
 // Load textdomain at init priority 0 so WP 6.7+ does not trigger "translation too early" (translations must be at init or later).
 add_action( 'init', function() {
-	load_plugin_textdomain( 'cro-toolkit', false, dirname( CRO_PLUGIN_BASENAME ) . '/languages/' );
+	load_plugin_textdomain( 'meyvora-convert', false, dirname( CRO_PLUGIN_BASENAME ) . '/languages/' );
 }, 0 );
 
 add_action( 'plugins_loaded', function() {
@@ -69,7 +71,7 @@ add_action( 'cro_campaign_shown_this_pageview', function( $campaign_id ) {
 
 /**
  * Declare compatibility with WooCommerce HPOS (High-Performance Order Storage).
- * CRO Toolkit uses wc_get_order() and order CRUD APIs only, not post/postmeta.
+ * Meyvora Convert uses wc_get_order() and order CRUD APIs only, not post/postmeta.
  */
 add_action( 'before_woocommerce_init', function() {
 	if ( class_exists( \Automattic\WooCommerce\Utilities\FeaturesUtil::class ) ) {
@@ -81,8 +83,39 @@ add_action( 'before_woocommerce_init', function() {
 require_once CRO_PLUGIN_DIR . 'includes/class-cro-database.php';
 require_once CRO_PLUGIN_DIR . 'includes/class-cro-activator.php';
 
-register_activation_hook( __FILE__, array( 'CRO_Activator', 'activate' ) );
-register_deactivation_hook( __FILE__, 'deactivate_cro_toolkit' );
+// Ensure manage_meyvora_convert capability is granted to admin/shop_manager on every load (fixes menu for existing installs that didn't reactivate).
+add_action( 'init', array( 'CRO_Activator', 'ensure_capability' ), 1 );
+
+require_once CRO_PLUGIN_DIR . 'includes/class-cro-privacy.php';
+add_action( 'init', array( 'CRO_Privacy', 'init' ), 5 );
+
+register_activation_hook( __FILE__, 'cro_handle_activation' );
+
+function cro_handle_activation( $network_wide ) {
+	if ( $network_wide && is_multisite() ) {
+		// Deactivate self to prevent partial state, then show a clear error.
+		deactivate_plugins( CRO_PLUGIN_BASENAME );
+		wp_die(
+			esc_html__( 'Meyvora Convert does not support network-wide activation. Please activate it individually on each site from that site\'s Plugins page.', 'meyvora-convert' ),
+			esc_html__( 'Network Activation Not Supported', 'meyvora-convert' ),
+			array( 'back_link' => true )
+		);
+	}
+	CRO_Activator::activate();
+}
+
+// Multisite: create tables for new sites when plugin is per-site active.
+add_action( 'wp_initialize_site', function( $new_site ) {
+	if ( ! is_plugin_active_for_network( CRO_PLUGIN_BASENAME ) && is_plugin_active( CRO_PLUGIN_BASENAME ) ) {
+		switch_to_blog( $new_site->blog_id );
+		if ( class_exists( 'CRO_Database' ) ) {
+			CRO_Database::create_tables();
+		}
+		restore_current_blog();
+	}
+} );
+
+register_deactivation_hook( __FILE__, 'deactivate_meyvora_convert' );
 
 /**
  * Check if WooCommerce is active
@@ -97,7 +130,7 @@ function cro_is_woocommerce_active() {
 function cro_woocommerce_missing_notice() {
 	?>
 	<div class="notice notice-error">
-		<p><?php esc_html_e( 'CRO Toolkit for WooCommerce requires WooCommerce to be installed and active.', 'cro-toolkit' ); ?></p>
+		<p><?php esc_html_e( 'Meyvora Convert requires WooCommerce to be installed and active.', 'meyvora-convert' ); ?></p>
 	</div>
 	<?php
 }
@@ -109,8 +142,8 @@ function cro_activation_check() {
 	if ( ! cro_is_woocommerce_active() ) {
 		deactivate_plugins( CRO_PLUGIN_BASENAME );
 		wp_die(
-			esc_html__( 'CRO Toolkit for WooCommerce requires WooCommerce to be installed and active. Please install WooCommerce first.', 'cro-toolkit' ),
-			esc_html__( 'Plugin Activation Error', 'cro-toolkit' ),
+			esc_html__( 'Meyvora Convert requires WooCommerce to be installed and active. Please install WooCommerce first.', 'meyvora-convert' ),
+			esc_html__( 'Plugin Activation Error', 'meyvora-convert' ),
 			array( 'back_link' => true )
 		);
 	}
@@ -122,8 +155,8 @@ function cro_activation_check() {
 function cro_prevent_woocommerce_deactivation( $plugin ) {
 	if ( 'woocommerce/woocommerce.php' === $plugin && is_plugin_active( CRO_PLUGIN_BASENAME ) ) {
 		wp_die(
-			esc_html__( 'CRO Toolkit for WooCommerce requires WooCommerce. Please deactivate CRO Toolkit first.', 'cro-toolkit' ),
-			esc_html__( 'Plugin Deactivation Error', 'cro-toolkit' ),
+			esc_html__( 'Meyvora Convert for WooCommerce requires WooCommerce. Please deactivate Meyvora Convert first.', 'meyvora-convert' ),
+			esc_html__( 'Plugin Deactivation Error', 'meyvora-convert' ),
 			array( 'back_link' => true )
 		);
 	}
@@ -143,7 +176,7 @@ add_action( 'admin_init', 'cro_admin_notices' );
 /**
  * The code that runs during plugin deactivation.
  */
-function deactivate_cro_toolkit() {
+function deactivate_meyvora_convert() {
 	require_once CRO_PLUGIN_DIR . 'includes/class-cro-deactivator.php';
 	CRO_Deactivator::deactivate();
 }
@@ -167,14 +200,17 @@ function cro_init_plugin() {
 	 */
 	require CRO_PLUGIN_DIR . 'includes/class-cro-loader.php';
 
+	require_once CRO_PLUGIN_DIR . 'includes/class-cro-webhook.php';
+	CRO_Webhook::init();
+
 	/**
 	 * Begins execution of the plugin.
 	 */
-	function run_cro_toolkit() {
+	function run_meyvora_convert() {
 		$plugin = new CRO_Loader();
 		$plugin->run();
 	}
-	run_cro_toolkit();
+	run_meyvora_convert();
 
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-cli.php';
@@ -189,7 +225,7 @@ add_action( 'init', 'cro_init_plugin', 1 );
  */
 if ( defined( 'CRO_DEBUG' ) && CRO_DEBUG ) {
 	add_action( 'shutdown', function () {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 

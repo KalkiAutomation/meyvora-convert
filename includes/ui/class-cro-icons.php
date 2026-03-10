@@ -3,7 +3,7 @@
  * Lucide SVG icons for CRO admin and frontend.
  * All icons use currentColor and are safe for inline output.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

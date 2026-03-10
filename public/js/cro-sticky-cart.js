@@ -1,7 +1,7 @@
 /**
  * CRO Sticky Cart – show/hide bar and add-to-cart
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function($) {
 	'use strict';

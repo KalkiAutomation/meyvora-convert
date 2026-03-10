@@ -2,7 +2,7 @@
 /**
  * The admin-specific functionality of the plugin.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -42,6 +42,7 @@ class CRO_Admin {
 		add_action( 'admin_init', array( $this, 'handle_save_admin_debug' ) );
 		add_action( 'admin_init', array( $this, 'handle_repair_tables' ) );
 		add_action( 'admin_init', array( $this, 'run_selfheal_tables' ) );
+		add_action( 'admin_init', array( $this, 'handle_bulk_campaigns' ) );
 		add_action( 'admin_init', array( $this, 'handle_campaign_actions' ) );
 		add_action( 'admin_init', array( $this, 'handle_ab_test_actions' ) );
 		// Front-end error reporting (graceful error handling).
@@ -74,10 +75,10 @@ class CRO_Admin {
 	public function register_menus() {
 		// Main menu
 		add_menu_page(
-			__( 'CRO Toolkit', 'cro-toolkit' ),
-			__( 'CRO Toolkit', 'cro-toolkit' ),
-			'manage_woocommerce',
-			'cro-toolkit',
+			__( 'Meyvora Convert', 'meyvora-convert' ),
+			__( 'Meyvora', 'meyvora-convert' ),
+			'manage_meyvora_convert',
+			'meyvora-convert',
 			array( $this, 'render_dashboard' ),
 			'dashicons-chart-area',
 			56
@@ -85,30 +86,30 @@ class CRO_Admin {
 
 		// Dashboard (same as main)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Dashboard', 'cro-toolkit' ),
-			__( 'Dashboard', 'cro-toolkit' ),
-			'manage_woocommerce',
-			'cro-toolkit',
+			'meyvora-convert',
+			__( 'Dashboard', 'meyvora-convert' ),
+			__( 'Dashboard', 'meyvora-convert' ),
+			'manage_meyvora_convert',
+			'meyvora-convert',
 			array( $this, 'render_dashboard' )
 		);
 
 		// Presets
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Presets', 'cro-toolkit' ),
-			__( 'Presets', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Presets', 'meyvora-convert' ),
+			__( 'Presets', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-presets',
 			array( $this, 'render_presets' )
 		);
 
 		// Campaigns
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Campaigns', 'cro-toolkit' ),
-			__( 'Campaigns', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Campaigns', 'meyvora-convert' ),
+			__( 'Campaigns', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-campaigns',
 			array( $this, 'render_campaigns' )
 		);
@@ -116,79 +117,79 @@ class CRO_Admin {
 		// Campaign Builder (hidden from menu)
 		add_submenu_page(
 			null, // Hidden
-			__( 'Edit Campaign', 'cro-toolkit' ),
-			__( 'Edit Campaign', 'cro-toolkit' ),
-			'manage_woocommerce',
+			__( 'Edit Campaign', 'meyvora-convert' ),
+			__( 'Edit Campaign', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-campaign-edit',
 			array( $this, 'render_campaign_builder' )
 		);
 
 		// On-Page Boosters
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'On-Page Boosters', 'cro-toolkit' ),
-			__( 'On-Page Boosters', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'On-Page Boosters', 'meyvora-convert' ),
+			__( 'On-Page Boosters', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-boosters',
 			array( $this, 'render_boosters' )
 		);
 
 		// Cart Optimizer
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Cart Optimizer', 'cro-toolkit' ),
-			__( 'Cart Optimizer', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Cart Optimizer', 'meyvora-convert' ),
+			__( 'Cart Optimizer', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-cart',
 			array( $this, 'render_cart_optimizer' )
 		);
 
 		// Abandoned Carts (list)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Abandoned Carts', 'cro-toolkit' ),
-			__( 'Abandoned Carts', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Abandoned Carts', 'meyvora-convert' ),
+			__( 'Abandoned Carts', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-abandoned-carts',
 			array( $this, 'render_abandoned_carts_list' )
 		);
 
 		// Abandoned Cart Emails (templates/settings)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Abandoned Cart Emails', 'cro-toolkit' ),
-			__( 'Abandoned Cart Emails', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Abandoned Cart Emails', 'meyvora-convert' ),
+			__( 'Abandoned Cart Emails', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-abandoned-cart',
 			array( $this, 'render_abandoned_cart_emails' )
 		);
 
 		// Offers (dynamic offers config)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Offers', 'cro-toolkit' ),
-			__( 'Offers', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Offers', 'meyvora-convert' ),
+			__( 'Offers', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-offers',
 			array( $this, 'render_offers' )
 		);
 
 		// Checkout Optimizer
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Checkout Optimizer', 'cro-toolkit' ),
-			__( 'Checkout Optimizer', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Checkout Optimizer', 'meyvora-convert' ),
+			__( 'Checkout Optimizer', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-checkout',
 			array( $this, 'render_checkout_optimizer' )
 		);
 
 		// A/B Tests
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'A/B Tests', 'cro-toolkit' ),
-			__( 'A/B Tests', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'A/B Tests', 'meyvora-convert' ),
+			__( 'A/B Tests', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-ab-tests',
 			array( $this, 'render_ab_tests' )
 		);
@@ -196,9 +197,9 @@ class CRO_Admin {
 		// New A/B Test (hidden from menu but accessible)
 		add_submenu_page(
 			null, // Hidden from menu
-			__( 'Create A/B Test', 'cro-toolkit' ),
-			__( 'Create A/B Test', 'cro-toolkit' ),
-			'manage_woocommerce',
+			__( 'Create A/B Test', 'meyvora-convert' ),
+			__( 'Create A/B Test', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-ab-test-new',
 			array( $this, 'render_ab_test_new' )
 		);
@@ -206,69 +207,69 @@ class CRO_Admin {
 		// View A/B Test (hidden from menu but accessible)
 		add_submenu_page(
 			null, // Hidden from menu
-			__( 'View A/B Test', 'cro-toolkit' ),
-			__( 'View A/B Test', 'cro-toolkit' ),
-			'manage_woocommerce',
+			__( 'View A/B Test', 'meyvora-convert' ),
+			__( 'View A/B Test', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-ab-test-view',
 			array( $this, 'render_ab_test_view' )
 		);
 
 		// Analytics
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Analytics', 'cro-toolkit' ),
-			__( 'Analytics', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Analytics', 'meyvora-convert' ),
+			__( 'Analytics', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-analytics',
 			array( $this, 'render_analytics' )
 		);
 
 		// Insights
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Insights', 'cro-toolkit' ),
-			__( 'Insights', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Insights', 'meyvora-convert' ),
+			__( 'Insights', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-insights',
 			array( $this, 'render_insights' )
 		);
 
 		// Settings
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Settings', 'cro-toolkit' ),
-			__( 'Settings', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Settings', 'meyvora-convert' ),
+			__( 'Settings', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-settings',
 			array( $this, 'render_settings' )
 		);
 
 		// System Status (under Settings in menu order)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'System Status', 'cro-toolkit' ),
-			__( 'System Status', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'System Status', 'meyvora-convert' ),
+			__( 'System Status', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-system-status',
 			array( $this, 'render_system_status' )
 		);
 
 		// Tools → Import / Export
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Import / Export', 'cro-toolkit' ),
-			__( 'Tools', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Import / Export', 'meyvora-convert' ),
+			__( 'Tools', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-tools',
 			array( $this, 'render_tools' )
 		);
 
 		// Developer (hooks, templates)
 		add_submenu_page(
-			'cro-toolkit',
-			__( 'Developer', 'cro-toolkit' ),
-			__( 'Developer', 'cro-toolkit' ),
-			'manage_woocommerce',
+			'meyvora-convert',
+			__( 'Developer', 'meyvora-convert' ),
+			__( 'Developer', 'meyvora-convert' ),
+			'manage_meyvora_convert',
 			'cro-developer',
 			array( $this, 'render_developer' )
 		);
@@ -279,7 +280,7 @@ class CRO_Admin {
 	 */
 	public function render_presets() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Presets', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Presets', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-presets',
 			'primary_action'  => null,
@@ -297,9 +298,9 @@ class CRO_Admin {
 
 		if ( $onboarding_request || ! $onboarding_completed ) {
 			CRO_Admin_UI::render_page( array(
-				'title'           => __( 'Welcome to CRO Toolkit', 'cro-toolkit' ),
-				'subtitle'        => __( 'Complete these steps to get started. You can change settings anytime.', 'cro-toolkit' ),
-				'active_tab'      => 'cro-toolkit',
+				'title'           => __( 'Welcome to Meyvora Convert', 'meyvora-convert' ),
+				'subtitle'        => __( 'Complete these steps to get started. You can change settings anytime.', 'meyvora-convert' ),
+				'active_tab'      => 'meyvora-convert',
 				'primary_action'  => null,
 				'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-onboarding.php',
 				'wrap_class'      => 'cro-onboarding-page',
@@ -343,10 +344,10 @@ class CRO_Admin {
 	 */
 	public function render_abandoned_carts_list() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Abandoned Carts', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Abandoned Carts', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-abandoned-carts',
-			'primary_action'  => array( 'label' => __( 'Settings', 'cro-toolkit' ), 'href' => admin_url( 'admin.php?page=cro-abandoned-cart' ) ),
+			'primary_action'  => array( 'label' => __( 'Settings', 'meyvora-convert' ), 'href' => admin_url( 'admin.php?page=cro-abandoned-cart' ) ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-abandoned-carts-list.php',
 			'wrap_class'      => 'cro-abandoned-carts-list',
 		) );
@@ -357,10 +358,10 @@ class CRO_Admin {
 	 */
 	public function render_abandoned_cart_emails() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Abandoned Cart Emails', 'cro-toolkit' ),
-			'subtitle'        => __( 'Configure reminder emails sent when a customer leaves items in their cart. Use the placeholders below in subject and body.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Abandoned Cart Emails', 'meyvora-convert' ),
+			'subtitle'        => __( 'Configure reminder emails sent when a customer leaves items in their cart. Use the placeholders below in subject and body.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-abandoned-cart',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'cro-toolkit' ), 'form_id' => 'cro-abandoned-cart-form' ),
+			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'cro-abandoned-cart-form' ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-abandoned-cart.php',
 			'wrap_class'      => 'cro-abandoned-cart-emails',
 		) );
@@ -393,10 +394,10 @@ class CRO_Admin {
 	public function render_ab_tests() {
 		$this->handle_ab_test_actions();
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'A/B Tests', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'A/B Tests', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-ab-tests',
-			'primary_action'  => array( 'label' => __( 'New A/B Test', 'cro-toolkit' ), 'href' => admin_url( 'admin.php?page=cro-ab-test-new' ) ),
+			'primary_action'  => array( 'label' => __( 'New A/B Test', 'meyvora-convert' ), 'href' => admin_url( 'admin.php?page=cro-ab-test-new' ) ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ab-tests.php',
 			'wrap_class'      => 'cro-ab-tests-page',
 		) );
@@ -407,7 +408,7 @@ class CRO_Admin {
 	 */
 	public function render_ab_test_new() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'New A/B Test', 'cro-toolkit' ),
+			'title'           => __( 'New A/B Test', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-ab-tests',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ab-test-new.php',
@@ -420,7 +421,7 @@ class CRO_Admin {
 	 */
 	public function render_ab_test_view() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'A/B Test', 'cro-toolkit' ),
+			'title'           => __( 'A/B Test', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-ab-tests',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ab-test-view.php',
@@ -458,10 +459,10 @@ class CRO_Admin {
 			$export_url = add_query_arg( 'campaign_id', $campaign_id, $export_url );
 		}
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Analytics', 'cro-toolkit' ),
-			'subtitle'        => __( 'Track impressions, conversions, and revenue from campaigns and offers.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Analytics', 'meyvora-convert' ),
+			'subtitle'        => __( 'Track impressions, conversions, and revenue from campaigns and offers.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-analytics',
-			'primary_action'  => array( 'label' => __( 'Export events CSV', 'cro-toolkit' ), 'href' => $export_url ),
+			'primary_action'  => array( 'label' => __( 'Export events CSV', 'meyvora-convert' ), 'href' => $export_url ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-analytics.php',
 			'wrap_class'      => 'cro-analytics-page',
 		) );
@@ -472,13 +473,13 @@ class CRO_Admin {
 	 */
 	public function render_insights() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Insights', 'cro-toolkit' ),
-			'subtitle'        => __( 'Actionable recommendations from your campaigns, offers, and boosters.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Insights', 'meyvora-convert' ),
+			'subtitle'        => __( 'Actionable recommendations from your campaigns, offers, and boosters.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-insights',
 			'primary_action'  => null,
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-insights.php',
 			'wrap_class'      => 'cro-insights-page',
-			'header_pills'    => array( __( 'Last 7 days', 'cro-toolkit' ) ),
+			'header_pills'    => array( __( 'Last 7 days', 'meyvora-convert' ) ),
 		) );
 	}
 
@@ -520,8 +521,8 @@ class CRO_Admin {
 	public function enqueue_styles( $hook ) {
 		$hook = (string) ( $hook ?? '' );
 		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
-		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false );
-		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false ) );
+		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false || strpos( $hook, 'meyvora-convert' ) !== false );
+		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false || $page === 'meyvora-convert' ) );
 		if ( ! $is_cro_hook && ! $is_cro_page ) {
 			return;
 		}
@@ -594,8 +595,8 @@ class CRO_Admin {
 			);
 		}
 
-		// Dashboard (main CRO Toolkit page): KPI cards, quick actions, activity list.
-		if ( $hook === 'toplevel_page_cro-toolkit' ) {
+		// Dashboard (main Meyvora Convert page): KPI cards, quick actions, activity list.
+		if ( $hook === 'toplevel_page_meyvora-convert' ) {
 			wp_enqueue_style(
 				'cro-admin-dashboard',
 				CRO_PLUGIN_URL . 'admin/css/cro-admin-dashboard.css',
@@ -632,8 +633,8 @@ class CRO_Admin {
 	public function enqueue_scripts( $hook ) {
 		$hook = (string) ( $hook ?? '' );
 		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
-		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false );
-		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false ) );
+		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false || strpos( $hook, 'meyvora-convert' ) !== false );
+		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false || $page === 'meyvora-convert' ) );
 		if ( ! $is_cro_hook && ! $is_cro_page ) {
 			return;
 		}
@@ -655,21 +656,21 @@ class CRO_Admin {
 				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
 				'adminUrl'  => admin_url( 'admin.php' ),
 				'siteUrl'   => get_site_url(),
-				'restUrl'   => rest_url( 'cro-toolkit/v1/' ),
+				'restUrl'   => rest_url( 'meyvora-convert/v1/' ),
 				'nonce'     => wp_create_nonce( 'cro_admin_nonce' ),
 				'restNonce' => wp_create_nonce( 'wp_rest' ),
 				'currency'  => function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '',
 				'debug'     => (bool) apply_filters( 'cro_admin_debug', $cro_debug ),
 				'strings'   => array(
-					'confirmDelete' => __( 'Are you sure?', 'cro-toolkit' ),
-					'saving'        => __( 'Saving...', 'cro-toolkit' ),
-					'saved'         => __( 'Saved!', 'cro-toolkit' ),
-					'error'         => __( 'Error occurred', 'cro-toolkit' ),
-					'selectImage'   => __( 'Select or Upload Image', 'cro-toolkit' ),
-					'useImage'      => __( 'Use this image', 'cro-toolkit' ),
-					'clickToUpload' => __( 'Click to upload', 'cro-toolkit' ),
-					'previewError'  => __( 'Preview could not be opened. Please try again.', 'cro-toolkit' ),
-					'copied'        => __( 'Copied!', 'cro-toolkit' ),
+					'confirmDelete' => __( 'Are you sure?', 'meyvora-convert' ),
+					'saving'        => __( 'Saving...', 'meyvora-convert' ),
+					'saved'         => __( 'Saved!', 'meyvora-convert' ),
+					'error'         => __( 'Error occurred', 'meyvora-convert' ),
+					'selectImage'   => __( 'Select or Upload Image', 'meyvora-convert' ),
+					'useImage'      => __( 'Use this image', 'meyvora-convert' ),
+					'clickToUpload' => __( 'Click to upload', 'meyvora-convert' ),
+					'previewError'  => __( 'Preview could not be opened. Please try again.', 'meyvora-convert' ),
+					'copied'        => __( 'Copied!', 'meyvora-convert' ),
 				),
 			)
 		);
@@ -737,9 +738,9 @@ class CRO_Admin {
 				'cro-selectwoo',
 				'croSelectWoo',
 				array(
-					'placeholder'    => __( 'Search or select…', 'cro-toolkit' ),
+					'placeholder'    => __( 'Search or select…', 'meyvora-convert' ),
 					'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
-					'searchProducts'  => __( 'Search products…', 'cro-toolkit' ),
+					'searchProducts'  => __( 'Search products…', 'meyvora-convert' ),
 				)
 			);
 		}
@@ -758,66 +759,66 @@ class CRO_Admin {
 				'cro-offers',
 				'croOffersI18n',
 				array(
-					'addOffer'        => __( 'Add Offer', 'cro-toolkit' ),
-					'editOffer'       => __( 'Edit Offer', 'cro-toolkit' ),
-					'nameRequired'    => __( 'Offer name is required.', 'cro-toolkit' ),
-					'priorityInteger' => __( 'Priority must be a number.', 'cro-toolkit' ),
-					'percent1To100'   => __( 'Percent discount must be between 1 and 100.', 'cro-toolkit' ),
-					'fixedMinZero'    => __( 'Fixed discount must be 0 or greater.', 'cro-toolkit' ),
-					'ttlMin1'         => __( 'Coupon TTL must be at least 1 hour.', 'cro-toolkit' ),
-					'saving'          => __( 'Saving...', 'cro-toolkit' ),
-					'saved'           => __( 'Offer saved.', 'cro-toolkit' ),
-					'error'           => __( 'Error occurred', 'cro-toolkit' ),
-					'active'          => __( 'Active', 'cro-toolkit' ),
-					'inactive'        => __( 'Inactive', 'cro-toolkit' ),
-					'edit'            => __( 'Edit', 'cro-toolkit' ),
-					'duplicate'       => __( 'Duplicate', 'cro-toolkit' ),
-					'delete'          => __( 'Delete', 'cro-toolkit' ),
-					'offer'             => __( 'Offer', 'cro-toolkit' ),
-					'deleteConfirm'     => __( 'Delete this offer?', 'cro-toolkit' ),
-					'deleteConfirmName' => __( 'Delete offer "%s"?', 'cro-toolkit' ),
-					'close'             => __( 'Close', 'cro-toolkit' ),
-					'notifications'     => __( 'Notifications', 'cro-toolkit' ),
-					'offersUsed'      => __( 'offers used', 'cro-toolkit' ),
-					'limitReached'    => __( 'Offer limit reached (5).', 'cro-toolkit' ),
-					'noOffersYet'     => __( 'No offers yet', 'cro-toolkit' ),
-					'emptyDesc'       => __( 'Create your first offer to show a dynamic reward on cart and checkout.', 'cro-toolkit' ),
-					'createFirst'     => __( 'Create your first offer', 'cro-toolkit' ),
-					'priorityLabel'   => __( 'Priority: %s', 'cro-toolkit' ),
+					'addOffer'        => __( 'Add Offer', 'meyvora-convert' ),
+					'editOffer'       => __( 'Edit Offer', 'meyvora-convert' ),
+					'nameRequired'    => __( 'Offer name is required.', 'meyvora-convert' ),
+					'priorityInteger' => __( 'Priority must be a number.', 'meyvora-convert' ),
+					'percent1To100'   => __( 'Percent discount must be between 1 and 100.', 'meyvora-convert' ),
+					'fixedMinZero'    => __( 'Fixed discount must be 0 or greater.', 'meyvora-convert' ),
+					'ttlMin1'         => __( 'Coupon TTL must be at least 1 hour.', 'meyvora-convert' ),
+					'saving'          => __( 'Saving...', 'meyvora-convert' ),
+					'saved'           => __( 'Offer saved.', 'meyvora-convert' ),
+					'error'           => __( 'Error occurred', 'meyvora-convert' ),
+					'active'          => __( 'Active', 'meyvora-convert' ),
+					'inactive'        => __( 'Inactive', 'meyvora-convert' ),
+					'edit'            => __( 'Edit', 'meyvora-convert' ),
+					'duplicate'       => __( 'Duplicate', 'meyvora-convert' ),
+					'delete'          => __( 'Delete', 'meyvora-convert' ),
+					'offer'             => __( 'Offer', 'meyvora-convert' ),
+					'deleteConfirm'     => __( 'Delete this offer?', 'meyvora-convert' ),
+					'deleteConfirmName' => __( 'Delete offer "%s"?', 'meyvora-convert' ),
+					'close'             => __( 'Close', 'meyvora-convert' ),
+					'notifications'     => __( 'Notifications', 'meyvora-convert' ),
+					'offersUsed'      => __( 'offers used', 'meyvora-convert' ),
+					'limitReached'    => __( 'Offer limit reached (5).', 'meyvora-convert' ),
+					'noOffersYet'     => __( 'No offers yet', 'meyvora-convert' ),
+					'emptyDesc'       => __( 'Create your first offer to show a dynamic reward on cart and checkout.', 'meyvora-convert' ),
+					'createFirst'     => __( 'Create your first offer', 'meyvora-convert' ),
+					'priorityLabel'   => __( 'Priority: %s', 'meyvora-convert' ),
 					'reorderNonce'    => wp_create_nonce( 'cro_offers_ajax' ),
-					'reorderSaved'    => __( 'Order saved.', 'cro-toolkit' ),
-					'reorderError'    => __( 'Could not save order.', 'cro-toolkit' ),
-					'dragToReorder'   => __( 'Drag to reorder', 'cro-toolkit' ),
-					'moveUp'           => __( 'Move up', 'cro-toolkit' ),
-					'moveDown'         => __( 'Move down', 'cro-toolkit' ),
-					'duplicatedNotice' => __( 'Offer duplicated.', 'cro-toolkit' ),
-					'deletedNotice'    => __( 'Offer deleted.', 'cro-toolkit' ),
-					'runTest'         => __( 'Run Test', 'cro-toolkit' ),
-					'runTestLabel'    => __( 'Running...', 'cro-toolkit' ),
-					'matchingOffer'   => __( 'Matching offer:', 'cro-toolkit' ),
-					'name'            => __( 'Name', 'cro-toolkit' ),
-					'rule'            => __( 'Rule', 'cro-toolkit' ),
-					'reward'          => __( 'Reward', 'cro-toolkit' ),
-					'why'             => __( 'Checks:', 'cro-toolkit' ),
-					'noOfferMatches'  => __( 'No offer matches this context.', 'cro-toolkit' ),
-					'noEligibleOffer' => __( 'No eligible offer', 'cro-toolkit' ),
-					'suggestionsLabel'=> __( 'Suggestions:', 'cro-toolkit' ),
-					'expectedLabel'   => __( 'Expected', 'cro-toolkit' ),
-					'actualLabel'     => __( 'Actual', 'cro-toolkit' ),
-					'summaryCartMin'   => __( 'Cart ≥ %s', 'cro-toolkit' ),
-					'summaryCartRange' => __( 'Cart %s – %s', 'cro-toolkit' ),
-					'summaryItems'     => __( '%d items', 'cro-toolkit' ),
-					'summaryFirstTime' => __( 'First-time customer', 'cro-toolkit' ),
-					'summaryReturning' => __( 'Returning customer (≥%d orders)', 'cro-toolkit' ),
-					'summaryLifetime'  => __( 'Lifetime spend ≥ %s', 'cro-toolkit' ),
-					'summaryRewardPct' => __( '%s%% off', 'cro-toolkit' ),
-					'summaryRewardFix' => __( '%s off', 'cro-toolkit' ),
-					'summaryRewardShip'=> __( 'Free shipping', 'cro-toolkit' ),
-					'summaryExpires'   => __( 'Expires %sh', 'cro-toolkit' ),
-					'summaryExcludeSale' => __( 'Exclude sale items', 'cro-toolkit' ),
+					'reorderSaved'    => __( 'Order saved.', 'meyvora-convert' ),
+					'reorderError'    => __( 'Could not save order.', 'meyvora-convert' ),
+					'dragToReorder'   => __( 'Drag to reorder', 'meyvora-convert' ),
+					'moveUp'           => __( 'Move up', 'meyvora-convert' ),
+					'moveDown'         => __( 'Move down', 'meyvora-convert' ),
+					'duplicatedNotice' => __( 'Offer duplicated.', 'meyvora-convert' ),
+					'deletedNotice'    => __( 'Offer deleted.', 'meyvora-convert' ),
+					'runTest'         => __( 'Run Test', 'meyvora-convert' ),
+					'runTestLabel'    => __( 'Running...', 'meyvora-convert' ),
+					'matchingOffer'   => __( 'Matching offer:', 'meyvora-convert' ),
+					'name'            => __( 'Name', 'meyvora-convert' ),
+					'rule'            => __( 'Rule', 'meyvora-convert' ),
+					'reward'          => __( 'Reward', 'meyvora-convert' ),
+					'why'             => __( 'Checks:', 'meyvora-convert' ),
+					'noOfferMatches'  => __( 'No offer matches this context.', 'meyvora-convert' ),
+					'noEligibleOffer' => __( 'No eligible offer', 'meyvora-convert' ),
+					'suggestionsLabel'=> __( 'Suggestions:', 'meyvora-convert' ),
+					'expectedLabel'   => __( 'Expected', 'meyvora-convert' ),
+					'actualLabel'     => __( 'Actual', 'meyvora-convert' ),
+					'summaryCartMin'   => __( 'Cart ≥ %s', 'meyvora-convert' ),
+					'summaryCartRange' => __( 'Cart %s – %s', 'meyvora-convert' ),
+					'summaryItems'     => __( '%d items', 'meyvora-convert' ),
+					'summaryFirstTime' => __( 'First-time customer', 'meyvora-convert' ),
+					'summaryReturning' => __( 'Returning customer (≥%d orders)', 'meyvora-convert' ),
+					'summaryLifetime'  => __( 'Lifetime spend ≥ %s', 'meyvora-convert' ),
+					'summaryRewardPct' => __( '%s%% off', 'meyvora-convert' ),
+					'summaryRewardFix' => __( '%s off', 'meyvora-convert' ),
+					'summaryRewardShip'=> __( 'Free shipping', 'meyvora-convert' ),
+					'summaryExpires'   => __( 'Expires %sh', 'meyvora-convert' ),
+					'summaryExcludeSale' => __( 'Exclude sale items', 'meyvora-convert' ),
 					'summaryBullet'    => ' • ',
 					'summaryArrow'     => ' → ',
-					'newOffer'         => __( 'New offer', 'cro-toolkit' ),
+					'newOffer'         => __( 'New offer', 'meyvora-convert' ),
 					'checkIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) : '✓',
 					'crossIcon'         => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ) : '✗',
 					'moveUpIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ) : '↑',
@@ -832,7 +833,7 @@ class CRO_Admin {
 
 	/**
 	 * Enqueue Classic Editor campaign button script and thickbox only on post edit screens.
-	 * Only for users with manage_woocommerce.
+	 * Only for users with manage_meyvora_convert.
 	 *
 	 * @param string $hook Current admin page hook.
 	 */
@@ -841,7 +842,7 @@ class CRO_Admin {
 		if ( $hook !== 'post.php' && $hook !== 'post-new.php' ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 
@@ -860,16 +861,16 @@ class CRO_Admin {
 			'cro-classic-editor-campaign',
 			'croCampaignClassic',
 			array(
-				'modalTitle' => __( 'Insert CRO Campaign', 'cro-toolkit' ),
+				'modalTitle' => __( 'Insert CRO Campaign', 'meyvora-convert' ),
 			)
 		);
 	}
 
 	/**
-	 * Add "Add CRO Campaign" button above editor (media_buttons). Only for users with manage_woocommerce.
+	 * Add "Add CRO Campaign" button above editor (media_buttons). Only for users with manage_meyvora_convert.
 	 */
 	public function render_media_button_cro_campaign() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 
@@ -888,20 +889,20 @@ class CRO_Admin {
 		}
 
 		?>
-		<button type="button" id="cro-insert-campaign-btn" class="button" title="<?php esc_attr_e( 'Insert a CRO Toolkit campaign shortcode', 'cro-toolkit' ); ?>">
+		<button type="button" id="cro-insert-campaign-btn" class="button" title="<?php esc_attr_e( 'Insert a Meyvora Convert campaign shortcode', 'meyvora-convert' ); ?>">
 			<?php echo class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) : ''; ?>
-			<?php esc_html_e( 'Add CRO Campaign', 'cro-toolkit' ); ?>
+			<?php esc_html_e( 'Add CRO Campaign', 'meyvora-convert' ); ?>
 		</button>
 		<div id="cro-campaign-modal-content" class="cro-is-hidden">
 			<div class="cro-campaign-modal-inner">
 				<p>
-					<label for="cro-campaign-select"><?php esc_html_e( 'Select campaign:', 'cro-toolkit' ); ?></label>
+					<label for="cro-campaign-select"><?php esc_html_e( 'Select campaign:', 'meyvora-convert' ); ?></label>
 				</p>
-				<select id="cro-campaign-select" class="cro-modern-select cro-selectwoo" data-placeholder="<?php esc_attr_e( '— Select campaign —', 'cro-toolkit' ); ?>">
-					<option value="0"><?php esc_html_e( '— Select campaign —', 'cro-toolkit' ); ?></option>
+				<select id="cro-campaign-select" class="cro-modern-select cro-selectwoo" data-placeholder="<?php esc_attr_e( '— Select campaign —', 'meyvora-convert' ); ?>">
+					<option value="0"><?php esc_html_e( '— Select campaign —', 'meyvora-convert' ); ?></option>
 					<?php foreach ( $campaigns as $c ) : ?>
 						<option value="<?php echo esc_attr( (string) $c['id'] ); ?>">
-							<?php echo esc_html( $c['name'] ? $c['name'] : sprintf( __( 'Campaign #%d', 'cro-toolkit' ), $c['id'] ) ); ?>
+							<?php echo esc_html( $c['name'] ? $c['name'] : sprintf( __( 'Campaign #%d', 'meyvora-convert' ), $c['id'] ) ); ?>
 							<?php if ( $c['status'] !== 'active' ) : ?>
 								(<?php echo esc_html( $c['status'] ); ?>)
 							<?php endif; ?>
@@ -909,8 +910,8 @@ class CRO_Admin {
 					<?php endforeach; ?>
 				</select>
 				<p class="cro-modal-actions">
-					<button type="button" id="cro-campaign-insert" class="button button-primary"><?php esc_html_e( 'Insert shortcode', 'cro-toolkit' ); ?></button>
-					<button type="button" class="button" onclick="tb_remove();"><?php esc_html_e( 'Cancel', 'cro-toolkit' ); ?></button>
+					<button type="button" id="cro-campaign-insert" class="button button-primary"><?php esc_html_e( 'Insert shortcode', 'meyvora-convert' ); ?></button>
+					<button type="button" class="button" onclick="tb_remove();"><?php esc_html_e( 'Cancel', 'meyvora-convert' ); ?></button>
 				</p>
 			</div>
 		</div>
@@ -922,9 +923,9 @@ class CRO_Admin {
 	 */
 	public function display_dashboard() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'CRO Toolkit Dashboard', 'cro-toolkit' ),
-			'subtitle'        => __( 'Overview of conversions, revenue, and active conversion tools.', 'cro-toolkit' ),
-			'active_tab'      => 'cro-toolkit',
+			'title'           => __( 'Meyvora Convert Dashboard', 'meyvora-convert' ),
+			'subtitle'        => __( 'Overview of conversions, revenue, and active conversion tools.', 'meyvora-convert' ),
+			'active_tab'      => 'meyvora-convert',
 			'primary_action'  => null,
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-dashboard.php',
 			'wrap_class'      => 'cro-dashboard',
@@ -947,12 +948,12 @@ class CRO_Admin {
 			}
 			$pills[] = sprintf(
 				/* translators: %d: number of active campaigns */
-				__( 'Active: %d', 'cro-toolkit' ),
+				__( 'Active: %d', 'meyvora-convert' ),
 				$active
 			);
 		}
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Campaigns', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Campaigns', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-campaigns',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-campaigns.php',
@@ -966,7 +967,7 @@ class CRO_Admin {
 	 */
 	public function display_campaign_editor() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'Edit Campaign', 'cro-toolkit' ),
+			'title'           => __( 'Edit Campaign', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-campaigns',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-campaign-builder.php',
@@ -979,10 +980,10 @@ class CRO_Admin {
 	 */
 	public function display_boosters() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'On-Page Conversion Boosters', 'cro-toolkit' ),
-			'subtitle'        => __( 'These elements appear on your product and cart pages to encourage conversions.', 'cro-toolkit' ),
+			'title'           => __( 'On-Page Conversion Boosters', 'meyvora-convert' ),
+			'subtitle'        => __( 'These elements appear on your product and cart pages to encourage conversions.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-boosters',
-			'primary_action'  => array( 'label' => __( 'Save changes', 'cro-toolkit' ), 'form_id' => 'cro-boosters-form' ),
+			'primary_action'  => array( 'label' => __( 'Save changes', 'meyvora-convert' ), 'form_id' => 'cro-boosters-form' ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-boosters.php',
 			'wrap_class'      => 'cro-boosters-page',
 		) );
@@ -993,10 +994,10 @@ class CRO_Admin {
 	 */
 	public function display_cart_optimizer() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'Cart Page Optimizer', 'cro-toolkit' ),
-			'subtitle'        => __( 'The cart page is high-intent real estate. Use it to build confidence and reduce hesitation.', 'cro-toolkit' ),
+			'title'           => __( 'Cart Page Optimizer', 'meyvora-convert' ),
+			'subtitle'        => __( 'The cart page is high-intent real estate. Use it to build confidence and reduce hesitation.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-cart',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'cro-toolkit' ), 'form_id' => 'cro-cart-form' ),
+			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'cro-cart-form' ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-cart.php',
 			'wrap_class'      => 'cro-cart-page',
 		) );
@@ -1013,16 +1014,16 @@ class CRO_Admin {
 		$pills = array();
 		$pills[] = sprintf(
 			/* translators: 1: number of offers used, 2: max offers */
-			__( '%1$d/%2$d offers used', 'cro-toolkit' ),
+			__( '%1$d/%2$d offers used', 'meyvora-convert' ),
 			$used,
 			$max_offers
 		);
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'Offers', 'cro-toolkit' ),
-			'subtitle'        => __( 'Show a single dynamic offer on cart and checkout based on rules and priority.', 'cro-toolkit' ),
+			'title'           => __( 'Offers', 'meyvora-convert' ),
+			'subtitle'        => __( 'Show a single dynamic offer on cart and checkout based on rules and priority.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-offers',
 			'primary_action'  => array(
-				'label'      => __( '+ Add Offer', 'cro-toolkit' ),
+				'label'      => __( '+ Add Offer', 'meyvora-convert' ),
 				'button_id'  => 'cro-offers-add-btn',
 				'attributes' => array( 'data-cro-drawer' => 'add' ),
 			),
@@ -1037,10 +1038,10 @@ class CRO_Admin {
 	 */
 	public function display_checkout_optimizer() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => __( 'Checkout Page Optimizer', 'cro-toolkit' ),
-			'subtitle'        => __( 'Reduce friction and build trust on the checkout page.', 'cro-toolkit' ),
+			'title'           => __( 'Checkout Page Optimizer', 'meyvora-convert' ),
+			'subtitle'        => __( 'Reduce friction and build trust on the checkout page.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-checkout',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'cro-toolkit' ), 'form_id' => 'cro-checkout-form' ),
+			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'cro-checkout-form' ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-checkout.php',
 			'wrap_class'      => 'cro-checkout-page',
 		) );
@@ -1051,10 +1052,10 @@ class CRO_Admin {
 	 */
 	public function display_ab_tests() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'A/B Tests', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'A/B Tests', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-ab-tests',
-			'primary_action'  => array( 'label' => __( 'New A/B Test', 'cro-toolkit' ), 'href' => admin_url( 'admin.php?page=cro-ab-test-new' ) ),
+			'primary_action'  => array( 'label' => __( 'New A/B Test', 'meyvora-convert' ), 'href' => admin_url( 'admin.php?page=cro-ab-test-new' ) ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ab-tests.php',
 			'wrap_class'      => 'cro-ab-tests-page',
 		) );
@@ -1065,8 +1066,8 @@ class CRO_Admin {
 	 */
 	public function display_settings() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Settings', 'cro-toolkit' ),
-			'subtitle'        => __( 'Configure analytics, debug, and data. Run a self-test from System Status for support.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Settings', 'meyvora-convert' ),
+			'subtitle'        => __( 'Configure analytics, debug, and data. Run a self-test from System Status for support.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-settings',
 			'primary_action'  => null,
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-settings.php',
@@ -1079,10 +1080,10 @@ class CRO_Admin {
 	 */
 	public function render_system_status() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'System Status', 'cro-toolkit' ),
-			'subtitle'        => __( 'Environment and compatibility checks for CRO Toolkit. Use the report below when contacting support.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'System Status', 'meyvora-convert' ),
+			'subtitle'        => __( 'Environment and compatibility checks for Meyvora Convert. Use the report below when contacting support.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-system-status',
-			'primary_action'  => array( 'label' => __( 'Verify Installation', 'cro-toolkit' ), 'form_id' => 'cro-verify-installation-form' ),
+			'primary_action'  => array( 'label' => __( 'Verify Installation', 'meyvora-convert' ), 'form_id' => 'cro-verify-installation-form' ),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-system-status.php',
 			'wrap_class'      => 'cro-admin-system-status',
 		) );
@@ -1100,7 +1101,7 @@ class CRO_Admin {
 	 */
 	public function render_tools() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Import / Export', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Import / Export', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-tools',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-tools.php',
@@ -1113,8 +1114,8 @@ class CRO_Admin {
 	 */
 	public function render_developer() {
 		CRO_Admin_UI::render_page( array(
-			'title'           => get_admin_page_title() ?: __( 'Developer', 'cro-toolkit' ),
-			'subtitle'        => __( 'Actions, filters, and template overrides for extending CRO Toolkit.', 'cro-toolkit' ),
+			'title'           => get_admin_page_title() ?: __( 'Developer', 'meyvora-convert' ),
+			'subtitle'        => __( 'Actions, filters, and template overrides for extending Meyvora Convert.', 'meyvora-convert' ),
 			'active_tab'      => 'cro-developer',
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-developer.php',
 			'wrap_class'      => 'cro-admin-developer',
@@ -1125,14 +1126,14 @@ class CRO_Admin {
 	 * Redirect to onboarding after first activation (once per install).
 	 */
 	public function handle_activation_redirect() {
-		if ( ! get_transient( 'cro_activation_redirect' ) || ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! get_transient( 'cro_activation_redirect' ) || ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		delete_transient( 'cro_activation_redirect' );
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'cro-toolkit' && isset( $_GET['cro_onboarding'] ) && (string) $_GET['cro_onboarding'] === '1' ) {
+		if ( isset( $_GET['page'] ) && $_GET['page'] === 'meyvora-convert' && isset( $_GET['cro_onboarding'] ) && (string) $_GET['cro_onboarding'] === '1' ) {
 			return;
 		}
-		wp_safe_redirect( admin_url( 'admin.php?page=cro-toolkit&cro_onboarding=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&cro_onboarding=1' ) );
 		exit;
 	}
 
@@ -1144,7 +1145,7 @@ class CRO_Admin {
 		if ( $action !== 'cro_restart_onboarding' ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
@@ -1153,7 +1154,7 @@ class CRO_Admin {
 			exit;
 		}
 		update_option( 'cro_onboarding_completed', false );
-		wp_safe_redirect( admin_url( 'admin.php?page=cro-toolkit&cro_onboarding=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&cro_onboarding=1' ) );
 		exit;
 	}
 
@@ -1161,7 +1162,7 @@ class CRO_Admin {
 	 * Handle "Skip" onboarding: mark completed and redirect to dashboard.
 	 */
 	public function handle_onboarding_skip() {
-		if ( ! isset( $_GET['cro_skip_onboarding'] ) || ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! isset( $_GET['cro_skip_onboarding'] ) || ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
@@ -1169,7 +1170,7 @@ class CRO_Admin {
 			return;
 		}
 		update_option( 'cro_onboarding_completed', true );
-		wp_safe_redirect( admin_url( 'admin.php?page=cro-toolkit' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert' ) );
 		exit;
 	}
 
@@ -1177,7 +1178,7 @@ class CRO_Admin {
 	 * Handle onboarding checklist form: save toggles and/or mark complete.
 	 */
 	public function handle_onboarding_save() {
-		if ( ! isset( $_POST['cro_onboarding_checklist'] ) || ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! isset( $_POST['cro_onboarding_checklist'] ) || ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		$nonce = isset( $_POST['cro_onboarding_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_onboarding_nonce'] ) ) : '';
@@ -1193,11 +1194,11 @@ class CRO_Admin {
 
 		if ( ! empty( $_POST['cro_onboarding_done'] ) ) {
 			update_option( 'cro_onboarding_completed', true );
-			wp_safe_redirect( admin_url( 'admin.php?page=cro-toolkit&onboarding_done=1' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&onboarding_done=1' ) );
 			exit;
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=cro-toolkit&cro_onboarding=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&cro_onboarding=1' ) );
 		exit;
 	}
 
@@ -1209,7 +1210,7 @@ class CRO_Admin {
 		if ( ! $action ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-presets' ) ) );
 			exit;
 		}
@@ -1244,7 +1245,7 @@ class CRO_Admin {
 		if ( ! isset( $_POST['cro_quick_launch'] ) || sanitize_text_field( wp_unslash( $_POST['cro_quick_launch'] ) ) !== 'recommended' ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		if ( ! isset( $_POST['cro_quick_launch_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cro_quick_launch_nonce'] ) ), 'cro_quick_launch' ) ) {
@@ -1254,7 +1255,7 @@ class CRO_Admin {
 			return;
 		}
 		$applied = cro_quick_launch_apply( 'recommended' );
-		$url = admin_url( 'admin.php?page=cro-toolkit' );
+		$url = admin_url( 'admin.php?page=meyvora-convert' );
 		if ( $applied ) {
 			$url = add_query_arg( 'cro_quick_launch_done', '1', $url );
 		}
@@ -1271,13 +1272,13 @@ class CRO_Admin {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'You do not have permission to export.', 'cro-toolkit' ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission to export.', 'meyvora-convert' ), 403 );
 		}
 
 		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_export' ) ) {
-			wp_die( esc_html__( 'Invalid security check. Please try again.', 'cro-toolkit' ), 403 );
+			wp_die( esc_html__( 'Invalid security check. Please try again.', 'meyvora-convert' ), 403 );
 		}
 
 		$campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : 0;
@@ -1322,7 +1323,7 @@ class CRO_Admin {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-analytics' ) ) );
 			exit;
 		}
@@ -1441,7 +1442,7 @@ class CRO_Admin {
 		if ( ! isset( $_POST['cro_verify_package'] ) || (int) $_POST['cro_verify_package'] !== 1 ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_safe_redirect( add_query_arg( 'cro_verify', '0', admin_url( 'admin.php?page=cro-tools' ) ) );
 			exit;
 		}
@@ -1463,7 +1464,7 @@ class CRO_Admin {
 		if ( ! isset( $_POST['cro_verify_installation'] ) || (int) $_POST['cro_verify_installation'] !== 1 ) {
 			return;
 		}
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_safe_redirect( add_query_arg( 'cro_verify_installation', '0', admin_url( 'admin.php?page=cro-system-status' ) ) );
 			exit;
 		}
@@ -1479,10 +1480,10 @@ class CRO_Admin {
 	}
 
 	/**
-	 * Save CRO Admin Debug toggle (Tools page). Only for users with manage_woocommerce.
+	 * Save CRO Admin Debug toggle (Tools page). Only for users with manage_meyvora_convert.
 	 */
 	public function handle_save_admin_debug() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		if ( ! isset( $_POST['cro_admin_debug_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cro_admin_debug_nonce'] ) ), 'cro_admin_debug' ) ) {
@@ -1499,11 +1500,11 @@ class CRO_Admin {
 	}
 
 	/**
-	 * Render CRO Admin Debug panel in footer (only when option enabled and user can manage_woocommerce).
+	 * Render CRO Admin Debug panel in footer (only when option enabled and user can manage_meyvora_convert).
 	 * Shows enqueued CSS/JS and builder init status.
 	 */
 	public function render_admin_debug_panel() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		if ( ! get_option( 'cro_admin_debug', false ) ) {
@@ -1552,7 +1553,7 @@ class CRO_Admin {
 						<li><?php echo esc_html( $s ); ?></li>
 					<?php endforeach; ?>
 					<?php if ( empty( $styles ) ) : ?>
-						<li><?php esc_html_e( 'None', 'cro-toolkit' ); ?></li>
+						<li><?php esc_html_e( 'None', 'meyvora-convert' ); ?></li>
 					<?php endif; ?>
 				</ul>
 				<p style="margin:4px 0;"><strong>JS (CRO):</strong></p>
@@ -1561,7 +1562,7 @@ class CRO_Admin {
 						<li><?php echo esc_html( $s ); ?></li>
 					<?php endforeach; ?>
 					<?php if ( empty( $scripts ) ) : ?>
-						<li><?php esc_html_e( 'None', 'cro-toolkit' ); ?></li>
+						<li><?php esc_html_e( 'None', 'meyvora-convert' ); ?></li>
 					<?php endif; ?>
 				</ul>
 				<?php if ( $is_builder ) : ?>
@@ -1595,8 +1596,8 @@ class CRO_Admin {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Unauthorized', 'cro-toolkit' ) );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'Unauthorized', 'meyvora-convert' ) );
 		}
 
 		$json_string = '';
@@ -1608,7 +1609,7 @@ class CRO_Admin {
 
 		if ( $json_string === '' ) {
 			add_action( 'admin_notices', function() {
-				echo '<div class="notice notice-error"><p>' . esc_html__( 'Please upload a file or paste JSON.', 'cro-toolkit' ) . '</p></div>';
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'Please upload a file or paste JSON.', 'meyvora-convert' ) . '</p></div>';
 			} );
 			return;
 		}
@@ -1617,21 +1618,21 @@ class CRO_Admin {
 
 		if ( json_last_error() !== JSON_ERROR_NONE ) {
 			add_action( 'admin_notices', function() {
-				echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid JSON.', 'cro-toolkit' ) . '</p></div>';
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid JSON.', 'meyvora-convert' ) . '</p></div>';
 			} );
 			return;
 		}
 
 		if ( ! isset( $import_data['campaigns'] ) || ! is_array( $import_data['campaigns'] ) ) {
 			add_action( 'admin_notices', function() {
-				echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid format: expected a "campaigns" array.', 'cro-toolkit' ) . '</p></div>';
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid format: expected a "campaigns" array.', 'meyvora-convert' ) . '</p></div>';
 			} );
 			return;
 		}
 
 		if ( ! class_exists( 'CRO_Campaign' ) ) {
 			add_action( 'admin_notices', function() {
-				echo '<div class="notice notice-error"><p>' . esc_html__( 'Campaign module unavailable.', 'cro-toolkit' ) . '</p></div>';
+				echo '<div class="notice notice-error"><p>' . esc_html__( 'Campaign module unavailable.', 'meyvora-convert' ) . '</p></div>';
 			} );
 			return;
 		}
@@ -1643,7 +1644,7 @@ class CRO_Admin {
 			}
 			$name = isset( $campaign['name'] ) && is_string( $campaign['name'] ) && trim( $campaign['name'] ) !== ''
 				? trim( $campaign['name'] ) . ' (Imported)'
-				: __( 'Unnamed Campaign (Imported)', 'cro-toolkit' );
+				: __( 'Unnamed Campaign (Imported)', 'meyvora-convert' );
 			$data = array(
 				'name'             => $name,
 				'status'           => 'draft',
@@ -1665,7 +1666,7 @@ class CRO_Admin {
 		add_action( 'admin_notices', function() use ( $imported_count ) {
 			echo '<div class="notice notice-success"><p>' . esc_html( sprintf(
 				/* translators: %d: number of campaigns imported */
-				__( 'Successfully imported %d campaign(s).', 'cro-toolkit' ),
+				__( 'Successfully imported %d campaign(s).', 'meyvora-convert' ),
 				$imported_count
 			) ) . '</p></div>';
 		} );
@@ -1675,7 +1676,7 @@ class CRO_Admin {
 	 * Self-heal missing DB tables on admin load (at most once per 12 hours). Admins only.
 	 */
 	public function run_selfheal_tables() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 		if ( class_exists( 'CRO_Database' ) ) {
@@ -1691,7 +1692,7 @@ class CRO_Admin {
 			return;
 		}
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_safe_redirect( add_query_arg( 'cro_repair', '0', admin_url( 'admin.php?page=cro-system-status' ) ) );
 			exit;
 		}
@@ -1720,6 +1721,43 @@ class CRO_Admin {
 	}
 
 	/**
+	 * Handle bulk activate / pause / delete for campaigns.
+	 */
+	public function handle_bulk_campaigns() {
+		if ( empty( $_POST['cro_bulk_action'] ) || empty( $_POST['campaign_ids'] ) ) {
+			return;
+		}
+		if ( ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cro_bulk_nonce'] ?? '' ) ), 'cro_bulk_campaigns' ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			return;
+		}
+
+		$action = sanitize_key( $_POST['cro_bulk_action'] );
+		$ids    = array_map( 'absint', (array) $_POST['campaign_ids'] );
+		$ids    = array_filter( $ids );
+		if ( empty( $ids ) ) {
+			return;
+		}
+
+		global $wpdb;
+		$table       = $wpdb->prefix . 'cro_campaigns';
+		$placeholder = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+		if ( 'activate' === $action ) {
+			$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='active' WHERE id IN ({$placeholder})", ...$ids ) );
+		} elseif ( 'pause' === $action ) {
+			$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='paused' WHERE id IN ({$placeholder})", ...$ids ) );
+		} elseif ( 'delete' === $action ) {
+			$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$placeholder})", ...$ids ) );
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=cro-campaigns&cro_bulk_done=1' ) );
+		exit;
+	}
+
+	/**
 	 * Handle campaign actions (duplicate, etc.).
 	 */
 	public function handle_campaign_actions() {
@@ -1730,7 +1768,7 @@ class CRO_Admin {
 		}
 
 		if ( 'duplicate' === $action ) {
-			if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 				wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-campaigns' ) ) );
 				exit;
 			}
@@ -1748,6 +1786,23 @@ class CRO_Admin {
 			} else {
 				wp_safe_redirect( admin_url( 'admin.php?page=cro-campaign-edit&campaign_id=' . $new_id . '&duplicated=1' ) );
 			}
+			exit;
+		}
+
+		if ( 'delete' === $action ) {
+			if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+				wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-campaigns' ) ) );
+				exit;
+			}
+
+			$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
+			if ( ! wp_verify_nonce( $nonce, 'cro_delete_campaign_' . $id ) ) {
+				wp_safe_redirect( add_query_arg( 'error', 'invalid_nonce', admin_url( 'admin.php?page=cro-campaigns' ) ) );
+				exit;
+			}
+
+			CRO_Campaign::delete( $id );
+			wp_safe_redirect( admin_url( 'admin.php?page=cro-campaigns&deleted=1' ) );
 			exit;
 		}
 	}
@@ -1768,7 +1823,7 @@ class CRO_Admin {
 
 		switch ( $action ) {
 			case 'start':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 					wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-ab-tests' ) ) );
 					exit;
 				}
@@ -1782,7 +1837,7 @@ class CRO_Admin {
 				exit;
 
 			case 'pause':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 					wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-ab-tests' ) ) );
 					exit;
 				}
@@ -1796,7 +1851,7 @@ class CRO_Admin {
 				exit;
 
 			case 'complete':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 					wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-ab-tests' ) ) );
 					exit;
 				}
@@ -1813,7 +1868,7 @@ class CRO_Admin {
 				exit;
 
 			case 'delete':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 					wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-ab-tests' ) ) );
 					exit;
 				}
@@ -1827,7 +1882,7 @@ class CRO_Admin {
 				exit;
 
 			case 'apply_winner':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 					wp_safe_redirect( add_query_arg( 'error', 'unauthorized', admin_url( 'admin.php?page=cro-ab-tests' ) ) );
 					exit;
 				}
@@ -1911,9 +1966,9 @@ class CRO_Admin {
 		}
 
 		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			error_log( '[CRO Toolkit] JS Error: ' . ( isset( $data['message'] ) ? $data['message'] : '' ) );
+			error_log( '[Meyvora Convert] JS Error: ' . ( isset( $data['message'] ) ? $data['message'] : '' ) );
 			if ( ! empty( $data['url'] ) ) {
-				error_log( '[CRO Toolkit] URL: ' . $data['url'] );
+				error_log( '[Meyvora Convert] URL: ' . $data['url'] );
 			}
 		}
 
@@ -1924,13 +1979,13 @@ class CRO_Admin {
 	 * AJAX: Save a single offer (drawer save). Capability and nonce checked.
 	 */
 	public function ajax_save_offer() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'cro-toolkit' ) ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 
 		$nonce = isset( $_POST['cro_save_offer_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_save_offer_nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_save_offer_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce. Please refresh and try again.', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ) ), 403 );
 		}
 
 		$max_offers = 5;
@@ -1968,7 +2023,7 @@ class CRO_Admin {
 					}
 				}
 				wp_send_json_error( array(
-					'message'          => __( 'Offer limit reached (5).', 'cro-toolkit' ),
+					'message'          => __( 'Offer limit reached (5).', 'meyvora-convert' ),
 					'offers'           => $result_offers,
 					'offers_used_count' => $offers_used_count,
 					'max_offers'       => $max_offers,
@@ -1977,7 +2032,7 @@ class CRO_Admin {
 		} else {
 			$offer_index = absint( $offer_index );
 			if ( $offer_index < 0 || $offer_index >= $max_offers ) {
-				wp_send_json_error( array( 'message' => __( 'Invalid offer.', 'cro-toolkit' ) ), 400 );
+				wp_send_json_error( array( 'message' => __( 'Invalid offer.', 'meyvora-convert' ) ), 400 );
 			}
 		}
 
@@ -2036,7 +2091,7 @@ class CRO_Admin {
 					}
 				}
 				wp_send_json_error( array(
-					'message'          => __( 'Validation failed.', 'cro-toolkit' ),
+					'message'          => __( 'Validation failed.', 'meyvora-convert' ),
 					'errors'           => $errors,
 					'offers'           => $result_offers,
 					'offers_used_count' => $offers_used_count,
@@ -2107,12 +2162,12 @@ class CRO_Admin {
 	 * Template content is sanitized with wp_kses_post; placeholders are replaced with safe sample values.
 	 */
 	public function ajax_abandoned_cart_preview() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'cro-toolkit' ) ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_cart_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'meyvora-convert' ) ), 403 );
 		}
 		$subject_tpl = isset( $_POST['subject'] ) ? sanitize_text_field( wp_unslash( $_POST['subject'] ) ) : '';
 		$body_tpl    = isset( $_POST['body'] ) ? wp_kses_post( wp_unslash( $_POST['body'] ) ) : '';
@@ -2121,7 +2176,7 @@ class CRO_Admin {
 		}
 		if ( trim( (string) $subject_tpl ) === '' && function_exists( 'cro_settings' ) ) {
 			$opts      = cro_settings()->get_abandoned_cart_settings();
-			$subject_tpl = isset( $opts['email_subject_template'] ) ? sanitize_text_field( $opts['email_subject_template'] ) : __( 'You left something in your cart – {store_name}', 'cro-toolkit' );
+			$subject_tpl = isset( $opts['email_subject_template'] ) ? sanitize_text_field( $opts['email_subject_template'] ) : __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
 		}
 		$values  = class_exists( 'CRO_Abandoned_Cart_Reminder' ) ? CRO_Abandoned_Cart_Reminder::get_placeholder_values( null, 'SAMPLE10', true ) : array();
 		$subject = class_exists( 'CRO_Abandoned_Cart_Reminder' ) ? CRO_Abandoned_Cart_Reminder::replace_placeholders( $subject_tpl, $values ) : $subject_tpl;
@@ -2134,16 +2189,16 @@ class CRO_Admin {
 	 * Template content is sanitized with wp_kses_post; placeholders are replaced with safe sample values.
 	 */
 	public function ajax_abandoned_cart_send_test() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'cro-toolkit' ) ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_cart_nonce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'meyvora-convert' ) ), 403 );
 		}
 		$to = isset( $_POST['to'] ) ? sanitize_email( wp_unslash( $_POST['to'] ) ) : '';
 		if ( ! is_email( $to ) ) {
-			wp_send_json_error( array( 'message' => __( 'Please enter a valid email address.', 'cro-toolkit' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'Please enter a valid email address.', 'meyvora-convert' ) ), 400 );
 		}
 		$subject_tpl = isset( $_POST['subject'] ) ? sanitize_text_field( wp_unslash( $_POST['subject'] ) ) : '';
 		$body_tpl    = isset( $_POST['body'] ) ? wp_kses_post( wp_unslash( $_POST['body'] ) ) : '';
@@ -2152,7 +2207,7 @@ class CRO_Admin {
 		}
 		if ( trim( (string) $subject_tpl ) === '' && function_exists( 'cro_settings' ) ) {
 			$opts       = cro_settings()->get_abandoned_cart_settings();
-			$subject_tpl = isset( $opts['email_subject_template'] ) ? sanitize_text_field( $opts['email_subject_template'] ) : __( 'You left something in your cart – {store_name}', 'cro-toolkit' );
+			$subject_tpl = isset( $opts['email_subject_template'] ) ? sanitize_text_field( $opts['email_subject_template'] ) : __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
 		}
 		$values  = class_exists( 'CRO_Abandoned_Cart_Reminder' ) ? CRO_Abandoned_Cart_Reminder::get_placeholder_values( null, 'SAMPLE10', true ) : array();
 		$subject = class_exists( 'CRO_Abandoned_Cart_Reminder' ) ? CRO_Abandoned_Cart_Reminder::replace_placeholders( $subject_tpl, $values ) : $subject_tpl;
@@ -2161,10 +2216,10 @@ class CRO_Admin {
 		$sent    = wp_mail( $to, $subject, $body, $headers );
 		if ( ! $sent ) {
 			global $phpmailer;
-			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo ) ? $phpmailer->ErrorInfo : __( 'wp_mail failed', 'cro-toolkit' );
+			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo ) ? $phpmailer->ErrorInfo : __( 'wp_mail failed', 'meyvora-convert' );
 			wp_send_json_error( array( 'message' => $err ), 500 );
 		}
-		wp_send_json_success( array( 'message' => __( 'Test email sent.', 'cro-toolkit' ) ) );
+		wp_send_json_success( array( 'message' => __( 'Test email sent.', 'meyvora-convert' ) ) );
 	}
 
 	/**
@@ -2172,7 +2227,7 @@ class CRO_Admin {
 	 * Expects GET term (search string). Returns JSON array of { id, text } for Select2/SelectWoo.
 	 */
 	public function ajax_search_products() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_send_json( array() );
 		}
 		$term = isset( $_GET['term'] ) ? sanitize_text_field( wp_unslash( $_GET['term'] ) ) : '';
@@ -2201,11 +2256,11 @@ class CRO_Admin {
 	 * admin_post: Cancel scheduled reminders for an abandoned cart.
 	 */
 	public function handle_abandoned_cart_cancel_reminders() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'You do not have permission.', 'cro-toolkit' ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
 		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
-			wp_die( esc_html__( 'Invalid request.', 'cro-toolkit' ), 403 );
+			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
 		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 		if ( $id > 0 && class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
@@ -2218,11 +2273,11 @@ class CRO_Admin {
 	 * admin_post: Mark abandoned cart as recovered.
 	 */
 	public function handle_abandoned_cart_mark_recovered() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'You do not have permission.', 'cro-toolkit' ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
 		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
-			wp_die( esc_html__( 'Invalid request.', 'cro-toolkit' ), 403 );
+			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
 		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 		if ( $id > 0 && class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
@@ -2235,11 +2290,11 @@ class CRO_Admin {
 	 * admin_post: Resend reminder email 1 for an abandoned cart.
 	 */
 	public function handle_abandoned_cart_resend() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'You do not have permission.', 'cro-toolkit' ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
 		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
-			wp_die( esc_html__( 'Invalid request.', 'cro-toolkit' ), 403 );
+			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
 		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
 		$sent = false;
@@ -2277,20 +2332,20 @@ class CRO_Admin {
 	 * AJAX: Abandoned cart drawer content (cart items, checkout link, email log, coupon).
 	 */
 	public function ajax_abandoned_cart_drawer() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'cro-toolkit' ) ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_carts_list' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'meyvora-convert' ) ), 403 );
 		}
 		$id = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
 		if ( $id <= 0 || ! class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid cart.', 'cro-toolkit' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'Invalid cart.', 'meyvora-convert' ) ), 400 );
 		}
 		$row = CRO_Abandoned_Cart_Tracker::get_row_by_id( $id );
 		if ( ! $row ) {
-			wp_send_json_error( array( 'message' => __( 'Cart not found.', 'cro-toolkit' ) ), 404 );
+			wp_send_json_error( array( 'message' => __( 'Cart not found.', 'meyvora-convert' ) ), 404 );
 		}
 		$currency = ! empty( $row->currency ) ? $row->currency : ( function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : '' );
 		$items = array();
@@ -2300,7 +2355,7 @@ class CRO_Admin {
 			if ( ! empty( $data['items'] ) ) {
 				foreach ( $data['items'] as $item ) {
 					$items[] = array(
-						'name'     => isset( $item['name'] ) ? $item['name'] : __( 'Item', 'cro-toolkit' ),
+						'name'     => isset( $item['name'] ) ? $item['name'] : __( 'Item', 'meyvora-convert' ),
 						'quantity' => isset( $item['quantity'] ) ? (int) $item['quantity'] : 1,
 						'price'    => isset( $item['price'] ) ? $item['price'] : null,
 						'total'    => isset( $item['total'] ) ? $item['total'] : null,
@@ -2384,24 +2439,24 @@ class CRO_Admin {
 			return number_format_i18n( (float) $amount, 2 ) . ( function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '' );
 		};
 		if ( ! empty( $o['min_cart_total'] ) ) {
-			$parts[] = sprintf( __( 'Cart ≥ %s', 'cro-toolkit' ), $fmt( $o['min_cart_total'] ) );
+			$parts[] = sprintf( __( 'Cart ≥ %s', 'meyvora-convert' ), $fmt( $o['min_cart_total'] ) );
 		}
 		if ( ! empty( $o['max_cart_total'] ) ) {
-			$parts[] = sprintf( __( 'Cart ≤ %s', 'cro-toolkit' ), $fmt( $o['max_cart_total'] ) );
+			$parts[] = sprintf( __( 'Cart ≤ %s', 'meyvora-convert' ), $fmt( $o['max_cart_total'] ) );
 		}
 		if ( ! empty( $o['min_items'] ) ) {
-			$parts[] = sprintf( _n( '%d item', '%d items', $o['min_items'], 'cro-toolkit' ), $o['min_items'] );
+			$parts[] = sprintf( _n( '%d item', '%d items', $o['min_items'], 'meyvora-convert' ), $o['min_items'] );
 		}
 		if ( ! empty( $o['first_time_customer'] ) ) {
-			$parts[] = __( 'First-time customer', 'cro-toolkit' );
+			$parts[] = __( 'First-time customer', 'meyvora-convert' );
 		}
 		if ( ! empty( $o['returning_customer_min_orders'] ) ) {
-			$parts[] = sprintf( __( 'Returning: %d+ orders', 'cro-toolkit' ), $o['returning_customer_min_orders'] );
+			$parts[] = sprintf( __( 'Returning: %d+ orders', 'meyvora-convert' ), $o['returning_customer_min_orders'] );
 		}
 		if ( ! empty( $o['lifetime_spend_min'] ) ) {
-			$parts[] = sprintf( __( 'Lifetime spend ≥ %s', 'cro-toolkit' ), $fmt( $o['lifetime_spend_min'] ) );
+			$parts[] = sprintf( __( 'Lifetime spend ≥ %s', 'meyvora-convert' ), $fmt( $o['lifetime_spend_min'] ) );
 		}
-		return empty( $parts ) ? __( 'Any cart', 'cro-toolkit' ) : implode( ' · ', $parts );
+		return empty( $parts ) ? __( 'Any cart', 'meyvora-convert' ) : implode( ' · ', $parts );
 	}
 
 	/**
@@ -2414,18 +2469,18 @@ class CRO_Admin {
 		$type = isset( $o['reward_type'] ) ? $o['reward_type'] : 'percent';
 		$amount = isset( $o['reward_amount'] ) ? (float) $o['reward_amount'] : 0;
 		if ( $type === 'free_shipping' ) {
-			return __( 'Free shipping', 'cro-toolkit' );
+			return __( 'Free shipping', 'meyvora-convert' );
 		}
 		if ( $type === 'percent' ) {
-			return sprintf( __( '%s%% off', 'cro-toolkit' ), $amount );
+			return sprintf( __( '%s%% off', 'meyvora-convert' ), $amount );
 		}
 		if ( $type === 'fixed' ) {
 			$formatted = number_format_i18n( (float) $amount, 2 );
 			if ( function_exists( 'get_woocommerce_currency_symbol' ) ) {
 				$formatted = get_woocommerce_currency_symbol() . $formatted;
 			}
-			return sprintf( __( '%s off', 'cro-toolkit' ), $formatted );
+			return sprintf( __( '%s off', 'meyvora-convert' ), $formatted );
 		}
-		return __( 'Discount', 'cro-toolkit' );
+		return __( 'Discount', 'meyvora-convert' );
 	}
 }

@@ -2,7 +2,7 @@
 /**
  * Security utilities
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -29,11 +29,11 @@ class CRO_Security {
 		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
 
 		if ( empty( $nonce ) ) {
-			wp_send_json_error( array( 'message' => __( 'Missing nonce', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Missing nonce', 'meyvora-convert' ) ), 403 );
 		}
 
 		if ( ! wp_verify_nonce( $nonce, $action ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce', 'meyvora-convert' ) ), 403 );
 		}
 
 		return true;
@@ -49,7 +49,7 @@ class CRO_Security {
 		$nonce = $request->get_header( 'X-WP-Nonce' );
 
 		if ( ! $nonce || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
-			return new WP_Error( 'rest_forbidden', __( 'Invalid nonce', 'cro-toolkit' ), array( 'status' => 403 ) );
+			return new WP_Error( 'rest_forbidden', __( 'Invalid nonce', 'meyvora-convert' ), array( 'status' => 403 ) );
 		}
 
 		return true;
@@ -58,14 +58,14 @@ class CRO_Security {
 	/**
 	 * Check admin capability; wp_die on failure.
 	 *
-	 * @param string $cap Capability to check (default manage_woocommerce).
+	 * @param string $cap Capability to check (default manage_meyvora_convert).
 	 * @return true
 	 */
-	public static function check_admin_cap( $cap = 'manage_woocommerce' ) {
+	public static function check_admin_cap( $cap = 'manage_meyvora_convert' ) {
 		if ( ! current_user_can( $cap ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to access this page.', 'cro-toolkit' ),
-				esc_html__( 'Permission Denied', 'cro-toolkit' ),
+				esc_html__( 'You do not have permission to access this page.', 'meyvora-convert' ),
+				esc_html__( 'Permission Denied', 'meyvora-convert' ),
 				array( 'response' => 403 )
 			);
 		}
@@ -189,11 +189,11 @@ class CRO_Security {
 	 * @param array  $data     Rows of data.
 	 */
 	public static function export_csv_secure( $filename, $headers, $data ) {
-		self::check_admin_cap( 'manage_woocommerce' );
+		self::check_admin_cap( 'manage_meyvora_convert' );
 
 		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_export' ) ) {
-			wp_die( esc_html__( 'Invalid request', 'cro-toolkit' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'Invalid request', 'meyvora-convert' ), '', array( 'response' => 403 ) );
 		}
 
 		$filename = sanitize_file_name( is_string( $filename ) ? $filename : (string) ( $filename ?? '' ) );

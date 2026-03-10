@@ -2,7 +2,7 @@
 /**
  * Cart messages template
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -30,7 +30,7 @@ $remaining = $free_shipping_threshold - $cart_total;
 		<?php
 		printf(
 			/* translators: %s: remaining amount */
-			esc_html__( 'Add %s more to get free shipping!', 'cro-toolkit' ),
+			esc_html__( 'Add %s more to get free shipping!', 'meyvora-convert' ),
 			wp_kses_post( wc_price( $remaining ) )
 		);
 		?>

@@ -138,7 +138,7 @@ class CRO_Frontend {
             'siteUrl' => home_url(),
             'cartUrl' => function_exists('wc_get_cart_url') ? wc_get_cart_url() : '/cart',
             'checkoutUrl' => function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : '/checkout',
-            'debug' => current_user_can('manage_woocommerce') && cro_settings()->get('general', 'debug_mode', false),
+            'debug' => current_user_can('manage_meyvora_convert') && cro_settings()->get('general', 'debug_mode', false),
             'context' => $context && method_exists($context, 'to_frontend_array') ? $context->to_frontend_array() : array(),
             'visitor' => $visitor && method_exists($visitor, 'to_frontend_array') ? $visitor->to_frontend_array() : array(),
         );

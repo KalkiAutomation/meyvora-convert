@@ -2,7 +2,7 @@
 /**
  * Theme and plugin compatibility
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -205,7 +205,7 @@ class CRO_Compatibility {
 					'type'    => 'popup',
 					'message' => sprintf(
 						/* translators: %s: plugin name */
-						__( '%1$s detected. Consider disabling its popups on pages where CRO Toolkit campaigns run.', 'cro-toolkit' ),
+						__( '%1$s detected. Consider disabling its popups on pages where Meyvora Convert campaigns run.', 'meyvora-convert' ),
 						$name
 					),
 				);
@@ -227,10 +227,17 @@ class CRO_Compatibility {
 					'type'    => 'cache',
 					'message' => sprintf(
 						/* translators: %s: plugin name */
-						__( '%1$s detected. Ensure dynamic content is excluded from caching.', 'cro-toolkit' ),
+						__( '%1$s detected. Ensure dynamic content is excluded from caching.', 'meyvora-convert' ),
 						$name
 					),
 				);
+			}
+		}
+
+		// WooCommerce Subscriptions detection
+		if ( class_exists( 'WC_Subscriptions' ) || is_plugin_active( 'woocommerce-subscriptions/woocommerce-subscriptions.php' ) ) {
+			if ( function_exists( 'cro_settings' ) ) {
+				cro_settings()->set( 'compatibility', 'wc_subscriptions_active', true );
 			}
 		}
 
@@ -245,7 +252,7 @@ class CRO_Compatibility {
 	 * Show compatibility notices in admin.
 	 */
 	public function show_compatibility_notices() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			return;
 		}
 
@@ -262,7 +269,7 @@ class CRO_Compatibility {
 
 		foreach ( $conflicts as $conflict ) {
 			if ( isset( $conflict['type'] ) && $conflict['type'] === 'popup' && ! empty( $conflict['message'] ) ) {
-				echo '<div class="notice notice-warning is-dismissible"><p><strong>CRO Toolkit:</strong> ';
+				echo '<div class="notice notice-warning is-dismissible"><p><strong>Meyvora Convert:</strong> ';
 				echo esc_html( $conflict['message'] );
 				echo '</p></div>';
 			}

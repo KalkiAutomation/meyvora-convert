@@ -2,7 +2,7 @@
 /**
  * REST API
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -94,7 +94,7 @@ class CRO_REST_API {
 	 */
 	public function register_routes() {
 		register_rest_route(
-			'cro-toolkit/v1',
+			'meyvora-convert/v1',
 			'/campaigns',
 			array(
 				'methods'             => 'GET',
@@ -104,7 +104,7 @@ class CRO_REST_API {
 		);
 
 		register_rest_route(
-			'cro-toolkit/v1',
+			'meyvora-convert/v1',
 			'/campaigns/(?P<id>\d+)',
 			array(
 				'methods'             => 'GET',
@@ -114,7 +114,7 @@ class CRO_REST_API {
 		);
 
 		register_rest_route(
-			'cro-toolkit/v1',
+			'meyvora-convert/v1',
 			'/analytics',
 			array(
 				'methods'             => 'GET',
@@ -125,7 +125,7 @@ class CRO_REST_API {
 
 		// Store campaign data for preview (avoids URL length limits).
 		register_rest_route(
-			'cro-toolkit/v1',
+			'meyvora-convert/v1',
 			'/preview',
 			array(
 				'methods'             => 'POST',
@@ -232,13 +232,13 @@ class CRO_REST_API {
 	}
 
 	/**
-	 * Check permission for preview (store/load). Requires manage_woocommerce.
+	 * Check permission for preview (store/load).
 	 * REST API validates X-WP-Nonce (wp_rest nonce) before this runs.
 	 *
 	 * @return bool
 	 */
 	public function preview_permission_check() {
-		return current_user_can( 'manage_woocommerce' );
+		return current_user_can( 'manage_meyvora_convert' );
 	}
 
 	/**
@@ -262,7 +262,7 @@ class CRO_REST_API {
 			}
 		}
 		if ( ! is_array( $data ) ) {
-			return new WP_Error( 'invalid_data', __( 'Invalid campaign data.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_data', __( 'Invalid campaign data.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 		$preview_id = 'cro_' . wp_generate_password( 16, false );
 		$expiry_seconds = class_exists( 'CRO_Campaign_Display' ) ? CRO_Campaign_Display::PREVIEW_EXPIRY_SECONDS : 1800;
@@ -319,7 +319,7 @@ class CRO_REST_API {
 		$campaign = CRO_Campaign::get( $id );
 
 		if ( ! $campaign ) {
-			return new WP_Error( 'not_found', __( 'Campaign not found.', 'cro-toolkit' ), array( 'status' => 404 ) );
+			return new WP_Error( 'not_found', __( 'Campaign not found.', 'meyvora-convert' ), array( 'status' => 404 ) );
 		}
 
 		return new WP_REST_Response( $campaign, 200 );
@@ -361,7 +361,7 @@ class CRO_REST_API {
 		if ( ! function_exists( 'cro_decide' ) ) {
 			return new WP_Error(
 				'cro_engine_unavailable',
-				__( 'Decision engine not available.', 'cro-toolkit' ),
+				__( 'Decision engine not available.', 'meyvora-convert' ),
 				array( 'status' => 503 )
 			);
 		}
@@ -532,13 +532,13 @@ class CRO_REST_API {
 		$id = intval( $request->get_param( 'id' ) );
 		
 		if ( ! $id ) {
-			return new WP_Error( 'invalid_id', __( 'Invalid campaign ID.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_id', __( 'Invalid campaign ID.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
 		$campaign = CRO_Campaign::get( $id );
 		
 		if ( ! $campaign ) {
-			return new WP_Error( 'not_found', __( 'Campaign not found.', 'cro-toolkit' ), array( 'status' => 404 ) );
+			return new WP_Error( 'not_found', __( 'Campaign not found.', 'meyvora-convert' ), array( 'status' => 404 ) );
 		}
 
 		// Convert to frontend format
@@ -566,7 +566,7 @@ class CRO_REST_API {
 			}
 		}
 		if ( ! is_array( $body ) ) {
-			return new WP_Error( 'invalid_data', __( 'Invalid request data.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_data', __( 'Invalid request data.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
 		$event_type  = sanitize_text_field( $body['event_type'] ?? '' );
@@ -575,10 +575,10 @@ class CRO_REST_API {
 		$source_id    = $source_type === 'campaign' ? $campaign_id : absint( $body['source_id'] ?? 0 );
 
 		if ( ! $event_type ) {
-			return new WP_Error( 'missing_data', __( 'Missing required fields.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'missing_data', __( 'Missing required fields.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 		if ( $source_type === 'campaign' && ! $campaign_id ) {
-			return new WP_Error( 'missing_data', __( 'Missing required fields.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'missing_data', __( 'Missing required fields.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
 		// Track via CRO_Tracker
@@ -607,14 +607,14 @@ class CRO_REST_API {
 		$body = $request->get_json_params();
 		
 		if ( ! is_array( $body ) ) {
-			return new WP_Error( 'invalid_data', __( 'Invalid request data.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_data', __( 'Invalid request data.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
 		$email = sanitize_email( $body['email'] ?? '' );
 		$campaign_id = absint( $body['campaign_id'] ?? 0 );
 
 		if ( ! $email || ! is_email( $email ) ) {
-			return new WP_Error( 'invalid_email', __( 'Invalid email address.', 'cro-toolkit' ), array( 'status' => 400 ) );
+			return new WP_Error( 'invalid_email', __( 'Invalid email address.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
 		// Save email
@@ -784,23 +784,23 @@ class CRO_REST_API {
 	 */
 	public function apply_offer_coupon( $request ) {
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-			return $this->offer_error( 'unavailable', __( 'Cart is unavailable.', 'cro-toolkit' ), 503 );
+			return $this->offer_error( 'unavailable', __( 'Cart is unavailable.', 'meyvora-convert' ), 503 );
 		}
 
 		$code = $request->get_param( 'coupon_code' );
 		if ( ! is_string( $code ) || trim( $code ) === '' ) {
-			return $this->offer_error( 'invalid_coupon', __( 'Invalid or missing coupon code.', 'cro-toolkit' ), 400 );
+			return $this->offer_error( 'invalid_coupon', __( 'Invalid or missing coupon code.', 'meyvora-convert' ), 400 );
 		}
 		$code = wc_format_coupon_code( sanitize_text_field( $code ) );
 
 		// Rate limit apply attempts per visitor/IP.
 		if ( ! $this->check_offer_apply_rate_limit() ) {
-			return $this->offer_error( 'rate_limited', __( 'Too many attempts. Please try again later.', 'cro-toolkit' ), 429 );
+			return $this->offer_error( 'rate_limited', __( 'Too many attempts. Please try again later.', 'meyvora-convert' ), 429 );
 		}
 
 		$coupon_id = function_exists( 'wc_get_coupon_id_by_code' ) ? wc_get_coupon_id_by_code( $code ) : 0;
 		if ( ! $coupon_id ) {
-			return $this->offer_error( 'invalid_coupon', __( 'This coupon is not valid.', 'cro-toolkit' ), 404 );
+			return $this->offer_error( 'invalid_coupon', __( 'This coupon is not valid.', 'meyvora-convert' ), 404 );
 		}
 
 		$meta_visitor = get_post_meta( $coupon_id, '_cro_visitor_id', true );
@@ -815,14 +815,14 @@ class CRO_REST_API {
 			$allowed = (string) $meta_visitor === $visitor_id && $visitor_id !== '';
 		}
 		if ( ! $allowed ) {
-			return $this->offer_error( 'forbidden', __( 'This coupon is not assigned to you.', 'cro-toolkit' ), 403 );
+			return $this->offer_error( 'forbidden', __( 'This coupon is not assigned to you.', 'meyvora-convert' ), 403 );
 		}
 
 		$applied = WC()->cart->get_applied_coupons();
 		if ( in_array( $code, $applied, true ) ) {
 			return new WP_REST_Response( array(
 				'success'        => true,
-				'message'        => __( 'Coupon already applied.', 'cro-toolkit' ),
+				'message'        => __( 'Coupon already applied.', 'meyvora-convert' ),
 				'coupon_code'    => $code,
 				'cart_fragments' => $this->get_cart_fragments(),
 			), 200 );
@@ -840,7 +840,7 @@ class CRO_REST_API {
 
 		return new WP_REST_Response( array(
 			'success'        => true,
-			'message'        => __( 'Coupon applied.', 'cro-toolkit' ),
+			'message'        => __( 'Coupon applied.', 'meyvora-convert' ),
 			'coupon_code'    => $code,
 			'cart_fragments' => $this->get_cart_fragments(),
 		), 200 );
@@ -897,8 +897,6 @@ class CRO_REST_API {
 	/**
 	 * Load decision engine and dependencies if cro_decide() is not available.
 	 * Requires includes/engine/ (Context, Decision, RuleEngine, IntentScorer, CampaignModel, DecisionEngine).
-	 * If the legacy includes/class-cro-decision-engine.php is already loaded, the new engine is not
-	 * loaded to avoid redeclaration; cro_decide() will be unavailable and decide() returns 503.
 	 */
 	private function ensure_decision_engine_loaded() {
 		if ( function_exists( 'cro_decide' ) ) {
@@ -920,7 +918,7 @@ class CRO_REST_API {
 		if ( ! class_exists( 'CRO_Campaign_Model' ) ) {
 			require_once $dir . 'models/class-cro-campaign-model.php';
 		}
-		// Load new engine only if not already declared (e.g. by legacy includes/class-cro-decision-engine.php).
+		// Canonical decision engine — do not re-add includes/class-cro-decision-engine.php
 		if ( ! class_exists( 'CRO_Decision_Engine' ) ) {
 			$engine_file = $dir . 'engine/class-cro-decision-engine.php';
 			if ( file_exists( $engine_file ) ) {
@@ -941,7 +939,7 @@ class CRO_REST_API {
 				if ( ! $this->check_rate_limit( $request ) ) {
 					return new WP_Error(
 						'rate_limited',
-						__( 'Too many requests. Please try again later.', 'cro-toolkit' ),
+						__( 'Too many requests. Please try again later.', 'meyvora-convert' ),
 						array( 'status' => 429 )
 					);
 				}
@@ -949,7 +947,7 @@ class CRO_REST_API {
 				if ( class_exists( 'CRO_Error_Handler' ) && CRO_Error_Handler::is_emergency_disabled() ) {
 					return new WP_Error(
 						'service_unavailable',
-						__( 'Service temporarily unavailable.', 'cro-toolkit' ),
+						__( 'Service temporarily unavailable.', 'meyvora-convert' ),
 						array( 'status' => 503 )
 					);
 				}
@@ -964,7 +962,7 @@ class CRO_REST_API {
 				}
 				return new WP_Error(
 					'server_error',
-					__( 'An error occurred. Please try again.', 'cro-toolkit' ),
+					__( 'An error occurred. Please try again.', 'meyvora-convert' ),
 					array( 'status' => 500 )
 				);
 			} catch ( Error $e ) {
@@ -976,7 +974,7 @@ class CRO_REST_API {
 				}
 				return new WP_Error(
 					'server_error',
-					__( 'An error occurred. Please try again.', 'cro-toolkit' ),
+					__( 'An error occurred. Please try again.', 'meyvora-convert' ),
 					array( 'status' => 500 )
 				);
 			}

@@ -2,7 +2,7 @@
 /**
  * Sticky cart booster
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -93,9 +93,9 @@ class CRO_Sticky_Cart {
 				),
 				'cartUrl'  => wc_get_cart_url(),
 				'i18n'     => array(
-					'adding'    => __( 'Adding...', 'cro-toolkit' ),
-					'added'     => __( 'Added!', 'cro-toolkit' ),
-					'view_cart' => __( 'View Cart', 'cro-toolkit' ),
+					'adding'    => __( 'Adding...', 'meyvora-convert' ),
+					'added'     => __( 'Added!', 'meyvora-convert' ),
+					'view_cart' => __( 'View Cart', 'meyvora-convert' ),
 				),
 			)
 		);
@@ -119,22 +119,25 @@ class CRO_Sticky_Cart {
 	public function ajax_add_to_cart() {
 		check_ajax_referer( 'cro_add_to_cart', 'nonce' );
 
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
+		}
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;
 		$quantity   = isset( $_POST['quantity'] ) ? max( 1, absint( wp_unslash( $_POST['quantity'] ) ) ) : 1;
 
 		if ( ! $product_id || ! function_exists( 'WC' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid request.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid request.', 'meyvora-convert' ) ) );
 		}
 
 		$product = wc_get_product( $product_id );
 		if ( ! $product || ! $product->is_purchasable() || ! $product->is_in_stock() ) {
-			wp_send_json_error( array( 'message' => __( 'Product cannot be added.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Product cannot be added.', 'meyvora-convert' ) ) );
 		}
 
 		$cart_item_key = WC()->cart->add_to_cart( $product_id, $quantity );
 
 		if ( false === $cart_item_key ) {
-			wp_send_json_error( array( 'message' => __( 'Could not add to cart.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Could not add to cart.', 'meyvora-convert' ) ) );
 		}
 
 		// Return fragments and cart hash for WooCommerce compatibility.
@@ -192,7 +195,7 @@ class CRO_Sticky_Cart {
 					<?php
 					$btn_label = isset( $this->settings['button_text'] ) && (string) $this->settings['button_text'] !== ''
 						? (string) $this->settings['button_text']
-						: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'sticky_cart', isset( $this->settings['tone'] ) ? $this->settings['tone'] : 'neutral', 'button_text' ) : __( 'Add to cart', 'cro-toolkit' ) );
+						: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'sticky_cart', isset( $this->settings['tone'] ) ? $this->settings['tone'] : 'neutral', 'button_text' ) : __( 'Add to cart', 'meyvora-convert' ) );
 					?>
 					<button type="button" class="cro-sticky-cart-button"
 							data-product-id="<?php echo esc_attr( $product->get_id() ); ?>"
@@ -202,7 +205,7 @@ class CRO_Sticky_Cart {
 					<?php else : ?>
 					<a href="#product-<?php echo esc_attr( $product->get_id() ); ?>" class="cro-sticky-cart-button cro-scroll-to-options"
 						style="background-color: <?php echo esc_attr( $button_bg ); ?>; color: <?php echo esc_attr( $button_text_color ); ?>;">
-						<?php esc_html_e( 'Select Options', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'Select Options', 'meyvora-convert' ); ?>
 					</a>
 					<?php endif; ?>
 				</div>

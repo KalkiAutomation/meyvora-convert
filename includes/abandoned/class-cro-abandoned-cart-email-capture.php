@@ -6,7 +6,7 @@
  * Option B (cart): Optional email field + "Send me a reminder" consent checkbox.
  * No silent capture; consent is stored (email_consent). Respects enable_abandoned_cart_emails and require_opt_in.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -55,7 +55,7 @@ class CRO_Abandoned_Cart_Email_Capture {
 			array(
 				'type'     => 'checkbox',
 				'class'    => array( 'form-row-wide', 'cro-abandoned-cart-reminder' ),
-				'label'    => __( 'Email me a reminder if I don\'t finish checkout', 'cro-toolkit' ),
+				'label'    => __( 'Email me a reminder if I don\'t finish checkout', 'meyvora-convert' ),
 				'default'  => 0,
 			),
 			$checkout->get_value( 'cro_abandoned_cart_reminder' )
@@ -76,21 +76,21 @@ class CRO_Abandoned_Cart_Email_Capture {
 		?>
 		<div class="cro-abandoned-cart-cart-capture" data-cro-cart-email-capture>
 			<div class="cro-cart-reminder-box">
-				<p class="cro-cart-reminder-title"><?php esc_html_e( 'Get a reminder?', 'cro-toolkit' ); ?></p>
-				<p class="cro-cart-reminder-desc"><?php esc_html_e( 'We can send you a quick email reminder if you leave your cart.', 'cro-toolkit' ); ?></p>
+				<p class="cro-cart-reminder-title"><?php esc_html_e( 'Get a reminder?', 'meyvora-convert' ); ?></p>
+				<p class="cro-cart-reminder-desc"><?php esc_html_e( 'We can send you a quick email reminder if you leave your cart.', 'meyvora-convert' ); ?></p>
 				<p class="form-row form-row-wide">
 					<label for="cro_cart_reminder_email">
-						<input type="email" id="cro_cart_reminder_email" name="cro_cart_reminder_email" class="input-text" placeholder="<?php esc_attr_e( 'Your email', 'cro-toolkit' ); ?>" />
+						<input type="email" id="cro_cart_reminder_email" name="cro_cart_reminder_email" class="input-text" placeholder="<?php esc_attr_e( 'Your email', 'meyvora-convert' ); ?>" />
 					</label>
 				</p>
 				<p class="form-row form-row-wide">
 					<label class="cro-consent-label">
 						<input type="checkbox" id="cro_cart_reminder_consent" name="cro_cart_reminder_consent" value="1" />
-						<?php esc_html_e( 'Send me a reminder', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'Send me a reminder', 'meyvora-convert' ); ?>
 					</label>
 				</p>
 				<p class="form-row">
-					<button type="button" class="button cro-cart-reminder-save"><?php esc_html_e( 'Save', 'cro-toolkit' ); ?></button>
+					<button type="button" class="button cro-cart-reminder-save"><?php esc_html_e( 'Save', 'meyvora-convert' ); ?></button>
 				</p>
 				<p class="cro-cart-reminder-feedback" data-cro-feedback style="display: none;"></p>
 			</div>

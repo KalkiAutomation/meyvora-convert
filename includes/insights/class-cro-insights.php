@@ -3,7 +3,7 @@
  * CRO Insights – rule-based recommendations from tracking data.
  * Uses cro_events and cro_daily_stats. No ML; actionable cards with "Fix" CTAs.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -31,8 +31,8 @@ class CRO_Insights {
 	 */
 	public static function get_insights( $days = self::DAYS ) {
 		$insights = array();
-		$date_to   = gmdate( 'Y-m-d' );
-		$date_from = gmdate( 'Y-m-d', strtotime( "-{$days} days" ) );
+		$date_to   = wp_date( 'Y-m-d' );
+		$date_from = wp_date( 'Y-m-d', strtotime( "-{$days} days" ) );
 
 		// Top performing offer (highest apply rate / conversion lift).
 		$top_offer = self::get_top_performing_offer( $date_from, $date_to );
@@ -40,15 +40,15 @@ class CRO_Insights {
 			$insights[] = array(
 				'id'          => 'top-offer',
 				'type'        => 'top',
-				'title'       => __( 'Top performing offer', 'cro-toolkit' ),
+				'title'       => __( 'Top performing offer', 'meyvora-convert' ),
 				'description' => sprintf(
 					/* translators: 1: offer name, 2: apply count or metric */
-					__( '%1$s is driving the most applies. Consider promoting it or creating similar rules.', 'cro-toolkit' ),
+					__( '%1$s is driving the most applies. Consider promoting it or creating similar rules.', 'meyvora-convert' ),
 					esc_html( $top_offer['name'] ),
 					$top_offer['applies']
 				),
 				'fix_url'     => admin_url( 'admin.php?page=cro-offers' ),
-				'fix_label'   => __( 'View Offers', 'cro-toolkit' ),
+				'fix_label'   => __( 'View Offers', 'meyvora-convert' ),
 			);
 		}
 
@@ -58,16 +58,16 @@ class CRO_Insights {
 			$insights[] = array(
 				'id'          => 'underperforming-campaign',
 				'type'        => 'underperforming',
-				'title'       => __( 'Campaign with low conversion', 'cro-toolkit' ),
+				'title'       => __( 'Campaign with low conversion', 'meyvora-convert' ),
 				'description' => sprintf(
 					/* translators: 1: campaign name, 2: impressions, 3: conversions */
-					__( '%1$s has %2$s impressions but only %3$s conversions. Try a stronger CTA or different placement.', 'cro-toolkit' ),
+					__( '%1$s has %2$s impressions but only %3$s conversions. Try a stronger CTA or different placement.', 'meyvora-convert' ),
 					esc_html( $under['name'] ),
 					$under['impressions'],
 					$under['conversions']
 				),
 				'fix_url'     => admin_url( 'admin.php?page=cro-campaigns' ),
-				'fix_label'   => __( 'Edit Campaigns', 'cro-toolkit' ),
+				'fix_label'   => __( 'Edit Campaigns', 'meyvora-convert' ),
 			);
 		}
 
@@ -77,10 +77,10 @@ class CRO_Insights {
 			$insights[] = array(
 				'id'          => 'shipping-threshold',
 				'type'        => 'action',
-				'title'       => __( 'Adjust shipping bar threshold', 'cro-toolkit' ),
+				'title'       => __( 'Adjust shipping bar threshold', 'meyvora-convert' ),
 				'description' => $shipping_action,
 				'fix_url'     => admin_url( 'admin.php?page=cro-boosters' ),
-				'fix_label'   => __( 'Boosters settings', 'cro-toolkit' ),
+				'fix_label'   => __( 'Boosters settings', 'meyvora-convert' ),
 			);
 		}
 
@@ -90,10 +90,10 @@ class CRO_Insights {
 			$insights[] = array(
 				'id'          => 'coupon-restrictions',
 				'type'        => 'action',
-				'title'       => __( 'Review coupon restrictions', 'cro-toolkit' ),
+				'title'       => __( 'Review coupon restrictions', 'meyvora-convert' ),
 				'description' => $coupon_action,
 				'fix_url'     => admin_url( 'admin.php?page=cro-offers' ),
-				'fix_label'   => __( 'View Offers', 'cro-toolkit' ),
+				'fix_label'   => __( 'View Offers', 'meyvora-convert' ),
 			);
 		}
 
@@ -103,10 +103,10 @@ class CRO_Insights {
 			$insights[] = array(
 				'id'          => 'placement',
 				'type'        => 'action',
-				'title'       => __( 'Improve campaign placement', 'cro-toolkit' ),
+				'title'       => __( 'Improve campaign placement', 'meyvora-convert' ),
 				'description' => $placement_action,
 				'fix_url'     => admin_url( 'admin.php?page=cro-campaigns' ),
-				'fix_label'   => __( 'Campaigns', 'cro-toolkit' ),
+				'fix_label'   => __( 'Campaigns', 'meyvora-convert' ),
 			);
 		}
 
@@ -189,8 +189,8 @@ class CRO_Insights {
 	 * @throws \Throwable On query failure or timeout.
 	 */
 	private static function get_attribution_uncached( $window_days ) {
-		$date_to   = gmdate( 'Y-m-d' );
-		$date_from = gmdate( 'Y-m-d', strtotime( "-{$window_days} days" ) );
+		$date_to   = wp_date( 'Y-m-d' );
+		$date_from = wp_date( 'Y-m-d', strtotime( "-{$window_days} days" ) );
 
 		$total_conversions = 0;
 		$total_impressions = 0;
@@ -225,7 +225,7 @@ class CRO_Insights {
 			$conv = (int) ( $row['conversions'] ?? 0 );
 			if ( $conv > 0 ) {
 				$top_campaigns[] = array(
-					'name'        => $row['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+					'name'        => $row['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 					'conversions' => $conv,
 					'url'         => admin_url( 'admin.php?page=cro-campaigns' ),
 				);
@@ -242,7 +242,7 @@ class CRO_Insights {
 			$top_offers_list = array();
 			foreach ( $top_offers as $row ) {
 				$top_offers_list[] = array(
-					'name'        => $row['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+					'name'        => $row['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 					'conversions' => (int) ( $row['conversions'] ?? 0 ),
 					'applies'     => (int) ( $row['applies'] ?? 0 ),
 					'rate'        => isset( $row['rate'] ) ? $row['rate'] : null,
@@ -270,7 +270,7 @@ class CRO_Insights {
 				$conv = (int) ( $row['conversions'] ?? 0 );
 				if ( $conv > 0 ) {
 					$top_ab_tests[] = array(
-						'name'        => $row['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+						'name'        => $row['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 						'conversions' => $conv,
 						'url'         => admin_url( 'admin.php?page=cro-ab-test-view&id=' . (int) $row['id'] ),
 					);
@@ -346,7 +346,7 @@ class CRO_Insights {
 				$rate = round( ( $conversions / $applies ) * 100 );
 			}
 			$list[] = array(
-				'name'        => $name_row['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+				'name'        => $name_row['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 				'conversions' => $conversions,
 				'applies'     => $applies,
 				'rate'        => $rate,
@@ -371,7 +371,7 @@ class CRO_Insights {
 			}
 			foreach ( is_array( $rows ) ? $rows : array() as $r ) {
 				$list[] = array(
-					'name'        => $r['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+					'name'        => $r['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 					'conversions' => 0,
 					'applies'     => (int) ( $r['applies'] ?? 0 ),
 					'rate'        => null,
@@ -425,7 +425,7 @@ class CRO_Insights {
 			$conv = (int) ( $row['conversions'] ?? 0 );
 			if ( $imp >= 50 && $conv < 2 && $imp > $conv * 20 ) {
 				return array(
-					'name'         => $row['name'] ?? __( 'Unknown', 'cro-toolkit' ),
+					'name'         => $row['name'] ?? __( 'Unknown', 'meyvora-convert' ),
 					'impressions'  => $imp,
 					'conversions'  => $conv,
 				);
@@ -458,7 +458,7 @@ class CRO_Insights {
 			$date_to
 		) );
 		if ( $imp >= 30 && $int < 3 ) {
-			return __( 'Shipping bar is shown often but rarely drives action. Lower the free-shipping threshold or make the message more compelling.', 'cro-toolkit' );
+			return __( 'Shipping bar is shown often but rarely drives action. Lower the free-shipping threshold or make the message more compelling.', 'meyvora-convert' );
 		}
 		return '';
 	}
@@ -493,7 +493,7 @@ class CRO_Insights {
 			'%apply%'
 		) );
 		if ( $applies >= 10 && $conversions < $applies * 0.3 ) {
-			return __( 'Coupons are applied often but conversion is low. Check minimum order amount, product restrictions, or expiry.', 'cro-toolkit' );
+			return __( 'Coupons are applied often but conversion is low. Check minimum order amount, product restrictions, or expiry.', 'meyvora-convert' );
 		}
 		return '';
 	}
@@ -512,7 +512,7 @@ class CRO_Insights {
 			$imp = (int) ( $row['impressions'] ?? 0 );
 			$conv = (int) ( $row['conversions'] ?? 0 );
 			if ( $imp >= 100 && $imp > 0 && ( $conv / $imp ) < 0.02 ) {
-				return __( 'Some campaigns have very low click-through. Try exit-intent or scroll triggers, or a clearer CTA.', 'cro-toolkit' );
+				return __( 'Some campaigns have very low click-through. Try exit-intent or scroll triggers, or a clearer CTA.', 'meyvora-convert' );
 			}
 		}
 		return '';

@@ -2,7 +2,7 @@
 /**
  * Admin page: Abandoned Cart Emails – templates, delays, opt-in, preview, test send.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -17,7 +17,7 @@ $opts    = wp_parse_args( $opts, array(
 	'email_1_delay_hours'          => 1,
 	'email_2_delay_hours'          => 24,
 	'email_3_delay_hours'          => 72,
-	'email_subject_template'       => __( 'You left something in your cart – {store_name}', 'cro-toolkit' ),
+	'email_subject_template'       => __( 'You left something in your cart – {store_name}', 'meyvora-convert' ),
 	'email_body_template'          => '',
 ) );
 
@@ -37,24 +37,24 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 	$opts = $settings->get_abandoned_cart_settings();
 	$opts = wp_parse_args( $opts, array( 'email_subject_template' => '', 'email_body_template' => '' ) );
 	$body_value = trim( (string) $opts['email_body_template'] ) !== '' ? $opts['email_body_template'] : $body_placeholder;
-	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Abandoned cart email settings saved.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Abandoned cart email settings saved.', 'meyvora-convert' ) . '</p></div>';
 }
 
 ?>
 
-	<div id="cro-ui-toast-container" class="cro-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'cro-toolkit' ); ?>"></div>
+	<div id="cro-ui-toast-container" class="cro-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'meyvora-convert' ); ?>"></div>
 
 	<form method="post" id="cro-abandoned-cart-form">
 		<?php wp_nonce_field( 'cro_abandoned_cart_save' ); ?>
 
 		<div class="cro-settings-section">
-			<h2><?php esc_html_e( 'General', 'cro-toolkit' ); ?></h2>
+			<h2><?php esc_html_e( 'General', 'meyvora-convert' ); ?></h2>
 			<div class="cro-fields-grid cro-fields-grid--1col">
 				<div class="cro-field cro-col-12">
 					<div class="cro-field__control">
 						<label>
 							<input type="checkbox" name="cro_abandoned_cart_enabled" value="1" <?php checked( ! empty( $opts['enable_abandoned_cart_emails'] ) ); ?> />
-							<?php esc_html_e( 'Enable abandoned cart reminder emails', 'cro-toolkit' ); ?>
+							<?php esc_html_e( 'Enable abandoned cart reminder emails', 'meyvora-convert' ); ?>
 						</label>
 					</div>
 				</div>
@@ -62,51 +62,51 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 					<div class="cro-field__control">
 						<label>
 							<input type="checkbox" name="cro_abandoned_cart_require_opt_in" value="1" <?php checked( ! empty( $opts['require_opt_in'] ) ); ?> />
-							<?php esc_html_e( 'Only send to visitors who opted in (e.g. checkbox on cart)', 'cro-toolkit' ); ?>
+							<?php esc_html_e( 'Only send to visitors who opted in (e.g. checkbox on cart)', 'meyvora-convert' ); ?>
 						</label>
 					</div>
 				</div>
 				<div class="cro-field cro-col-12">
-					<label class="cro-field__label"><?php esc_html_e( 'Email delays', 'cro-toolkit' ); ?></label>
+					<label class="cro-field__label"><?php esc_html_e( 'Email delays', 'meyvora-convert' ); ?></label>
 					<div class="cro-field__control">
-						<label><?php esc_html_e( 'Email 1 (hours):', 'cro-toolkit' ); ?></label>
+						<label><?php esc_html_e( 'Email 1 (hours):', 'meyvora-convert' ); ?></label>
 						<input type="number" name="cro_email_1_delay_hours" value="<?php echo esc_attr( (string) $opts['email_1_delay_hours'] ); ?>" min="0" class="small-text" />
 						&nbsp;
-						<label><?php esc_html_e( 'Email 2 (hours):', 'cro-toolkit' ); ?></label>
+						<label><?php esc_html_e( 'Email 2 (hours):', 'meyvora-convert' ); ?></label>
 						<input type="number" name="cro_email_2_delay_hours" value="<?php echo esc_attr( (string) $opts['email_2_delay_hours'] ); ?>" min="0" class="small-text" />
 						&nbsp;
-						<label><?php esc_html_e( 'Email 3 (hours):', 'cro-toolkit' ); ?></label>
+						<label><?php esc_html_e( 'Email 3 (hours):', 'meyvora-convert' ); ?></label>
 						<input type="number" name="cro_email_3_delay_hours" value="<?php echo esc_attr( (string) $opts['email_3_delay_hours'] ); ?>" min="0" class="small-text" />
 					</div>
-					<span class="cro-help"><?php esc_html_e( 'Hours after cart abandonment to send each reminder (e.g. 1, 24, 72).', 'cro-toolkit' ); ?></span>
+					<span class="cro-help"><?php esc_html_e( 'Hours after cart abandonment to send each reminder (e.g. 1, 24, 72).', 'meyvora-convert' ); ?></span>
 				</div>
 			</div>
 		</div>
 
 		<div class="cro-settings-section">
-			<h2><?php esc_html_e( 'Email templates', 'cro-toolkit' ); ?></h2>
+			<h2><?php esc_html_e( 'Email templates', 'meyvora-convert' ); ?></h2>
 			<div class="cro-fields-grid cro-fields-grid--1col">
 				<div class="cro-field cro-col-12">
-					<label for="cro_email_subject_template" class="cro-field__label"><?php esc_html_e( 'Subject', 'cro-toolkit' ); ?></label>
+					<label for="cro_email_subject_template" class="cro-field__label"><?php esc_html_e( 'Subject', 'meyvora-convert' ); ?></label>
 					<div class="cro-field__control">
 						<input type="text" id="cro_email_subject_template" name="cro_email_subject_template" value="<?php echo esc_attr( $opts['email_subject_template'] ); ?>" class="large-text" />
 					</div>
 				</div>
 				<div class="cro-field cro-col-12">
-					<label for="cro_email_body_template" class="cro-field__label"><?php esc_html_e( 'Body (HTML)', 'cro-toolkit' ); ?></label>
+					<label for="cro_email_body_template" class="cro-field__label"><?php esc_html_e( 'Body (HTML)', 'meyvora-convert' ); ?></label>
 					<div class="cro-field__control">
 						<div class="cro-email-body-editor-wrap">
-							<p class="cro-help cro-mb-1"><?php esc_html_e( 'Insert placeholders below. Leave empty to use the default template.', 'cro-toolkit' ); ?></p>
+							<p class="cro-help cro-mb-1"><?php esc_html_e( 'Insert placeholders below. Leave empty to use the default template.', 'meyvora-convert' ); ?></p>
 							<div class="cro-email-placeholder-buttons">
 								<?php
 								$placeholders = array(
-									'first_name'   => __( 'First name', 'cro-toolkit' ),
-									'cart_total'   => __( 'Cart total', 'cro-toolkit' ),
-									'cart_items'   => __( 'Cart items', 'cro-toolkit' ),
-									'checkout_url' => __( 'Checkout URL', 'cro-toolkit' ),
-									'coupon_code'  => __( 'Coupon code', 'cro-toolkit' ),
-									'discount_text'=> __( 'Discount text', 'cro-toolkit' ),
-									'store_name'   => __( 'Store name', 'cro-toolkit' ),
+									'first_name'   => __( 'First name', 'meyvora-convert' ),
+									'cart_total'   => __( 'Cart total', 'meyvora-convert' ),
+									'cart_items'   => __( 'Cart items', 'meyvora-convert' ),
+									'checkout_url' => __( 'Checkout URL', 'meyvora-convert' ),
+									'coupon_code'  => __( 'Coupon code', 'meyvora-convert' ),
+									'discount_text'=> __( 'Discount text', 'meyvora-convert' ),
+									'store_name'   => __( 'Store name', 'meyvora-convert' ),
 								);
 								foreach ( $placeholders as $key => $label ) :
 									$token = '{' . $key . '}';
@@ -135,7 +135,7 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 							wp_editor( $body_value, $editor_id, $editor_settings );
 							?>
 							<p class="cro-help cro-mt-1">
-								<button type="button" id="cro_reset_body_template" class="button button-small"><?php esc_html_e( 'Reset to default template', 'cro-toolkit' ); ?></button>
+								<button type="button" id="cro_reset_body_template" class="button button-small"><?php esc_html_e( 'Reset to default template', 'meyvora-convert' ); ?></button>
 							</p>
 						</div>
 					</div>
@@ -144,13 +144,13 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 		</div>
 
 		<div class="cro-settings-section">
-			<h2><?php esc_html_e( 'Send test email', 'cro-toolkit' ); ?></h2>
+			<h2><?php esc_html_e( 'Send test email', 'meyvora-convert' ); ?></h2>
 			<div class="cro-fields-grid cro-fields-grid--1col">
 				<div class="cro-field cro-col-12">
-					<label for="cro_test_email_to" class="cro-field__label"><?php esc_html_e( 'Send test email to', 'cro-toolkit' ); ?></label>
+					<label for="cro_test_email_to" class="cro-field__label"><?php esc_html_e( 'Send test email to', 'meyvora-convert' ); ?></label>
 					<div class="cro-field__control">
-						<input type="email" id="cro_test_email_to" value="" class="regular-text" placeholder="<?php esc_attr_e( 'email@example.com', 'cro-toolkit' ); ?>" />
-						<button type="button" id="cro_send_test_email" class="button"><?php esc_html_e( 'Send test email', 'cro-toolkit' ); ?></button>
+						<input type="email" id="cro_test_email_to" value="" class="regular-text" placeholder="<?php esc_attr_e( 'email@example.com', 'meyvora-convert' ); ?>" />
+						<button type="button" id="cro_send_test_email" class="button"><?php esc_html_e( 'Send test email', 'meyvora-convert' ); ?></button>
 						<div id="cro_test_email_notice" class="cro-test-email-notice notice is-dismissible cro-hidden cro-mt-2" role="alert"></div>
 					</div>
 				</div>
@@ -158,17 +158,17 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 		</div>
 
 		<p class="submit">
-			<button type="submit" name="cro_save_abandoned_cart" class="button button-primary cro-ui-btn-primary"><?php esc_html_e( 'Save settings', 'cro-toolkit' ); ?></button>
+			<button type="submit" name="cro_save_abandoned_cart" class="button button-primary cro-ui-btn-primary"><?php esc_html_e( 'Save settings', 'meyvora-convert' ); ?></button>
 		</p>
 	</form>
 
 	<div class="cro-ui-card cro-settings-section cro-preview-section">
-		<h2><?php esc_html_e( 'Preview', 'cro-toolkit' ); ?></h2>
-		<p class="description cro-mb-2"><?php esc_html_e( 'Renders the current subject and body with sample placeholder values. Use "Refresh preview" after editing.', 'cro-toolkit' ); ?></p>
-		<button type="button" id="cro_refresh_preview" class="button"><?php esc_html_e( 'Refresh preview', 'cro-toolkit' ); ?></button>
+		<h2><?php esc_html_e( 'Preview', 'meyvora-convert' ); ?></h2>
+		<p class="description cro-mb-2"><?php esc_html_e( 'Renders the current subject and body with sample placeholder values. Use "Refresh preview" after editing.', 'meyvora-convert' ); ?></p>
+		<button type="button" id="cro_refresh_preview" class="button"><?php esc_html_e( 'Refresh preview', 'meyvora-convert' ); ?></button>
 		<div id="cro_preview_wrapper" class="cro-email-preview-wrapper">
 			<div id="cro_preview_subject" class="cro-preview-subject"></div>
-			<iframe id="cro_preview_iframe" class="cro-preview-iframe" title="<?php esc_attr_e( 'Email body preview', 'cro-toolkit' ); ?>"></iframe>
+			<iframe id="cro_preview_iframe" class="cro-preview-iframe" title="<?php esc_attr_e( 'Email body preview', 'meyvora-convert' ); ?>"></iframe>
 		</div>
 	</div>
 
@@ -286,7 +286,7 @@ window.croAbandonedCart = {
 		sendTestBtn.addEventListener('click', function() {
 			var to = (testTo.value || '').trim();
 			if (!to) {
-				showTestNotice(false, '<?php echo esc_js( __( 'Please enter an email address.', 'cro-toolkit' ) ); ?>');
+				showTestNotice(false, '<?php echo esc_js( __( 'Please enter an email address.', 'meyvora-convert' ) ); ?>');
 				return;
 			}
 			if (testNotice) { testNotice.style.display = 'none'; }
@@ -304,11 +304,11 @@ window.croAbandonedCart = {
 				credentials: 'same-origin'
 			}).then(function(r) { return r.json(); }).then(function(res) {
 				sendTestBtn.disabled = false;
-				var msg = (res.data && res.data.message) ? res.data.message : (res.success ? '<?php echo esc_js( __( 'Test email sent.', 'cro-toolkit' ) ); ?>' : '<?php echo esc_js( __( 'Failed to send.', 'cro-toolkit' ) ); ?>');
+				var msg = (res.data && res.data.message) ? res.data.message : (res.success ? '<?php echo esc_js( __( 'Test email sent.', 'meyvora-convert' ) ); ?>' : '<?php echo esc_js( __( 'Failed to send.', 'meyvora-convert' ) ); ?>');
 				showTestNotice(!!res.success, msg);
 			}).catch(function() {
 				sendTestBtn.disabled = false;
-				showTestNotice(false, '<?php echo esc_js( __( 'Request failed. Please try again.', 'cro-toolkit' ) ); ?>');
+				showTestNotice(false, '<?php echo esc_js( __( 'Request failed. Please try again.', 'meyvora-convert' ) ); ?>');
 			});
 		});
 	}
@@ -325,7 +325,7 @@ window.croAbandonedCart = {
 	var resetBtn = document.getElementById('cro_reset_body_template');
 	if (resetBtn && typeof croAbandonedCart !== 'undefined' && croAbandonedCart.defaultBodyTemplate !== undefined) {
 		resetBtn.addEventListener('click', function() {
-			if (confirm('<?php echo esc_js( __( 'Replace the current body with the default template?', 'cro-toolkit' ) ); ?>')) {
+			if (confirm('<?php echo esc_js( __( 'Replace the current body with the default template?', 'meyvora-convert' ) ); ?>')) {
 				setBodyContent(croAbandonedCart.defaultBodyTemplate);
 				updatePreview();
 			}

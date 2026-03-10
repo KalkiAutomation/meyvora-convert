@@ -1,8 +1,8 @@
 /**
- * CRO Toolkit – deferred bootstrap
+ * Meyvora Convert – deferred bootstrap
  * Runs only when page is interactive to avoid blocking.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function() {
 	'use strict';

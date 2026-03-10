@@ -1,11 +1,12 @@
-=== CRO Toolkit for WooCommerce ===
+=== Meyvora Convert ===
 
 Contributors: (your-username)
-Tags: woocommerce, conversion, cart, checkout, popups, exit intent, sticky cart, shipping bar, trust badges
-Requires at least: 5.8
-Tested up to: 6.4
+Tags: woocommerce, conversion, popup, exit intent, abandoned cart, sticky cart, shipping bar, trust badges, A/B testing, analytics
+Requires at least: 6.2
+Tested up to: 6.7
 Requires PHP: 7.4
 Stable tag: 1.0.0
+Requires Plugins: woocommerce
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,7 +14,7 @@ Lightweight conversion rate optimization toolkit for WooCommerce: exit intent po
 
 == Description ==
 
-CRO Toolkit adds conversion-focused features to your WooCommerce store without bloat:
+Meyvora Convert adds conversion-focused features to your WooCommerce store without bloat:
 
 * **Conversion campaigns** – Exit intent and scroll-triggered popups to capture emails and offer coupons
 * **On-page boosters** – Sticky add-to-cart, free shipping progress bar, trust badges, low-stock urgency
@@ -22,18 +23,25 @@ CRO Toolkit adds conversion-focused features to your WooCommerce store without b
 * **Dynamic offers** – Rule-based personalized coupons (cart threshold, first-time/returning customer, lifetime spend, roles)
 * **Blocks support** – All CRO elements render inside WooCommerce Cart and Checkout blocks (Gutenberg)
 * **Classic support** – Same elements via hooks on classic shortcode cart/checkout
-* **Editor support** – Insert campaigns via shortcode [cro_campaign id="123"] or the Gutenberg block "CRO Toolkit / Campaign"; Classic editor "Add CRO Campaign" button
+* **Editor support** – Insert campaigns via shortcode [cro_campaign id="123"] or the Gutenberg block "Meyvora Convert / Campaign"; Classic editor "Add CRO Campaign" button
 
 Performance-first: assets load only on WooCommerce and feature-relevant pages unless overridden by the `cro_should_enqueue_assets` filter. No "Pro" or upgrade prompts.
 
 == Installation ==
 
 1. Upload the plugin folder to `/wp-content/plugins/` or install via WordPress admin → Plugins → Add New → Upload.
-2. Activate "CRO Toolkit for WooCommerce" from the Plugins screen.
+2. Activate "Meyvora Convert" from the Plugins screen.
 3. Ensure WooCommerce is installed and active.
-4. Go to CRO Toolkit in the admin menu to configure campaigns, boosters, cart/checkout settings, and offers.
+4. Go to Meyvora Convert in the admin menu to configure campaigns, boosters, cart/checkout settings, and offers.
 
 == Frequently Asked Questions ==
+
+= Does this plugin support WordPress Multisite? =
+
+Yes, with per-site activation only. Activate Meyvora Convert on each site
+individually from that site's Plugins page. Network-wide (bulk) activation
+is blocked. Each site on the network gets its own isolated database tables,
+campaigns, and settings.
 
 = Does this work with WooCommerce Blocks (block-based cart/checkout)? =
 
@@ -45,7 +53,7 @@ Yes. The same CRO elements (trust strip, shipping progress, offer banner, etc.) 
 
 = How do I show a campaign on a specific page? =
 
-Use the shortcode `[cro_campaign id="123"]` with your campaign ID, or add the "CRO Toolkit / Campaign" block (Gutenberg) or use "Add CRO Campaign" in the Classic editor and pick a campaign.
+Use the shortcode `[cro_campaign id="123"]` with your campaign ID, or add the "Meyvora Convert / Campaign" block (Gutenberg) or use "Add CRO Campaign" in the Classic editor and pick a campaign.
 
 = Are generated offer coupons secure? =
 
@@ -53,12 +61,22 @@ Yes. Coupons use the format CRO-{offer_id}-{random6}, are single-use, and are ra
 
 == Screenshots ==
 
-1. Dashboard with quick launch and KPIs
-2. Campaign builder
-3. Cart optimizer settings (trust strip, shipping progress)
-4. Checkout optimizer (guarantee, secure badge)
-5. Dynamic offers configuration
-6. System Status and Verify Install Package
+1. Dashboard overview — KPI cards showing conversions, revenue influenced, active A/B tests, and abandoned carts
+2. Visual campaign builder with live template preview, trigger settings, and targeting rules
+3. Cart optimizer — trust strip, free shipping progress bar, and urgency messaging
+4. Checkout optimizer — secure checkout badge, guarantee note, and trust elements
+5. Dynamic offers rule builder with cart threshold, customer type, and lifetime spend conditions
+6. System Status panel — WooCommerce compatibility, DB table health, cron status, and conflict detection
+
+== Privacy Policy ==
+
+Meyvora Convert stores the following data to operate its features:
+
+* Visitor state cookie (`cro_visitor_state`): stores which campaigns a visitor has seen or dismissed. Contains no personally identifiable information. Expires after 30 days.
+* Abandoned cart emails: stored in the database only when a visitor voluntarily submits their email address. Requires explicit consent before storage.
+* Analytics events: anonymized impression and conversion events (campaign ID, page type, device type). IP addresses are only stored if full analytics tracking is enabled by the site owner.
+
+Meyvora Convert supports WordPress's built-in personal data export and erasure tools (Tools → Export Personal Data / Erase Personal Data).
 
 == Changelog ==
 

@@ -3,7 +3,7 @@
  * (cro:campaign_shown, cro:campaign_dismissed, cro:campaign_converted, cro:email_captured, cro:coupon_copied).
  * Includes CROPopup class for controller-driven popups and event handlers for server-rendered popups.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 /**

@@ -1,8 +1,8 @@
 /**
- * Dashboard page (admin.php?page=cro-toolkit): KPI row, quick actions, recent activity.
- * Loaded only on the main CRO Toolkit dashboard. Uses design system tokens.
+ * Dashboard page (admin.php?page=meyvora-convert): KPI row, quick actions, recent activity.
+ * Loaded only on the main Meyvora Convert dashboard. Uses design system tokens.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 .cro-dashboard-modern {

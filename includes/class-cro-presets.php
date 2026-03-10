@@ -2,7 +2,7 @@
 /**
  * Preset Library for campaigns and boosters.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -44,11 +44,11 @@ class CRO_Presets {
 	public static function apply( $id ) {
 		$preset = self::get( $id );
 		if ( ! $preset ) {
-			return array( 'success' => false, 'message' => __( 'Preset not found.', 'cro-toolkit' ) );
+			return array( 'success' => false, 'message' => __( 'Preset not found.', 'meyvora-convert' ) );
 		}
 
 		if ( ! function_exists( 'cro_settings' ) ) {
-			return array( 'success' => false, 'message' => __( 'Settings not available.', 'cro-toolkit' ) );
+			return array( 'success' => false, 'message' => __( 'Settings not available.', 'meyvora-convert' ) );
 		}
 
 		$settings = cro_settings();
@@ -92,9 +92,9 @@ class CRO_Presets {
 			$campaign_id = CRO_Campaign::create( $campaign_data );
 		}
 
-		$message = isset( $preset['apply_message'] ) ? $preset['apply_message'] : __( 'Preset applied successfully.', 'cro-toolkit' );
+		$message = isset( $preset['apply_message'] ) ? $preset['apply_message'] : __( 'Preset applied successfully.', 'meyvora-convert' );
 		if ( $campaign_id ) {
-			$message .= ' ' . __( 'A new campaign was created.', 'cro-toolkit' );
+			$message .= ' ' . __( 'A new campaign was created.', 'meyvora-convert' );
 		}
 
 		return array(
@@ -113,8 +113,8 @@ class CRO_Presets {
 		return array(
 			'free_shipping_bar' => array(
 				'id'          => 'free_shipping_bar',
-				'name'        => __( 'Free Shipping Bar', 'cro-toolkit' ),
-				'description' => __( 'Shows a progress bar toward free shipping on product, cart, and shop. Encourages higher order value.', 'cro-toolkit' ),
+				'name'        => __( 'Free Shipping Bar', 'meyvora-convert' ),
+				'description' => __( 'Shows a progress bar toward free shipping on product, cart, and shop. Encourages higher order value.', 'meyvora-convert' ),
 				'features'    => array( 'shipping_bar' ),
 				'settings'    => array(
 					'shipping_bar' => array(
@@ -129,39 +129,39 @@ class CRO_Presets {
 						'bar_color'         => '#333333',
 					),
 				),
-				'apply_message' => __( 'Free shipping bar is now enabled on product, cart, and shop.', 'cro-toolkit' ),
+				'apply_message' => __( 'Free shipping bar is now enabled on product, cart, and shop.', 'meyvora-convert' ),
 			),
 
 			'low_stock_urgency' => array(
 				'id'          => 'low_stock_urgency',
-				'name'        => __( 'Low Stock Urgency', 'cro-toolkit' ),
-				'description' => __( 'Displays "Only X left!" on product pages when stock is low. Drives urgency without a campaign.', 'cro-toolkit' ),
+				'name'        => __( 'Low Stock Urgency', 'meyvora-convert' ),
+				'description' => __( 'Displays "Only X left!" on product pages when stock is low. Drives urgency without a campaign.', 'meyvora-convert' ),
 				'features'    => array( 'stock_urgency' ),
 				'settings'    => array(),
-				'apply_message' => __( 'Low stock urgency messages are now enabled on product pages.', 'cro-toolkit' ),
+				'apply_message' => __( 'Low stock urgency messages are now enabled on product pages.', 'meyvora-convert' ),
 			),
 
 			'trust_badges_checkout' => array(
 				'id'          => 'trust_badges_checkout',
-				'name'        => __( 'Trust Badges & Checkout', 'cro-toolkit' ),
-				'description' => __( 'Trust badges on product and cart; secure checkout message and badge on checkout to reduce friction.', 'cro-toolkit' ),
+				'name'        => __( 'Trust Badges & Checkout', 'meyvora-convert' ),
+				'description' => __( 'Trust badges on product and cart; secure checkout message and badge on checkout to reduce friction.', 'meyvora-convert' ),
 				'features'    => array( 'trust_badges', 'checkout_optimizer' ),
 				'settings'    => array(
 					'checkout_optimizer' => array(
 						'show_trust_message' => true,
-						'trust_message_text' => __( 'Secure checkout – your data is protected.', 'cro-toolkit' ),
+						'trust_message_text' => __( 'Secure checkout – your data is protected.', 'meyvora-convert' ),
 						'show_secure_badge'  => true,
 						'show_guarantee'     => true,
-						'guarantee_text'     => __( '30-day money-back guarantee', 'cro-toolkit' ),
+						'guarantee_text'     => __( '30-day money-back guarantee', 'meyvora-convert' ),
 					),
 				),
-				'apply_message' => __( 'Trust badges and checkout trust elements are now enabled.', 'cro-toolkit' ),
+				'apply_message' => __( 'Trust badges and checkout trust elements are now enabled.', 'meyvora-convert' ),
 			),
 
 			'sticky_cta_minimal' => array(
 				'id'          => 'sticky_cta_minimal',
-				'name'        => __( 'Sticky CTA Minimal', 'cro-toolkit' ),
-				'description' => __( 'Minimal sticky add-to-cart bar on product pages (mobile-first). Clean look, no image.', 'cro-toolkit' ),
+				'name'        => __( 'Sticky CTA Minimal', 'meyvora-convert' ),
+				'description' => __( 'Minimal sticky add-to-cart bar on product pages (mobile-first). Clean look, no image.', 'meyvora-convert' ),
 				'features'    => array( 'sticky_cart' ),
 				'settings'    => array(
 					'sticky_cart' => array(
@@ -170,23 +170,23 @@ class CRO_Presets {
 						'show_product_image'  => false,
 						'show_product_title'  => true,
 						'show_price'          => true,
-						'button_text'         => __( 'Add to Cart', 'cro-toolkit' ),
+						'button_text'         => __( 'Add to Cart', 'meyvora-convert' ),
 						'bg_color'            => '#ffffff',
 						'button_bg_color'     => '#333333',
 						'button_text_color'   => '#ffffff',
 					),
 				),
-				'apply_message' => __( 'Minimal sticky add-to-cart bar is now enabled.', 'cro-toolkit' ),
+				'apply_message' => __( 'Minimal sticky add-to-cart bar is now enabled.', 'meyvora-convert' ),
 			),
 
 			'exit_intent_email' => array(
 				'id'          => 'exit_intent_email',
-				'name'        => __( 'Exit Intent Email', 'cro-toolkit' ),
-				'description' => __( 'Exit-intent popup that captures email and offers a discount. Targets product and cart pages.', 'cro-toolkit' ),
+				'name'        => __( 'Exit Intent Email', 'meyvora-convert' ),
+				'description' => __( 'Exit-intent popup that captures email and offers a discount. Targets product and cart pages.', 'meyvora-convert' ),
 				'features'    => array( 'campaigns' ),
 				'settings'    => array(),
 				'campaign'    => array(
-					'name'             => __( 'Exit Intent – Email Capture', 'cro-toolkit' ),
+					'name'             => __( 'Exit Intent – Email Capture', 'meyvora-convert' ),
 					'campaign_type'    => 'exit_intent',
 					'template_type'    => 'centered',
 					'status'           => 'draft',
@@ -196,16 +196,16 @@ class CRO_Presets {
 						'require_interaction' => true,
 					),
 					'content' => array(
-						'headline'          => __( 'Wait! Get 10% Off', 'cro-toolkit' ),
-						'subheadline'       => __( 'Enter your email for a discount code.', 'cro-toolkit' ),
+						'headline'          => __( 'Wait! Get 10% Off', 'meyvora-convert' ),
+						'subheadline'       => __( 'Enter your email for a discount code.', 'meyvora-convert' ),
 						'show_email_field'   => true,
-						'email_placeholder'  => __( 'Your email', 'cro-toolkit' ),
+						'email_placeholder'  => __( 'Your email', 'meyvora-convert' ),
 						'show_coupon'        => true,
 						'coupon_code'        => 'SAVE10',
-						'coupon_display_text'=> __( 'Use code: SAVE10', 'cro-toolkit' ),
-						'cta_text'           => __( 'Send My Code', 'cro-toolkit' ),
+						'coupon_display_text'=> __( 'Use code: SAVE10', 'meyvora-convert' ),
+						'cta_text'           => __( 'Send My Code', 'meyvora-convert' ),
 						'show_dismiss_link'  => true,
-						'dismiss_text'       => __( 'No thanks', 'cro-toolkit' ),
+						'dismiss_text'       => __( 'No thanks', 'meyvora-convert' ),
 					),
 					'styling' => array(
 						'bg_color'          => '#ffffff',
@@ -226,17 +226,17 @@ class CRO_Presets {
 						'frequency' => 'once_per_session',
 					),
 				),
-				'apply_message' => __( 'Exit intent email campaign created. Review and activate it in Campaigns.', 'cro-toolkit' ),
+				'apply_message' => __( 'Exit intent email campaign created. Review and activate it in Campaigns.', 'meyvora-convert' ),
 			),
 
 			'cart_upsell_reminder' => array(
 				'id'          => 'cart_upsell_reminder',
-				'name'        => __( 'Cart Upsell Reminder', 'cro-toolkit' ),
-				'description' => __( 'Time-based popup on cart page reminding visitors of free shipping or an offer. Good for cart abandoners.', 'cro-toolkit' ),
+				'name'        => __( 'Cart Upsell Reminder', 'meyvora-convert' ),
+				'description' => __( 'Time-based popup on cart page reminding visitors of free shipping or an offer. Good for cart abandoners.', 'meyvora-convert' ),
 				'features'    => array( 'campaigns' ),
 				'settings'    => array(),
 				'campaign'    => array(
-					'name'             => __( 'Cart – Free Shipping Reminder', 'cro-toolkit' ),
+					'name'             => __( 'Cart – Free Shipping Reminder', 'meyvora-convert' ),
 					'campaign_type'    => 'time_trigger',
 					'template_type'    => 'centered',
 					'status'           => 'draft',
@@ -246,11 +246,11 @@ class CRO_Presets {
 						'require_interaction' => false,
 					),
 					'content' => array(
-						'headline'          => __( 'You\'re so close!', 'cro-toolkit' ),
-						'subheadline'       => __( 'Add a bit more to your cart to get free shipping.', 'cro-toolkit' ),
+						'headline'          => __( 'You\'re so close!', 'meyvora-convert' ),
+						'subheadline'       => __( 'Add a bit more to your cart to get free shipping.', 'meyvora-convert' ),
 						'show_email_field'   => false,
 						'show_coupon'        => false,
-						'cta_text'           => __( 'Continue to Cart', 'cro-toolkit' ),
+						'cta_text'           => __( 'Continue to Cart', 'meyvora-convert' ),
 						'show_dismiss_link'  => true,
 					),
 					'styling' => array(
@@ -270,36 +270,36 @@ class CRO_Presets {
 						'frequency' => 'once_per_session',
 					),
 				),
-				'apply_message' => __( 'Cart upsell reminder campaign created. Review and activate it in Campaigns.', 'cro-toolkit' ),
+				'apply_message' => __( 'Cart upsell reminder campaign created. Review and activate it in Campaigns.', 'meyvora-convert' ),
 			),
 
 			'quick_boost' => array(
 				'id'          => 'quick_boost',
-				'name'        => __( 'Quick Boost', 'cro-toolkit' ),
-				'description' => __( 'Shipping bar + sticky add-to-cart + trust badges. Ideal first setup for new stores.', 'cro-toolkit' ),
+				'name'        => __( 'Quick Boost', 'meyvora-convert' ),
+				'description' => __( 'Shipping bar + sticky add-to-cart + trust badges. Ideal first setup for new stores.', 'meyvora-convert' ),
 				'features'    => array( 'shipping_bar', 'sticky_cart', 'trust_badges' ),
 				'settings'    => array(
 					'shipping_bar' => array(
 						'use_woo_threshold' => true,
 						'show_on_pages'     => array( 'product', 'cart', 'shop' ),
-						'message_progress'  => __( 'You are {amount} away from free shipping!', 'cro-toolkit' ),
-						'message_achieved'  => __( 'You qualify for free shipping!', 'cro-toolkit' ),
+						'message_progress'  => __( 'You are {amount} away from free shipping!', 'meyvora-convert' ),
+						'message_achieved'  => __( 'You qualify for free shipping!', 'meyvora-convert' ),
 					),
 					'sticky_cart' => array(
 						'show_on_mobile_only' => true,
 						'show_product_image'  => true,
 						'show_product_title'  => true,
 						'show_price'          => true,
-						'button_text'         => __( 'Add to Cart', 'cro-toolkit' ),
+						'button_text'         => __( 'Add to Cart', 'meyvora-convert' ),
 					),
 				),
-				'apply_message' => __( 'Quick boost preset applied: shipping bar, sticky cart, and trust badges enabled.', 'cro-toolkit' ),
+				'apply_message' => __( 'Quick boost preset applied: shipping bar, sticky cart, and trust badges enabled.', 'meyvora-convert' ),
 			),
 
 			'conversion_stack' => array(
 				'id'          => 'conversion_stack',
-				'name'        => __( 'Conversion Stack', 'cro-toolkit' ),
-				'description' => __( 'Full stack: shipping bar, sticky cart, trust badges, cart optimizer, and one exit-intent campaign. Maximize conversions.', 'cro-toolkit' ),
+				'name'        => __( 'Conversion Stack', 'meyvora-convert' ),
+				'description' => __( 'Full stack: shipping bar, sticky cart, trust badges, cart optimizer, and one exit-intent campaign. Maximize conversions.', 'meyvora-convert' ),
 				'features'    => array( 'shipping_bar', 'sticky_cart', 'trust_badges', 'cart_optimizer', 'campaigns' ),
 				'settings'    => array(
 					'shipping_bar' => array(
@@ -308,25 +308,25 @@ class CRO_Presets {
 					),
 					'cart_optimizer' => array(
 						'show_trust_under_total' => true,
-						'trust_message'         => __( 'Secure payment · Fast shipping · Easy returns', 'cro-toolkit' ),
+						'trust_message'         => __( 'Secure payment · Fast shipping · Easy returns', 'meyvora-convert' ),
 						'show_urgency'           => true,
-						'urgency_message'       => __( 'Items in your cart are in high demand!', 'cro-toolkit' ),
+						'urgency_message'       => __( 'Items in your cart are in high demand!', 'meyvora-convert' ),
 					),
 				),
 				'campaign' => array(
-					'name'             => __( 'Exit Intent – Special Offer', 'cro-toolkit' ),
+					'name'             => __( 'Exit Intent – Special Offer', 'meyvora-convert' ),
 					'campaign_type'    => 'exit_intent',
 					'template_type'    => 'centered',
 					'status'           => 'draft',
 					'trigger_settings' => array( 'type' => 'exit_intent', 'sensitivity' => 'medium' ),
 					'content' => array(
-						'headline'           => __( 'Wait! Don\'t leave yet', 'cro-toolkit' ),
-						'subheadline'        => __( 'We have a special offer for you.', 'cro-toolkit' ),
+						'headline'           => __( 'Wait! Don\'t leave yet', 'meyvora-convert' ),
+						'subheadline'        => __( 'We have a special offer for you.', 'meyvora-convert' ),
 						'show_email_field'    => true,
 						'show_coupon'         => true,
 						'coupon_code'        => 'WELCOME10',
 						'coupon_display_text'=> 'Use code: WELCOME10',
-						'cta_text'            => __( 'Claim My Discount', 'cro-toolkit' ),
+						'cta_text'            => __( 'Claim My Discount', 'meyvora-convert' ),
 						'show_dismiss_link'   => true,
 					),
 					'styling' => array(
@@ -344,7 +344,7 @@ class CRO_Presets {
 					),
 					'display_rules' => array( 'frequency' => 'once_per_session' ),
 				),
-				'apply_message' => __( 'Conversion stack applied. One exit-intent campaign was created – review and activate in Campaigns.', 'cro-toolkit' ),
+				'apply_message' => __( 'Conversion stack applied. One exit-intent campaign was created – review and activate in Campaigns.', 'meyvora-convert' ),
 			),
 		);
 	}

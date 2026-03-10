@@ -191,7 +191,7 @@ class CRO_AB_Statistics {
         if ( ! self::has_reached_sample_size( $test ) ) {
             return sprintf(
                 /* translators: %s: minimum sample size per variation */
-                __( 'Not enough data. Each variation needs at least %s impressions before results are reliable.', 'cro-toolkit' ),
+                __( 'Not enough data. Each variation needs at least %s impressions before results are reliable.', 'meyvora-convert' ),
                 number_format_i18n( (int) $test->min_sample_size )
             );
         }
@@ -199,14 +199,37 @@ class CRO_AB_Statistics {
         if ( ! empty( $results['has_winner'] ) && ! empty( $results['winner'] ) ) {
             return sprintf(
                 /* translators: 1: variation name, 2: improvement percent, 3: confidence percent */
-                __( 'Winner found! "%1$s" is performing %2$s better with %3$s%% confidence.', 'cro-toolkit' ),
+                __( 'Winner found! "%1$s" is performing %2$s better with %3$s%% confidence.', 'meyvora-convert' ),
                 $results['winner']['variation_name'],
                 number_format( $results['winner']['improvement'], 1 ) . '%',
                 number_format( $results['winner']['confidence'], 0 )
             );
         }
 
-        return __( 'No significant difference found yet. Keep the test running or increase traffic.', 'cro-toolkit' );
+        return __( 'No significant difference found yet. Keep the test running or increase traffic.', 'meyvora-convert' );
+    }
+
+    /**
+     * Get the variation ID of the statistically significant winner for a test, or null if no winner yet.
+     * Uses the test's confidence_level and min_sample_size; returns the challenger variation ID with highest improvement.
+     *
+     * @param int $test_id Test ID.
+     * @return int|null Winner variation ID or null.
+     */
+    public static function get_winner( $test_id ) {
+        if ( ! class_exists( 'CRO_AB_Test' ) ) {
+            return null;
+        }
+        $ab   = new CRO_AB_Test();
+        $test = $ab->get( $test_id );
+        if ( ! $test || empty( $test->variations ) ) {
+            return null;
+        }
+        $results = self::calculate( $test );
+        if ( ! empty( $results['has_winner'] ) && ! empty( $results['winner']['variation_id'] ) ) {
+            return (int) $results['winner']['variation_id'];
+        }
+        return null;
     }
 
     /**
@@ -218,13 +241,13 @@ class CRO_AB_Statistics {
      */
     public static function get_data_state_label( $test, $results = null ) {
         if ( ! self::has_reached_sample_size( $test ) ) {
-            return __( 'Not enough data', 'cro-toolkit' );
+            return __( 'Not enough data', 'meyvora-convert' );
         }
         if ( $results && ! empty( $results['has_winner'] ) && ! empty( $results['winner'] ) ) {
             return $results['winner']['variation_name'];
         }
         if ( $results ) {
-            return __( 'No winner yet', 'cro-toolkit' );
+            return __( 'No winner yet', 'meyvora-convert' );
         }
         return '—';
     }

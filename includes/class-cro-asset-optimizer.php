@@ -4,7 +4,7 @@
  *
  * Optimizes CSS and JS loading
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -82,7 +82,7 @@ class CRO_Asset_Optimizer {
 			$js_file = 'public/js/cro-controller.js';
 		}
 		wp_enqueue_script(
-			'cro-toolkit',
+			'meyvora-convert',
 			( defined( 'CRO_PLUGIN_URL' ) ? CRO_PLUGIN_URL : '' ) . $js_file,
 			array(),
 			defined( 'CRO_VERSION' ) ? CRO_VERSION : '1.0.0',
@@ -98,7 +98,7 @@ class CRO_Asset_Optimizer {
 	 * @return string
 	 */
 	public static function defer_scripts( $tag, $handle ) {
-		$defer_scripts = array( 'cro-toolkit', 'cro-controller', 'cro-popup', 'cro-signals' );
+		$defer_scripts = array( 'meyvora-convert', 'cro-controller', 'cro-popup', 'cro-signals' );
 
 		if ( in_array( $handle, $defer_scripts, true ) ) {
 			return str_replace( ' src', ' defer src', $tag );

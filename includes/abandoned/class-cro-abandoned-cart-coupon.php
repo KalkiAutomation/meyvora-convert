@@ -5,7 +5,7 @@
  * Generates single-use coupon when preparing to send reminder (configurable: default Email #1).
  * Stores code on abandoned cart record; reuses same coupon for later emails.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

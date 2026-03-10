@@ -2,7 +2,7 @@
 /**
  * The file that defines the core plugin class
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -78,7 +78,7 @@ class CRO_Loader {
 		// Shortcodes (campaign render)
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-shortcodes.php';
 
-		// Decision engine and visitor state are loaded in the main plugin file (cro-toolkit.php).
+		// Decision engine and visitor state are loaded in the main plugin file (meyvora-convert.php).
 
 		// Intent validator (validate trigger signals)
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-intent-validator.php';
@@ -163,7 +163,7 @@ class CRO_Loader {
 		// WooCommerce Blocks IntegrationInterface (scripts/styles/data for Cart/Checkout blocks)
 		require_once CRO_PLUGIN_DIR . 'includes/blocks/class-cro-blocks-integration.php';
 
-		// Gutenberg block: CRO Toolkit / Campaign
+		// Gutenberg block: Meyvora Convert / Campaign
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-gutenberg-block.php';
 
 		// Admin
@@ -200,7 +200,7 @@ class CRO_Loader {
 	 */
 	public function load_textdomain() {
 		load_plugin_textdomain(
-			'cro-toolkit',
+			'meyvora-convert',
 			false,
 			dirname( CRO_PLUGIN_BASENAME ) . '/languages/'
 		);

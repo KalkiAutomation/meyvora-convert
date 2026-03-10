@@ -1,16 +1,16 @@
 /**
- * CRO Toolkit – namespace isolation
+ * Meyvora Convert – namespace isolation
  * All CRO components use .cro- prefix. Never use generic selectors (button, input, .modal, #popup).
  */
-.cro-toolkit-scope {
+.cro-scope {
   box-sizing: border-box;
   font-family: inherit;
   line-height: 1.5;
 }
 
-.cro-toolkit-scope *,
-.cro-toolkit-scope *::before,
-.cro-toolkit-scope *::after {
+.cro-scope *,
+.cro-scope *::before,
+.cro-scope *::after {
   box-sizing: inherit;
 }
 

@@ -1,8 +1,8 @@
 <?php
 /**
- * WP-CLI commands for CRO Toolkit.
+ * WP-CLI commands for Meyvora Convert.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'ABSPATH' ) && ! defined( 'WP_CLI' ) ) {
@@ -14,7 +14,7 @@ if ( ! class_exists( 'WP_CLI' ) ) {
 }
 
 /**
- * CRO Toolkit WP-CLI commands.
+ * Meyvora Convert WP-CLI commands.
  */
 class CRO_CLI_Command {
 

@@ -6,7 +6,7 @@
  * applies strength multipliers, normalizes to 0–100, and supports thresholds
  * and signal-quality validation.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -84,9 +84,10 @@ class CRO_Intent_Scorer {
 		$this->thresholds = isset( $config['thresholds'] ) && is_array( $config['thresholds'] )
 			? array_merge( self::$default_thresholds, $config['thresholds'] )
 			: self::$default_thresholds;
+		$saved_threshold  = function_exists( 'cro_settings' ) ? (int) cro_settings()->get( 'campaigns', 'intent_score_threshold', 50 ) : 50;
 		$this->default_threshold = isset( $config['default_threshold'] )
 			? max( 0, min( 100, (int) $config['default_threshold'] ) )
-			: 50;
+			: max( 0, min( 100, $saved_threshold ) );
 	}
 
 	/**

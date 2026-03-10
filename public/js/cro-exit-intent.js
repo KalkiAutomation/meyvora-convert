@@ -1,12 +1,18 @@
 /**
  * Exit intent detection
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function($) {
 	'use strict';
 
 	var exitIntentDetected = false;
+
+	function triggerExitIntent(source) {
+		if (exitIntentDetected) return;
+		exitIntentDetected = true;
+		$(document).trigger('cro:exit-intent', source ? [source] : []);
+	}
 
 	/**
 	 * Signal collector for exit intent validation
@@ -211,7 +217,7 @@
 
 			const $header = $('<div>', {
 				css: { fontWeight: 'bold', marginBottom: '10px', borderBottom: '1px solid #444', paddingBottom: '5px' },
-				html: '🔧 CRO Toolkit Debug <button id="cro-debug-close" style="float:right;background:none;border:none;color:#fff;cursor:pointer;">×</button>'
+				html: '🔧 Meyvora Convert Debug <button id="cro-debug-close" style="float:right;background:none;border:none;color:#fff;cursor:pointer;">×</button>'
 			});
 
 			const $content = $('<div>', { id: 'cro-debug-content' });
@@ -471,6 +477,23 @@
 				$(document).trigger('cro:exit-intent');
 			}
 		});
+
+		// Mobile exit intent: scroll-up velocity + back-button interception (no mouseleave available).
+		if (window.croSignals && window.croSignals.isMobile()) {
+			history.pushState({ cro_exit_guard: true }, '');
+			window.addEventListener('popstate', function() {
+				if (!exitIntentDetected) {
+					triggerExitIntent('mobile_back_button');
+					history.pushState({ cro_exit_guard: true }, '');
+				}
+			});
+			$(window).on('scroll', function() {
+				if (exitIntentDetected) return;
+				if (window.croSignals.getScrollVelocity() < -500) {
+					triggerExitIntent('mobile_scroll_up');
+				}
+			});
+		}
 	});
 
 })(jQuery);

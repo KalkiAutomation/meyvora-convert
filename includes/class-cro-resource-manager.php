@@ -4,7 +4,7 @@
  *
  * Manages memory and resource usage
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;

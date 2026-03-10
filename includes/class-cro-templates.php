@@ -4,7 +4,7 @@
  *
  * Manages popup templates with previews and configurations.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -32,8 +32,8 @@ class CRO_Templates {
 			// ==========================================
 
 			'centered'           => array(
-				'name'            => __( 'Centered Modal', 'cro-toolkit' ),
-				'description'     => __( 'Classic centered popup with overlay', 'cro-toolkit' ),
+				'name'            => __( 'Centered Modal', 'meyvora-convert' ),
+				'description'     => __( 'Classic centered popup with overlay', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -47,8 +47,8 @@ class CRO_Templates {
 			),
 
 			'centered-image-left'  => array(
-				'name'            => __( 'Image Left', 'cro-toolkit' ),
-				'description'     => __( 'Two-column layout with image on left side', 'cro-toolkit' ),
+				'name'            => __( 'Image Left', 'meyvora-convert' ),
+				'description'     => __( 'Two-column layout with image on left side', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -62,8 +62,8 @@ class CRO_Templates {
 			),
 
 			'centered-image-right' => array(
-				'name'            => __( 'Image Right', 'cro-toolkit' ),
-				'description'     => __( 'Two-column layout with image on right side', 'cro-toolkit' ),
+				'name'            => __( 'Image Right', 'meyvora-convert' ),
+				'description'     => __( 'Two-column layout with image on right side', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -77,8 +77,8 @@ class CRO_Templates {
 			),
 
 			'centered-image-top'  => array(
-				'name'            => __( 'Image Top', 'cro-toolkit' ),
-				'description'     => __( 'Large image at top with content below', 'cro-toolkit' ),
+				'name'            => __( 'Image Top', 'meyvora-convert' ),
+				'description'     => __( 'Large image at top with content below', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -92,8 +92,8 @@ class CRO_Templates {
 			),
 
 			'fullscreen'          => array(
-				'name'            => __( 'Fullscreen', 'cro-toolkit' ),
-				'description'     => __( 'Full-screen takeover for maximum impact', 'cro-toolkit' ),
+				'name'            => __( 'Fullscreen', 'meyvora-convert' ),
+				'description'     => __( 'Full-screen takeover for maximum impact', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -106,8 +106,8 @@ class CRO_Templates {
 			),
 
 			'minimal'             => array(
-				'name'            => __( 'Minimal', 'cro-toolkit' ),
-				'description'     => __( 'Clean, simple design focused on message', 'cro-toolkit' ),
+				'name'            => __( 'Minimal', 'meyvora-convert' ),
+				'description'     => __( 'Clean, simple design focused on message', 'meyvora-convert' ),
 				'type'            => 'popup',
 				'category'        => 'modal',
 				'preview_image'   => '',
@@ -124,8 +124,8 @@ class CRO_Templates {
 			// ==========================================
 
 			'slide-bottom'        => array(
-				'name'            => __( 'Bottom Slide', 'cro-toolkit' ),
-				'description'     => __( 'Slides up from bottom of screen', 'cro-toolkit' ),
+				'name'            => __( 'Bottom Slide', 'meyvora-convert' ),
+				'description'     => __( 'Slides up from bottom of screen', 'meyvora-convert' ),
 				'type'            => 'slide',
 				'category'        => 'slide',
 				'preview_image'   => '',
@@ -139,8 +139,8 @@ class CRO_Templates {
 			),
 
 			'slide-bottom-left'   => array(
-				'name'            => __( 'Bottom Left Corner', 'cro-toolkit' ),
-				'description'     => __( 'Small notification in bottom left corner', 'cro-toolkit' ),
+				'name'            => __( 'Bottom Left Corner', 'meyvora-convert' ),
+				'description'     => __( 'Small notification in bottom left corner', 'meyvora-convert' ),
 				'type'            => 'slide',
 				'category'        => 'slide',
 				'preview_image'   => '',
@@ -154,8 +154,8 @@ class CRO_Templates {
 			),
 
 			'slide-bottom-right'  => array(
-				'name'            => __( 'Bottom Right Corner', 'cro-toolkit' ),
-				'description'     => __( 'Small notification in bottom right corner', 'cro-toolkit' ),
+				'name'            => __( 'Bottom Right Corner', 'meyvora-convert' ),
+				'description'     => __( 'Small notification in bottom right corner', 'meyvora-convert' ),
 				'type'            => 'slide',
 				'category'        => 'slide',
 				'preview_image'   => '',
@@ -173,8 +173,8 @@ class CRO_Templates {
 			// ==========================================
 
 			'top-bar'             => array(
-				'name'            => __( 'Top Bar', 'cro-toolkit' ),
-				'description'     => __( 'Sticky bar at top of page', 'cro-toolkit' ),
+				'name'            => __( 'Top Bar', 'meyvora-convert' ),
+				'description'     => __( 'Sticky bar at top of page', 'meyvora-convert' ),
 				'type'            => 'bar',
 				'category'        => 'bar',
 				'preview_image'   => '',
@@ -188,8 +188,8 @@ class CRO_Templates {
 			),
 
 			'bottom-bar'          => array(
-				'name'            => __( 'Bottom Bar', 'cro-toolkit' ),
-				'description'     => __( 'Sticky bar at bottom of page', 'cro-toolkit' ),
+				'name'            => __( 'Bottom Bar', 'meyvora-convert' ),
+				'description'     => __( 'Sticky bar at bottom of page', 'meyvora-convert' ),
 				'type'            => 'bar',
 				'category'        => 'bar',
 				'preview_image'   => '',
@@ -295,7 +295,7 @@ class CRO_Templates {
 		}
 
 		// Check theme override
-		$theme_file = get_stylesheet_directory() . '/cro-toolkit/templates/' . $template_key . '.php';
+		$theme_file = get_stylesheet_directory() . '/meyvora-convert/templates/' . $template_key . '.php';
 		if ( file_exists( $theme_file ) ) {
 			return $theme_file;
 		}
@@ -337,9 +337,9 @@ class CRO_Templates {
 	 */
 	public static function get_categories() {
 		return array(
-			'modal' => __( 'Modal Popups', 'cro-toolkit' ),
-			'slide' => __( 'Slide-ins', 'cro-toolkit' ),
-			'bar'   => __( 'Notification Bars', 'cro-toolkit' ),
+			'modal' => __( 'Modal Popups', 'meyvora-convert' ),
+			'slide' => __( 'Slide-ins', 'meyvora-convert' ),
+			'bar'   => __( 'Notification Bars', 'meyvora-convert' ),
 		);
 	}
 

@@ -4,7 +4,7 @@
  * 
  * Small popup in the bottom-right corner
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -33,7 +33,7 @@ if ( $is_preview ) {
      style="<?php echo esc_attr( CRO_Templates::get_inline_styles( $styling, $campaign ) ); ?>">
     
     <!-- Close Button -->
-    <button type="button" class="cro-popup__close" aria-label="<?php esc_attr_e( 'Close', 'cro-toolkit' ); ?>" data-action="close">
+    <button type="button" class="cro-popup__close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>" data-action="close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12"/>
         </svg>
@@ -70,7 +70,7 @@ if ( $is_preview ) {
         
         <?php if ( ! empty( $content['show_dismiss_link'] ) ) : ?>
         <a href="#" class="cro-popup__dismiss" data-action="dismiss">
-            <?php echo esc_html( $content['dismiss_text'] ?? __( 'No thanks', 'cro-toolkit' ) ); ?>
+            <?php echo esc_html( $content['dismiss_text'] ?? __( 'No thanks', 'meyvora-convert' ) ); ?>
         </a>
         <?php endif; ?>
         

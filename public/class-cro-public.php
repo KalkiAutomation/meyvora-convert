@@ -2,7 +2,7 @@
 /**
  * The public-facing functionality of the plugin.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -240,7 +240,7 @@ class CRO_Public {
 		$font_size_base  = round( $scale * 16, 2 ) . 'px';
 
 		$css = "
-		/* CRO Toolkit – use Brand Styles vars from wp_head */
+		/* Meyvora Convert – use Brand Styles vars from wp_head */
 		:root {
 			--cro-animation-speed: {$animation_speed};
 			--cro-font-size-base: {$font_size_base};

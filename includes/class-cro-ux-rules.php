@@ -2,7 +2,7 @@
 /**
  * UX protection rules – gate campaigns by checkout, forms, motion, frequency, and timing.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

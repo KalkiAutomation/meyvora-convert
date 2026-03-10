@@ -2,7 +2,7 @@
 /**
  * A/B Test Model
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -52,7 +52,7 @@ class CRO_AB_Test {
 		);
 
 		if ( ! $inserted ) {
-			return new WP_Error( 'create_failed', __( 'Failed to create A/B test.', 'cro-toolkit' ) );
+			return new WP_Error( 'create_failed', __( 'Failed to create A/B test.', 'meyvora-convert' ) );
 		}
 
 		$test_id = (int) $wpdb->insert_id;
@@ -172,6 +172,16 @@ class CRO_AB_Test {
 	}
     
 	/**
+	 * Get all tests with a given status.
+	 *
+	 * @param string $status Status (e.g. 'running', 'draft', 'completed').
+	 * @return array
+	 */
+	public function get_all_by_status( $status ) {
+		return $this->get_all( array( 'status' => $status ) );
+	}
+
+	/**
 	 * Get all tests
 	 *
 	 * @param array $args Query args (status, limit, offset).
@@ -227,7 +237,7 @@ class CRO_AB_Test {
 		$test_id = absint( $test_id );
 		$test = $this->get( $test_id );
 		if ( ! $test || ( isset( $test->variations ) && count( $test->variations ) < 2 ) ) {
-			return new WP_Error( 'invalid_test', __( 'Test must have at least 2 variations.', 'cro-toolkit' ) );
+			return new WP_Error( 'invalid_test', __( 'Test must have at least 2 variations.', 'meyvora-convert' ) );
 		}
 		return $wpdb->update(
 			$this->table,
@@ -255,6 +265,32 @@ class CRO_AB_Test {
 			array( 'status' => 'paused' ),
 			array( 'id' => $test_id ),
 			array( '%s' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * Update test status (and set completed_at when status is 'completed').
+	 *
+	 * @param int    $test_id Test ID.
+	 * @param string $status  Status (e.g. 'running', 'paused', 'completed').
+	 * @return int|false
+	 */
+	public function update_status( $test_id, $status ) {
+		global $wpdb;
+		$test_id = absint( $test_id );
+		$status  = sanitize_text_field( $status );
+		$data    = array( 'status' => $status );
+		$format  = array( '%s' );
+		if ( $status === 'completed' ) {
+			$data['completed_at'] = current_time( 'mysql' );
+			$format[]             = '%s';
+		}
+		return $wpdb->update(
+			$this->table,
+			$data,
+			array( 'id' => $test_id ),
+			$format,
 			array( '%d' )
 		);
 	}
@@ -485,5 +521,77 @@ class CRO_AB_Test {
 			"SELECT * FROM {$this->variations_table} WHERE id = %d",
 			$variation_id
 		) );
+	}
+
+	/**
+	 * If the test has auto_apply_winner and a statistically significant winner, apply the winner and mark test completed.
+	 *
+	 * @param int $test_id Test ID.
+	 * @return bool True if winner was applied and test completed.
+	 */
+	public function maybe_auto_apply_winner( $test_id ) {
+		$test = $this->get( $test_id );
+		if ( ! $test || empty( $test->auto_apply_winner ) || $test->status !== 'running' ) {
+			return false;
+		}
+		$stats                = new CRO_AB_Statistics();
+		$winner_variation_id  = $stats->get_winner( $test_id );
+		if ( ! $winner_variation_id ) {
+			return false;
+		}
+		$this->apply_variation_as_winner( $test_id, $winner_variation_id );
+		$this->update_status( $test_id, 'completed' );
+		return true;
+	}
+
+	/**
+	 * Apply a winning variation's campaign_data to the original campaign and store winner on test.
+	 *
+	 * @param int $test_id     Test ID.
+	 * @param int $variation_id Winning variation ID.
+	 * @return bool True on success.
+	 */
+	public function apply_variation_as_winner( $test_id, $variation_id ) {
+		global $wpdb;
+		$test_id     = absint( $test_id );
+		$variation_id = absint( $variation_id );
+		if ( ! $test_id || ! $variation_id ) {
+			return false;
+		}
+		$test = $this->get( $test_id );
+		if ( ! $test || empty( $test->original_campaign_id ) ) {
+			return false;
+		}
+		$variation = $this->get_variation( $variation_id );
+		if ( ! $variation || empty( $variation->campaign_data ) ) {
+			return false;
+		}
+		$data = json_decode( $variation->campaign_data, true );
+		if ( ! is_array( $data ) ) {
+			return false;
+		}
+		unset( $data['id'], $data['created_at'] );
+		$campaigns_table = $wpdb->prefix . 'cro_campaigns';
+		$original_id    = (int) $test->original_campaign_id;
+		$formats        = array_fill( 0, count( $data ), '%s' );
+		$updated = $wpdb->update(
+			$campaigns_table,
+			$data,
+			array( 'id' => $original_id ),
+			$formats,
+			array( '%d' )
+		);
+
+		if ( $updated !== false ) {
+			$wpdb->update(
+				$this->table,
+				array( 'winner_variation_id' => $variation_id ),
+				array( 'id' => $test_id ),
+				array( '%d' ),
+				array( '%d' )
+			);
+		}
+
+		return $updated !== false;
 	}
 }

@@ -7,16 +7,16 @@ $tests = is_array( $tests ) ? $tests : array();
 $ab_error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
 $ab_msg   = isset( $_GET['message'] ) ? sanitize_text_field( wp_unslash( $_GET['message'] ) ) : '';
 if ( $ab_error === 'invalid_nonce' ) {
-	echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid security check. Please try again.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid security check. Please try again.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $ab_error === 'unauthorized' ) {
-	echo '<div class="notice notice-error"><p>' . esc_html__( 'You do not have permission to perform that action.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="notice notice-error"><p>' . esc_html__( 'You do not have permission to perform that action.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $ab_msg ) {
 	$messages = array(
-		'started'        => __( 'A/B test started.', 'cro-toolkit' ),
-		'paused'         => __( 'A/B test paused.', 'cro-toolkit' ),
-		'completed'      => __( 'A/B test completed.', 'cro-toolkit' ),
-		'winner_applied' => __( 'Winner applied and test completed.', 'cro-toolkit' ),
-		'deleted'        => __( 'A/B test deleted.', 'cro-toolkit' ),
+		'started'        => __( 'A/B test started.', 'meyvora-convert' ),
+		'paused'         => __( 'A/B test paused.', 'meyvora-convert' ),
+		'completed'      => __( 'A/B test completed.', 'meyvora-convert' ),
+		'winner_applied' => __( 'Winner applied and test completed.', 'meyvora-convert' ),
+		'deleted'        => __( 'A/B test deleted.', 'meyvora-convert' ),
 	);
 	if ( isset( $messages[ $ab_msg ] ) ) {
 		echo '<div class="notice notice-success is-dismissible"><p>' . esc_html( $messages[ $ab_msg ] ) . '</p></div>';
@@ -26,10 +26,10 @@ if ( $ab_error === 'invalid_nonce' ) {
 
     <?php if (empty($tests)) : ?>
     <div class="cro-empty-state">
-        <h2><?php esc_html_e('No A/B Tests Yet', 'cro-toolkit'); ?></h2>
-        <p><?php esc_html_e('Test different versions of your campaigns to find what converts best.', 'cro-toolkit'); ?></p>
+        <h2><?php esc_html_e('No A/B Tests Yet', 'meyvora-convert'); ?></h2>
+        <p><?php esc_html_e('Test different versions of your campaigns to find what converts best.', 'meyvora-convert'); ?></p>
         <a href="<?php echo admin_url('admin.php?page=cro-ab-test-new'); ?>" class="button button-primary">
-            <?php esc_html_e('Create Your First Test', 'cro-toolkit'); ?>
+            <?php esc_html_e('Create Your First Test', 'meyvora-convert'); ?>
         </a>
     </div>
     <?php else : ?>
@@ -38,13 +38,13 @@ if ( $ab_error === 'invalid_nonce' ) {
     <table class="cro-table">
         <thead>
             <tr>
-                <th><?php esc_html_e( 'Test Name', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Status', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Variations', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Revenue', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Result', 'cro-toolkit' ); ?></th>
-                <th><?php esc_html_e( 'Actions', 'cro-toolkit' ); ?></th>
+                <th><?php esc_html_e( 'Test Name', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Status', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Variations', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Revenue', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Result', 'meyvora-convert' ); ?></th>
+                <th><?php esc_html_e( 'Actions', 'meyvora-convert' ); ?></th>
             </tr>
         </thead>
         <tbody>
@@ -85,7 +85,7 @@ if ( $ab_error === 'invalid_nonce' ) {
                 </td>
                 <td>
                     <?php if ( ! $enough_data && ( $test->status === 'running' || $test->status === 'paused' ) ) : ?>
-                        <span class="cro-result-insufficient"><?php esc_html_e( 'Not enough data', 'cro-toolkit' ); ?></span>
+                        <span class="cro-result-insufficient"><?php esc_html_e( 'Not enough data', 'meyvora-convert' ); ?></span>
                     <?php elseif ( $stats && ! empty( $stats['has_winner'] ) && ! empty( $stats['winner']['variation_name'] ) ) : ?>
                         <span class="cro-winner"><?php echo CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php echo esc_html( $stats['winner']['variation_name'] ); ?></span>
                     <?php else : ?>
@@ -94,22 +94,22 @@ if ( $ab_error === 'invalid_nonce' ) {
                 </td>
                 <td class="cro-table-actions">
                     <?php if ( $test->status === 'draft' ) : ?>
-                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>" class="button button-small button-primary"><?php esc_html_e( 'Start', 'cro-toolkit' ); ?></a>
+                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>" class="button button-small button-primary"><?php esc_html_e( 'Start', 'meyvora-convert' ); ?></a>
                     <?php elseif ( $test->status === 'running' ) : ?>
-                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=pause&id=' . $test->id ), 'pause_ab_test' ) ); ?>"><?php esc_html_e( 'Pause', 'cro-toolkit' ); ?></a>
-                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=complete&id=' . $test->id ), 'complete_ab_test' ) ); ?>" onclick="return confirm('<?php echo esc_js( __( 'End this test?', 'cro-toolkit' ) ); ?>');"><?php esc_html_e( 'Complete', 'cro-toolkit' ); ?></a>
+                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=pause&id=' . $test->id ), 'pause_ab_test' ) ); ?>"><?php esc_html_e( 'Pause', 'meyvora-convert' ); ?></a>
+                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=complete&id=' . $test->id ), 'complete_ab_test' ) ); ?>" onclick="return confirm('<?php echo esc_js( __( 'End this test?', 'meyvora-convert' ) ); ?>');"><?php esc_html_e( 'Complete', 'meyvora-convert' ); ?></a>
                         <?php if ( $enough_data && $stats && ! empty( $stats['has_winner'] ) && ! empty( $stats['winner']['variation_id'] ) ) : ?>
-                            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=apply_winner&id=' . $test->id . '&winner=' . (int) $stats['winner']['variation_id'] ), 'apply_winner' ) ); ?>" class="button button-small button-primary" onclick="return confirm('<?php echo esc_js( __( 'Apply winner and end test?', 'cro-toolkit' ) ); ?>');"><?php esc_html_e( 'Apply Winner', 'cro-toolkit' ); ?></a>
+                            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=apply_winner&id=' . $test->id . '&winner=' . (int) $stats['winner']['variation_id'] ), 'apply_winner' ) ); ?>" class="button button-small button-primary" onclick="return confirm('<?php echo esc_js( __( 'Apply winner and end test?', 'meyvora-convert' ) ); ?>');"><?php esc_html_e( 'Apply Winner', 'meyvora-convert' ); ?></a>
                         <?php endif; ?>
                     <?php elseif ( $test->status === 'paused' ) : ?>
-                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>" class="button button-small button-primary"><?php esc_html_e( 'Resume', 'cro-toolkit' ); ?></a>
-                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=complete&id=' . $test->id ), 'complete_ab_test' ) ); ?>" onclick="return confirm('<?php echo esc_js( __( 'End this test?', 'cro-toolkit' ) ); ?>');"><?php esc_html_e( 'Complete', 'cro-toolkit' ); ?></a>
+                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>" class="button button-small button-primary"><?php esc_html_e( 'Resume', 'meyvora-convert' ); ?></a>
+                        <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=complete&id=' . $test->id ), 'complete_ab_test' ) ); ?>" onclick="return confirm('<?php echo esc_js( __( 'End this test?', 'meyvora-convert' ) ); ?>');"><?php esc_html_e( 'Complete', 'meyvora-convert' ); ?></a>
                     <?php endif; ?>
-                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-ab-test-view&id=' . $test->id ) ); ?>"><?php esc_html_e( 'View', 'cro-toolkit' ); ?></a>
-                    <?php if ( current_user_can( 'manage_woocommerce' ) ) : ?>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-ab-test-view&id=' . $test->id ) ); ?>"><?php esc_html_e( 'View', 'meyvora-convert' ); ?></a>
+                    <?php if ( current_user_can( 'manage_meyvora_convert' ) ) : ?>
                         <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=delete&id=' . $test->id ), 'delete_ab_test' ) ); ?>"
                            class="cro-action-delete"
-                           onclick="return confirm('<?php echo esc_js( __( 'Delete this A/B test? This cannot be undone.', 'cro-toolkit' ) ); ?>');"><?php esc_html_e( 'Delete', 'cro-toolkit' ); ?></a>
+                           onclick="return confirm('<?php echo esc_js( __( 'Delete this A/B test? This cannot be undone.', 'meyvora-convert' ) ); ?>');"><?php esc_html_e( 'Delete', 'meyvora-convert' ); ?></a>
                     <?php endif; ?>
                 </td>
             </tr>

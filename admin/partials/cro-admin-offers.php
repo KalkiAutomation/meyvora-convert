@@ -2,7 +2,7 @@
 /**
  * Admin Offers page – configure dynamic offers (option: cro_dynamic_offers) and test which offer matches.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -66,25 +66,25 @@ $cro_format_price_plain = function ( $amount ) {
 $cro_rule_summary = function ( $o ) use ( $cro_format_price_plain ) {
 	$parts = array();
 	if ( ! empty( $o['min_cart_total'] ) ) {
-		$parts[] = sprintf( __( 'Cart ≥ %s', 'cro-toolkit' ), $cro_format_price_plain( $o['min_cart_total'] ) );
+		$parts[] = sprintf( __( 'Cart ≥ %s', 'meyvora-convert' ), $cro_format_price_plain( $o['min_cart_total'] ) );
 	}
 	if ( ! empty( $o['max_cart_total'] ) ) {
-		$parts[] = sprintf( __( 'Cart ≤ %s', 'cro-toolkit' ), $cro_format_price_plain( $o['max_cart_total'] ) );
+		$parts[] = sprintf( __( 'Cart ≤ %s', 'meyvora-convert' ), $cro_format_price_plain( $o['max_cart_total'] ) );
 	}
 	if ( ! empty( $o['min_items'] ) ) {
-		$parts[] = sprintf( _n( '%d item', '%d items', $o['min_items'], 'cro-toolkit' ), $o['min_items'] );
+		$parts[] = sprintf( _n( '%d item', '%d items', $o['min_items'], 'meyvora-convert' ), $o['min_items'] );
 	}
 	if ( ! empty( $o['first_time_customer'] ) ) {
-		$parts[] = __( 'First-time customer', 'cro-toolkit' );
+		$parts[] = __( 'First-time customer', 'meyvora-convert' );
 	}
 	if ( ! empty( $o['returning_customer_min_orders'] ) ) {
-		$parts[] = sprintf( __( 'Returning: %d+ orders', 'cro-toolkit' ), $o['returning_customer_min_orders'] );
+		$parts[] = sprintf( __( 'Returning: %d+ orders', 'meyvora-convert' ), $o['returning_customer_min_orders'] );
 	}
 	if ( ! empty( $o['lifetime_spend_min'] ) ) {
-		$parts[] = sprintf( __( 'Lifetime spend ≥ %s', 'cro-toolkit' ), $cro_format_price_plain( $o['lifetime_spend_min'] ) );
+		$parts[] = sprintf( __( 'Lifetime spend ≥ %s', 'meyvora-convert' ), $cro_format_price_plain( $o['lifetime_spend_min'] ) );
 	}
 	if ( empty( $parts ) ) {
-		return __( 'Any cart', 'cro-toolkit' );
+		return __( 'Any cart', 'meyvora-convert' );
 	}
 	return implode( ' · ', $parts );
 };
@@ -99,19 +99,19 @@ $cro_reward_summary = function ( $o ) {
 	$type   = isset( $o['reward_type'] ) ? $o['reward_type'] : 'percent';
 	$amount = isset( $o['reward_amount'] ) ? (float) $o['reward_amount'] : 0;
 	if ( $type === 'free_shipping' ) {
-		return __( 'Free shipping', 'cro-toolkit' );
+		return __( 'Free shipping', 'meyvora-convert' );
 	}
 	if ( $type === 'percent' ) {
-		return sprintf( __( '%s%% off', 'cro-toolkit' ), $amount );
+		return sprintf( __( '%s%% off', 'meyvora-convert' ), $amount );
 	}
 	if ( $type === 'fixed' ) {
 		$formatted = number_format_i18n( (float) $amount, 2 );
 		if ( function_exists( 'get_woocommerce_currency_symbol' ) ) {
 			$formatted = get_woocommerce_currency_symbol() . $formatted;
 		}
-		return sprintf( __( '%s off', 'cro-toolkit' ), $formatted );
+		return sprintf( __( '%s off', 'meyvora-convert' ), $formatted );
 	}
-	return __( 'Discount', 'cro-toolkit' );
+	return __( 'Discount', 'meyvora-convert' );
 };
 
 // Migration: ensure legacy static-form offers (no id) are migrated to dynamic format and flag set.
@@ -162,7 +162,7 @@ if ( isset( $_POST['cro_duplicate_offer'] ) && isset( $_POST['cro_offers_nonce']
 					$slot = isset( $offers_raw[ $j ] ) && is_array( $offers_raw[ $j ] ) ? $offers_raw[ $j ] : array();
 					if ( empty( trim( (string) ( $slot['headline'] ?? '' ) ) ) ) {
 						$copy = $src;
-						$copy['headline'] = trim( $src['headline'] ) . ' (' . __( 'Copy', 'cro-toolkit' ) . ')';
+						$copy['headline'] = trim( $src['headline'] ) . ' (' . __( 'Copy', 'meyvora-convert' ) . ')';
 						$copy['id']       = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : ( 'cro_' . uniqid( '', true ) );
 						$copy['updated_at'] = gmdate( 'c' );
 						$offers_raw[ $j ] = $copy;
@@ -255,23 +255,23 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 ?>
 
 	<?php if ( isset( $_GET['cro_duplicated'] ) ) : ?>
-		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer duplicated.', 'cro-toolkit' ); ?></p></div>
+		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer duplicated.', 'meyvora-convert' ); ?></p></div>
 	<?php endif; ?>
 	<?php if ( isset( $_GET['cro_deleted'] ) ) : ?>
-		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer deleted.', 'cro-toolkit' ); ?></p></div>
+		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer deleted.', 'meyvora-convert' ); ?></p></div>
 	<?php endif; ?>
 	<?php if ( isset( $_GET['cro_toggled'] ) ) : ?>
-		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer status updated.', 'cro-toolkit' ); ?></p></div>
+		<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer status updated.', 'meyvora-convert' ); ?></p></div>
 	<?php endif; ?>
 	<?php if ( isset( $_GET['cro_error'] ) && $_GET['cro_error'] === 'limit' ) : ?>
-		<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p><?php esc_html_e( 'Offer limit reached (5). Cannot duplicate.', 'cro-toolkit' ); ?></p></div>
+		<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p><?php esc_html_e( 'Offer limit reached (5). Cannot duplicate.', 'meyvora-convert' ); ?></p></div>
 	<?php endif; ?>
 
-	<div id="cro-ui-toast-container" class="cro-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'cro-toolkit' ); ?>"></div>
+	<div id="cro-ui-toast-container" class="cro-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'meyvora-convert' ); ?>"></div>
 	<div id="cro-offers-toast" class="cro-offers-toast cro-hidden" role="status"></div>
 
 	<div class="cro-offers-bar cro-bar">
-		<span class="cro-offers-count cro-bar__count"><?php echo (int) $offers_used_count; ?>/<?php echo (int) $max_offers; ?> <?php esc_html_e( 'offers used', 'cro-toolkit' ); ?></span>
+		<span class="cro-offers-count cro-bar__count"><?php echo (int) $offers_used_count; ?>/<?php echo (int) $max_offers; ?> <?php esc_html_e( 'offers used', 'meyvora-convert' ); ?></span>
 	</div>
 	<?php if ( $offers_used_count >= $max_offers ) : ?>
 	<script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('cro-offers-add-btn');if(b)b.disabled=true;});</script>
@@ -282,10 +282,10 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<div class="cro-card__body">
 					<div class="cro-ui-empty-state">
 						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo CRO_Icons::svg( 'tag', array( 'class' => 'cro-ico' ) ); ?></span>
-						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No offers yet', 'cro-toolkit' ); ?></h2>
-						<div class="cro-ui-empty-state__desc"><?php esc_html_e( 'Create your first offer to show a dynamic reward on cart and checkout.', 'cro-toolkit' ); ?></div>
+						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No offers yet', 'meyvora-convert' ); ?></h2>
+						<div class="cro-ui-empty-state__desc"><?php esc_html_e( 'Create your first offer to show a dynamic reward on cart and checkout.', 'meyvora-convert' ); ?></div>
 						<div class="cro-ui-empty-state__actions">
-							<button type="button" class="button button-primary cro-ui-btn-primary cro-offers-empty-cta" data-cro-drawer="add"><?php esc_html_e( 'Create your first offer', 'cro-toolkit' ); ?></button>
+							<button type="button" class="button button-primary cro-ui-btn-primary cro-offers-empty-cta" data-cro-drawer="add"><?php esc_html_e( 'Create your first offer', 'meyvora-convert' ); ?></button>
 					</div>
 				</div>
 				</div>
@@ -334,10 +334,10 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<div class="cro-offer-card" data-offer-index="<?php echo (int) $i; ?>" data-offer-id="<?php echo $offer_id; ?>" data-priority="<?php echo (int) $o['priority']; ?>" draggable="true">
 					<div class="cro-offer-card-main">
 						<div class="cro-offer-card-head">
-							<span class="cro-offer-card-drag-handle" title="<?php esc_attr_e( 'Drag to reorder', 'cro-toolkit' ); ?>" aria-hidden="true"></span>
+							<span class="cro-offer-card-drag-handle" title="<?php esc_attr_e( 'Drag to reorder', 'meyvora-convert' ); ?>" aria-hidden="true"></span>
 							<h3 class="cro-offer-card-name"><?php echo esc_html( $o['headline'] ); ?></h3>
 							<span class="cro-offer-card-status cro-offer-card-status--<?php echo ! empty( $o['enabled'] ) ? 'active' : 'inactive'; ?>">
-								<?php echo ! empty( $o['enabled'] ) ? esc_html__( 'Active', 'cro-toolkit' ) : esc_html__( 'Inactive', 'cro-toolkit' ); ?>
+								<?php echo ! empty( $o['enabled'] ) ? esc_html__( 'Active', 'meyvora-convert' ) : esc_html__( 'Inactive', 'meyvora-convert' ); ?>
 							</span>
 						</div>
 						<div class="cro-offer-card-rule"><?php echo esc_html( $rule_summary ); ?></div>
@@ -345,14 +345,14 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 						<div class="cro-offer-card-priority">
 							<?php
 							/* translators: %s: priority number */
-							echo esc_html( sprintf( __( 'Priority: %s', 'cro-toolkit' ), $o['priority'] ) );
+							echo esc_html( sprintf( __( 'Priority: %s', 'meyvora-convert' ), $o['priority'] ) );
 							?>
 						</div>
 					</div>
 					<div class="cro-offer-card-actions">
 						<span class="cro-offer-card-move-btns">
-							<button type="button" class="button button-small cro-offer-move-up" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move up', 'cro-toolkit' ); ?>" aria-label="<?php esc_attr_e( 'Move up', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ); ?></button>
-							<button type="button" class="button button-small cro-offer-move-down" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move down', 'cro-toolkit' ); ?>" aria-label="<?php esc_attr_e( 'Move down', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></button>
+							<button type="button" class="button button-small cro-offer-move-up" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ); ?></button>
+							<button type="button" class="button button-small cro-offer-move-down" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></button>
 						</span>
 						<form method="post" class="cro-offer-card-toggle-form">
 							<?php wp_nonce_field( 'cro_offers_nonce', 'cro_offers_nonce' ); ?>
@@ -363,11 +363,11 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<span class="cro-offer-card-toggle-slider"></span>
 							</label>
 						</form>
-						<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Edit', 'cro-toolkit' ); ?></button>
+						<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Edit', 'meyvora-convert' ); ?></button>
 						<?php if ( $offers_used_count < $max_offers ) : ?>
-							<button type="button" class="button button-small cro-offer-card-duplicate" data-cro-offer-id="<?php echo $offer_id; ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Duplicate', 'cro-toolkit' ); ?></button>
+							<button type="button" class="button button-small cro-offer-card-duplicate" data-cro-offer-id="<?php echo $offer_id; ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Duplicate', 'meyvora-convert' ); ?></button>
 						<?php endif; ?>
-						<button type="button" class="button button-small cro-offer-card-delete" data-cro-offer-id="<?php echo $offer_id; ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Delete', 'cro-toolkit' ); ?></button>
+						<button type="button" class="button button-small cro-offer-card-delete" data-cro-offer-id="<?php echo $offer_id; ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Delete', 'meyvora-convert' ); ?></button>
 					</div>
 				</div>
 			<?php endforeach; ?>
@@ -379,37 +379,37 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 	<!-- Offer Builder drawer -->
 	<div id="cro-offer-drawer" class="cro-offer-drawer" aria-hidden="true">
 		<div class="cro-offer-drawer-backdrop" aria-hidden="true"></div>
-		<div class="cro-offer-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cro-offer-drawer-title" aria-label="<?php esc_attr_e( 'Offer form', 'cro-toolkit' ); ?>">
+		<div class="cro-offer-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cro-offer-drawer-title" aria-label="<?php esc_attr_e( 'Offer form', 'meyvora-convert' ); ?>">
 			<div class="cro-offer-drawer-header">
-				<h2 class="cro-offer-drawer-title" id="cro-offer-drawer-title"><?php esc_html_e( 'Add Offer', 'cro-toolkit' ); ?></h2>
-				<button type="button" class="cro-offer-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<h2 class="cro-offer-drawer-title" id="cro-offer-drawer-title"><?php esc_html_e( 'Add Offer', 'meyvora-convert' ); ?></h2>
+				<button type="button" class="cro-offer-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
 			</div>
 			<form id="cro-offer-drawer-form" class="cro-offer-drawer-form">
 				<?php wp_nonce_field( 'cro_save_offer_nonce', 'cro_save_offer_nonce' ); ?>
 				<input type="hidden" name="cro_offer_index" id="cro-drawer-offer-index" value="" />
 
 				<div class="cro-offer-drawer-summary-bar" id="cro-offer-drawer-summary-bar" aria-live="polite">
-					<span class="cro-offer-drawer-summary-label"><?php esc_html_e( 'Summary', 'cro-toolkit' ); ?></span>
+					<span class="cro-offer-drawer-summary-label"><?php esc_html_e( 'Summary', 'meyvora-convert' ); ?></span>
 					<div id="cro-drawer-offer-summary" class="cro-drawer-offer-summary"></div>
 				</div>
 
 				<div class="cro-offer-drawer-sections-wrap">
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-basics" data-section="basics">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-basics-body">
-						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Basics', 'cro-toolkit' ); ?></span>
+						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Basics', 'meyvora-convert' ); ?></span>
 						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-basics-body" style="max-height: 400px;">
 					<div class="cro-offer-drawer-section__body-inner">
 					<div class="cro-grid cro-grid--12">
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-headline" class="cro-field__label"><?php esc_html_e( 'Offer name', 'cro-toolkit' ); ?> <span class="required">*</span></label>
+							<label for="cro-drawer-headline" class="cro-field__label"><?php esc_html_e( 'Offer name', 'meyvora-convert' ); ?> <span class="required">*</span></label>
 							<div class="cro-field__control">
-								<input type="text" name="cro_drawer_headline" id="cro-drawer-headline" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. 10% off your order', 'cro-toolkit' ); ?>" required />
+								<input type="text" name="cro_drawer_headline" id="cro-drawer-headline" class="regular-text" placeholder="<?php esc_attr_e( 'e.g. 10% off your order', 'meyvora-convert' ); ?>" required />
 							</div>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-description" class="cro-field__label"><?php esc_html_e( 'Description (optional)', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-description" class="cro-field__label"><?php esc_html_e( 'Description (optional)', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<textarea name="cro_drawer_description" id="cro-drawer-description" rows="2" class="large-text"></textarea>
 							</div>
@@ -419,14 +419,14 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<label class="cro-offer-drawer-toggle">
 									<input type="checkbox" name="cro_drawer_enabled" id="cro-drawer-enabled" value="1" />
 									<span class="cro-offer-drawer-toggle-slider"></span>
-									<?php esc_html_e( 'Active', 'cro-toolkit' ); ?>
+									<?php esc_html_e( 'Active', 'meyvora-convert' ); ?>
 								</label>
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
 							<label for="cro-drawer-priority" class="cro-field__label">
-								<span class="cro-field__label-wrap"><?php esc_html_e( 'Priority', 'cro-toolkit' ); ?>
-									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Lower number = higher priority. First matching offer wins.', 'cro-toolkit' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
+								<span class="cro-field__label-wrap"><?php esc_html_e( 'Priority', 'meyvora-convert' ); ?>
+									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Lower number = higher priority. First matching offer wins.', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
 								</span>
 							</label>
 							<div class="cro-field__control">
@@ -440,26 +440,26 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-conditions" data-section="conditions">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-conditions-body">
-						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Conditions', 'cro-toolkit' ); ?></span>
+						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Conditions', 'meyvora-convert' ); ?></span>
 						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-conditions-body" style="max-height: 1200px;">
 					<div class="cro-offer-drawer-section__body-inner">
 					<div class="cro-grid cro-grid--12">
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-min-cart-total" class="cro-field__label"><?php esc_html_e( 'Min cart total', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-min-cart-total" class="cro-field__label"><?php esc_html_e( 'Min cart total', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_min_cart_total" id="cro-drawer-min-cart-total" min="0" step="0.01" value="0" />
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-max-cart-total" class="cro-field__label"><?php esc_html_e( 'Max cart total (optional)', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-max-cart-total" class="cro-field__label"><?php esc_html_e( 'Max cart total (optional)', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<input type="number" name="cro_drawer_max_cart_total" id="cro-drawer-max-cart-total" min="0" step="0.01" value="" placeholder="<?php esc_attr_e( 'Optional', 'cro-toolkit' ); ?>" />
+								<input type="number" name="cro_drawer_max_cart_total" id="cro-drawer-max-cart-total" min="0" step="0.01" value="" placeholder="<?php esc_attr_e( 'Optional', 'meyvora-convert' ); ?>" />
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-min-items" class="cro-field__label"><?php esc_html_e( 'Min items', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-min-items" class="cro-field__label"><?php esc_html_e( 'Min items', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_min_items" id="cro-drawer-min-items" min="0" value="0" />
 							</div>
@@ -469,25 +469,25 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<label class="cro-offer-drawer-toggle">
 									<input type="checkbox" name="cro_drawer_exclude_sale_items" id="cro-drawer-exclude-sale-items" value="1" />
 									<span class="cro-offer-drawer-toggle-slider"></span>
-									<?php esc_html_e( 'Exclude sale items', 'cro-toolkit' ); ?>
+									<?php esc_html_e( 'Exclude sale items', 'meyvora-convert' ); ?>
 								</label>
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-include-categories" class="cro-field__label"><?php esc_html_e( 'Include categories only', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-include-categories" class="cro-field__label"><?php esc_html_e( 'Include categories only', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_include_categories[]" id="cro-drawer-include-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'cro-toolkit' ); ?>">
+								<select name="cro_drawer_include_categories[]" id="cro-drawer-include-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
 									<?php foreach ( $product_categories as $pc ) : ?>
 										<option value="<?php echo esc_attr( $pc['id'] ); ?>"><?php echo esc_html( $pc['name'] ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Cart must contain only products from these categories.', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Cart must contain only products from these categories.', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-exclude-categories" class="cro-field__label"><?php esc_html_e( 'Exclude categories', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-exclude-categories" class="cro-field__label"><?php esc_html_e( 'Exclude categories', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_exclude_categories[]" id="cro-drawer-exclude-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'cro-toolkit' ); ?>">
+								<select name="cro_drawer_exclude_categories[]" id="cro-drawer-exclude-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
 									<?php foreach ( $product_categories as $pc ) : ?>
 										<option value="<?php echo esc_attr( $pc['id'] ); ?>"><?php echo esc_html( $pc['name'] ); ?></option>
 									<?php endforeach; ?>
@@ -495,34 +495,34 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-include-products" class="cro-field__label"><?php esc_html_e( 'Include products', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-include-products" class="cro-field__label"><?php esc_html_e( 'Include products', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_include_products[]" id="cro-drawer-include-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'cro-toolkit' ); ?>" data-action="cro_search_products"></select>
+								<select name="cro_drawer_include_products[]" id="cro-drawer-include-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products"></select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Cart must contain at least one of these products.', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Cart must contain at least one of these products.', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-exclude-products" class="cro-field__label"><?php esc_html_e( 'Exclude products', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-exclude-products" class="cro-field__label"><?php esc_html_e( 'Exclude products', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_exclude_products[]" id="cro-drawer-exclude-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'cro-toolkit' ); ?>" data-action="cro_search_products"></select>
+								<select name="cro_drawer_exclude_products[]" id="cro-drawer-exclude-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products"></select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Offer does not match if cart contains any of these.', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Offer does not match if cart contains any of these.', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-cart-contains-category" class="cro-field__label"><?php esc_html_e( 'Cart contains category', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-cart-contains-category" class="cro-field__label"><?php esc_html_e( 'Cart contains category', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_cart_contains_category[]" id="cro-drawer-cart-contains-category" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'cro-toolkit' ); ?>">
+								<select name="cro_drawer_cart_contains_category[]" id="cro-drawer-cart-contains-category" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
 									<?php foreach ( $product_categories as $pc ) : ?>
 										<option value="<?php echo esc_attr( $pc['id'] ); ?>"><?php echo esc_html( $pc['name'] ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Cart must have at least one product in one of these categories.', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Cart must have at least one product in one of these categories.', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-min-qty-for-category" class="cro-field__label"><?php esc_html_e( 'Min qty for category (optional)', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-min-qty-for-category" class="cro-field__label"><?php esc_html_e( 'Min qty for category (optional)', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<textarea name="cro_drawer_min_qty_for_category" id="cro-drawer-min-qty-for-category" rows="2" class="large-text code" placeholder="<?php esc_attr_e( 'One per line: category_id:min_qty e.g. 15:2', 'cro-toolkit' ); ?>"></textarea>
+								<textarea name="cro_drawer_min_qty_for_category" id="cro-drawer-min-qty-for-category" rows="2" class="large-text code" placeholder="<?php esc_attr_e( 'One per line: category_id:min_qty e.g. 15:2', 'meyvora-convert' ); ?>"></textarea>
 							</div>
 						</div>
 						<div class="cro-field cro-field--toggle cro-col-6">
@@ -530,7 +530,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<label class="cro-offer-drawer-toggle">
 									<input type="checkbox" name="cro_drawer_first_time_customer" id="cro-drawer-first-time" value="1" />
 									<span class="cro-offer-drawer-toggle-slider"></span>
-									<?php esc_html_e( 'First-time customer only', 'cro-toolkit' ); ?>
+									<?php esc_html_e( 'First-time customer only', 'meyvora-convert' ); ?>
 								</label>
 							</div>
 						</div>
@@ -539,27 +539,27 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<label class="cro-offer-drawer-toggle" for="cro-drawer-returning-toggle">
 									<input type="checkbox" id="cro-drawer-returning-toggle" aria-controls="cro-drawer-returning-min-wrap" />
 									<span class="cro-offer-drawer-toggle-slider"></span>
-									<?php esc_html_e( 'Returning customer (min orders)', 'cro-toolkit' ); ?>
+									<?php esc_html_e( 'Returning customer (min orders)', 'meyvora-convert' ); ?>
 								</label>
 							</div>
 						</div>
 						<div class="cro-field cro-drawer-returning-min-wrap cro-hidden cro-col-6" id="cro-drawer-returning-min-wrap">
-							<label for="cro-drawer-returning-min-orders" class="cro-field__label"><?php esc_html_e( 'Min orders', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-returning-min-orders" class="cro-field__label"><?php esc_html_e( 'Min orders', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_returning_customer_min_orders" id="cro-drawer-returning-min-orders" min="0" value="0" />
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-lifetime-spend" class="cro-field__label"><?php esc_html_e( 'Min lifetime spend', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-lifetime-spend" class="cro-field__label"><?php esc_html_e( 'Min lifetime spend', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_lifetime_spend_min" id="cro-drawer-lifetime-spend" min="0" step="0.01" value="0" />
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-allowed-roles" class="cro-field__label"><?php esc_html_e( 'Allowed roles', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-allowed-roles" class="cro-field__label"><?php esc_html_e( 'Allowed roles', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_allowed_roles[]" id="cro-drawer-allowed-roles" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Any role', 'cro-toolkit' ); ?>">
-									<option value=""><?php esc_html_e( '— Any —', 'cro-toolkit' ); ?></option>
+								<select name="cro_drawer_allowed_roles[]" id="cro-drawer-allowed-roles" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Any role', 'meyvora-convert' ); ?>">
+									<option value=""><?php esc_html_e( '— Any —', 'meyvora-convert' ); ?></option>
 									<?php foreach ( $role_names as $role ) : ?>
 										<option value="<?php echo esc_attr( $role ); ?>"><?php echo esc_html( $role ); ?></option>
 									<?php endforeach; ?>
@@ -567,9 +567,9 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-excluded-roles" class="cro-field__label"><?php esc_html_e( 'Excluded roles', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-excluded-roles" class="cro-field__label"><?php esc_html_e( 'Excluded roles', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_excluded_roles[]" id="cro-drawer-excluded-roles" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select roles…', 'cro-toolkit' ); ?>">
+								<select name="cro_drawer_excluded_roles[]" id="cro-drawer-excluded-roles" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select roles…', 'meyvora-convert' ); ?>">
 									<?php foreach ( $role_names as $role ) : ?>
 										<option value="<?php echo esc_attr( $role ); ?>"><?php echo esc_html( $role ); ?></option>
 									<?php endforeach; ?>
@@ -583,31 +583,31 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-reward" data-section="reward">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-reward-body">
-						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Reward', 'cro-toolkit' ); ?></span>
+						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Reward', 'meyvora-convert' ); ?></span>
 						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-reward-body">
 					<div class="cro-offer-drawer-section__body-inner">
 					<div class="cro-grid cro-grid--12">
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-reward-type" class="cro-field__label"><?php esc_html_e( 'Type', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-reward-type" class="cro-field__label"><?php esc_html_e( 'Type', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_reward_type" id="cro-drawer-reward-type" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Percent discount', 'cro-toolkit' ); ?>">
-									<option value="percent"><?php esc_html_e( 'Percent discount', 'cro-toolkit' ); ?></option>
-									<option value="fixed"><?php esc_html_e( 'Fixed discount', 'cro-toolkit' ); ?></option>
-									<option value="free_shipping"><?php esc_html_e( 'Free shipping', 'cro-toolkit' ); ?></option>
+								<select name="cro_drawer_reward_type" id="cro-drawer-reward-type" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Percent discount', 'meyvora-convert' ); ?>">
+									<option value="percent"><?php esc_html_e( 'Percent discount', 'meyvora-convert' ); ?></option>
+									<option value="fixed"><?php esc_html_e( 'Fixed discount', 'meyvora-convert' ); ?></option>
+									<option value="free_shipping"><?php esc_html_e( 'Free shipping', 'meyvora-convert' ); ?></option>
 								</select>
 							</div>
 						</div>
 						<div class="cro-field cro-drawer-reward-amount-wrap cro-col-6">
-							<label for="cro-drawer-reward-amount" class="cro-field__label"><?php esc_html_e( 'Amount', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-reward-amount" class="cro-field__label"><?php esc_html_e( 'Amount', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_reward_amount" id="cro-drawer-reward-amount" min="0" step="0.01" value="10" />
 								<span class="cro-drawer-reward-suffix">%</span>
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-coupon-ttl" class="cro-field__label"><?php esc_html_e( 'Coupon TTL (hours)', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-coupon-ttl" class="cro-field__label"><?php esc_html_e( 'Coupon TTL (hours)', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_coupon_ttl_hours" id="cro-drawer-coupon-ttl" min="1" max="720" value="48" />
 							</div>
@@ -616,34 +616,34 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 							<div class="cro-field__control">
 								<label class="cro-offer-drawer-check">
 									<input type="checkbox" name="cro_drawer_individual_use" id="cro-drawer-individual-use" value="1" />
-									<?php esc_html_e( 'Individual use only (coupon cannot be combined with others)', 'cro-toolkit' ); ?>
+									<?php esc_html_e( 'Individual use only (coupon cannot be combined with others)', 'meyvora-convert' ); ?>
 								</label>
 							</div>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-apply-to-categories" class="cro-field__label"><?php esc_html_e( 'Apply discount to categories', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-apply-to-categories" class="cro-field__label"><?php esc_html_e( 'Apply discount to categories', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_apply_to_categories[]" id="cro-drawer-apply-to-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'cro-toolkit' ); ?>">
+								<select name="cro_drawer_apply_to_categories[]" id="cro-drawer-apply-to-categories" multiple class="cro-drawer-select cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
 									<?php foreach ( $product_categories as $pc ) : ?>
 										<option value="<?php echo esc_attr( $pc['id'] ); ?>"><?php echo esc_html( $pc['name'] ); ?></option>
 									<?php endforeach; ?>
 								</select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Restrict generated coupon to these categories (optional).', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Restrict generated coupon to these categories (optional).', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-apply-to-products" class="cro-field__label"><?php esc_html_e( 'Apply discount to products', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-apply-to-products" class="cro-field__label"><?php esc_html_e( 'Apply discount to products', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
-								<select name="cro_drawer_apply_to_products[]" id="cro-drawer-apply-to-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'cro-toolkit' ); ?>" data-action="cro_search_products"></select>
+								<select name="cro_drawer_apply_to_products[]" id="cro-drawer-apply-to-products" multiple class="cro-drawer-select cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products"></select>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Restrict generated coupon to these products (optional).', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Restrict generated coupon to these products (optional).', 'meyvora-convert' ); ?></span>
 						</div>
 						<div class="cro-field cro-col-12">
-							<label for="cro-drawer-per-category-discount" class="cro-field__label"><?php esc_html_e( 'Per-category discount (optional)', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-per-category-discount" class="cro-field__label"><?php esc_html_e( 'Per-category discount (optional)', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<div id="cro-drawer-per-category-discount" class="cro-drawer-per-category-discount-list"></div>
 							</div>
-							<span class="cro-help"><?php esc_html_e( 'Category → amount. Overrides single amount for matching cart category.', 'cro-toolkit' ); ?></span>
+							<span class="cro-help"><?php esc_html_e( 'Category → amount. Overrides single amount for matching cart category.', 'meyvora-convert' ); ?></span>
 						</div>
 					</div>
 					</div>
@@ -652,7 +652,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-limits" data-section="limits">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-limits-body">
-						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Limits', 'cro-toolkit' ); ?></span>
+						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Limits', 'meyvora-convert' ); ?></span>
 						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-limits-body" style="max-height: 200px;">
@@ -660,8 +660,8 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 					<div class="cro-grid cro-grid--12">
 						<div class="cro-field cro-col-6">
 							<label for="cro-drawer-rate-limit-hours" class="cro-field__label">
-								<span class="cro-field__label-wrap"><?php esc_html_e( 'Rate limit (hours)', 'cro-toolkit' ); ?>
-									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Hours before same visitor can see this offer again (default 6).', 'cro-toolkit' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
+								<span class="cro-field__label-wrap"><?php esc_html_e( 'Rate limit (hours)', 'meyvora-convert' ); ?>
+									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Hours before same visitor can see this offer again (default 6).', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
 								</span>
 							</label>
 							<div class="cro-field__control">
@@ -669,7 +669,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 							</div>
 						</div>
 						<div class="cro-field cro-col-6">
-							<label for="cro-drawer-max-coupons-per-visitor" class="cro-field__label"><?php esc_html_e( 'Max coupons per visitor per offer', 'cro-toolkit' ); ?></label>
+							<label for="cro-drawer-max-coupons-per-visitor" class="cro-field__label"><?php esc_html_e( 'Max coupons per visitor per offer', 'meyvora-convert' ); ?></label>
 							<div class="cro-field__control">
 								<input type="number" name="cro_drawer_max_coupons_per_visitor" id="cro-drawer-max-coupons-per-visitor" min="0" value="1" />
 							</div>
@@ -681,8 +681,8 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				</div>
 
 				<div class="cro-offer-drawer-footer">
-					<button type="button" class="button cro-offer-drawer-cancel"><?php esc_html_e( 'Cancel', 'cro-toolkit' ); ?></button>
-					<button type="submit" class="button button-primary cro-offer-drawer-save"><?php esc_html_e( 'Save Offer', 'cro-toolkit' ); ?></button>
+					<button type="button" class="button cro-offer-drawer-cancel"><?php esc_html_e( 'Cancel', 'meyvora-convert' ); ?></button>
+					<button type="submit" class="button button-primary cro-offer-drawer-save"><?php esc_html_e( 'Save Offer', 'meyvora-convert' ); ?></button>
 				</div>
 			</form>
 		</div>
@@ -690,57 +690,57 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 
 	<!-- Test Offer panel -->
 	<div class="cro-settings-section cro-offer-test-panel">
-		<h2><?php esc_html_e( 'Test Offer', 'cro-toolkit' ); ?></h2>
-		<div class="cro-section-description cro-section-desc"><?php esc_html_e( 'Simulate a visitor to see which offer would match and why.', 'cro-toolkit' ); ?></div>
+		<h2><?php esc_html_e( 'Test Offer', 'meyvora-convert' ); ?></h2>
+		<div class="cro-section-description cro-section-desc"><?php esc_html_e( 'Simulate a visitor to see which offer would match and why.', 'meyvora-convert' ); ?></div>
 		<div class="cro-offer-test-form-wrap cro-grid cro-grid--gap-3 cro-grid--2">
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-cart-total"><?php esc_html_e( 'Cart total', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-cart-total"><?php esc_html_e( 'Cart total', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
 					<input type="number" id="cro-test-cart-total" name="cart_total" value="50" min="0" step="0.01" class="small-text" />
 				</div>
 			</div>
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-items-count"><?php esc_html_e( 'Items count', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-items-count"><?php esc_html_e( 'Items count', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
 					<input type="number" id="cro-test-items-count" name="cart_items_count" value="1" min="0" class="small-text" />
 				</div>
 			</div>
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-is-logged-in"><?php esc_html_e( 'Guest vs Logged-in', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-is-logged-in"><?php esc_html_e( 'Guest vs Logged-in', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
-					<select id="cro-test-is-logged-in" name="is_logged_in" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Guest', 'cro-toolkit' ); ?>">
-						<option value="0"><?php esc_html_e( 'Guest', 'cro-toolkit' ); ?></option>
-						<option value="1"><?php esc_html_e( 'Logged-in', 'cro-toolkit' ); ?></option>
+					<select id="cro-test-is-logged-in" name="is_logged_in" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Guest', 'meyvora-convert' ); ?>">
+						<option value="0"><?php esc_html_e( 'Guest', 'meyvora-convert' ); ?></option>
+						<option value="1"><?php esc_html_e( 'Logged-in', 'meyvora-convert' ); ?></option>
 					</select>
 				</div>
 			</div>
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-order-count"><?php esc_html_e( 'Order count', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-order-count"><?php esc_html_e( 'Order count', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
 					<input type="number" id="cro-test-order-count" name="order_count" value="0" min="0" class="small-text" />
 				</div>
 			</div>
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-lifetime-spend"><?php esc_html_e( 'Lifetime spend', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-lifetime-spend"><?php esc_html_e( 'Lifetime spend', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
 					<input type="number" id="cro-test-lifetime-spend" name="lifetime_spend" value="0" min="0" step="0.01" class="small-text" />
 				</div>
 			</div>
 			<div class="cro-field">
-				<label class="cro-field__label" for="cro-test-user-role"><?php esc_html_e( 'Role', 'cro-toolkit' ); ?></label>
+				<label class="cro-field__label" for="cro-test-user-role"><?php esc_html_e( 'Role', 'meyvora-convert' ); ?></label>
 				<div class="cro-field__control">
-					<select id="cro-test-user-role" name="user_role" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( '— Any —', 'cro-toolkit' ); ?>">
-						<option value=""><?php esc_html_e( '— Any —', 'cro-toolkit' ); ?></option>
+					<select id="cro-test-user-role" name="user_role" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( '— Any —', 'meyvora-convert' ); ?>">
+						<option value=""><?php esc_html_e( '— Any —', 'meyvora-convert' ); ?></option>
 						<?php foreach ( $role_names as $role ) : ?>
 							<option value="<?php echo esc_attr( $role ); ?>"><?php echo esc_html( $role ); ?></option>
 						<?php endforeach; ?>
 					</select>
-					<p class="cro-help"><?php esc_html_e( 'Used when Logged-in is selected.', 'cro-toolkit' ); ?></p>
+					<p class="cro-help"><?php esc_html_e( 'Used when Logged-in is selected.', 'meyvora-convert' ); ?></p>
 				</div>
 			</div>
 		</div>
 		<div class="cro-mt-2">
-			<button type="button" class="button button-secondary" id="cro-offer-test-run"><?php esc_html_e( 'Run Test', 'cro-toolkit' ); ?></button>
+			<button type="button" class="button button-secondary" id="cro-offer-test-run"><?php esc_html_e( 'Run Test', 'meyvora-convert' ); ?></button>
 		</div>
 		<div id="cro-offer-test-output" class="cro-offer-test-output cro-hidden" aria-live="polite">
 			<div class="cro-offer-test-result-match"></div>

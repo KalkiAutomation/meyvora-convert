@@ -2,7 +2,7 @@
  * Initialize SelectWoo on CRO admin multi-selects (.cro-select-woo).
  * Only runs when WooCommerce SelectWoo is available; no-op otherwise.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 (function ($) {

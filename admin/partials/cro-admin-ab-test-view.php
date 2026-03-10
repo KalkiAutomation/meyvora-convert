@@ -2,7 +2,7 @@
 /**
  * A/B Test Detail View with Variation Management
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -12,15 +12,15 @@ $ab_model = new CRO_AB_Test();
 $test     = $ab_model->get( $test_id );
 
 if ( ! $test ) {
-	wp_die( esc_html__( 'Test not found', 'cro-toolkit' ) );
+	wp_die( esc_html__( 'Test not found', 'meyvora-convert' ) );
 }
 
 // Handle add variation
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_add_variation'] ) ) {
 	check_admin_referer( 'cro_add_variation' );
 
-	if ( ! current_user_can( 'manage_woocommerce' ) ) {
-		wp_die( esc_html__( 'Unauthorized', 'cro-toolkit' ) );
+	if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+		wp_die( esc_html__( 'Unauthorized', 'meyvora-convert' ) );
 	}
 
 	global $wpdb;
@@ -86,8 +86,8 @@ if ( ! is_array( $original_content ) ) {
 		<p>
 			<?php
 			$messages = array(
-				'created'         => __( 'A/B Test created! Now add variations below.', 'cro-toolkit' ),
-				'variation_added'  => __( 'Variation added successfully.', 'cro-toolkit' ),
+				'created'         => __( 'A/B Test created! Now add variations below.', 'meyvora-convert' ),
+				'variation_added'  => __( 'Variation added successfully.', 'meyvora-convert' ),
 			);
 			$msg_key = sanitize_text_field( wp_unslash( $_GET['message'] ) );
 			echo esc_html( $messages[ $msg_key ] ?? '' );
@@ -103,13 +103,13 @@ if ( ! is_array( $original_content ) ) {
 	<div class="cro-ab-warning-banner" role="alert">
 		<span class="cro-ab-warning-icon" aria-hidden="true"><?php echo CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ); ?></span>
 		<div class="cro-ab-warning-content">
-			<strong><?php esc_html_e( 'Not enough data yet', 'cro-toolkit' ); ?></strong>
+			<strong><?php esc_html_e( 'Not enough data yet', 'meyvora-convert' ); ?></strong>
 			<p>
 				<?php
 				echo esc_html(
 					sprintf(
 						/* translators: %s: minimum sample size per variation */
-						__( 'Each variation needs at least %s impressions before results are statistically reliable. Keep the test running.', 'cro-toolkit' ),
+						__( 'Each variation needs at least %s impressions before results are statistically reliable. Keep the test running.', 'meyvora-convert' ),
 						number_format_i18n( (int) $test->min_sample_size )
 					)
 				);
@@ -123,7 +123,7 @@ if ( ! is_array( $original_content ) ) {
 	<div class="cro-test-status-box <?php echo ( $stats && ! empty( $stats['has_winner'] ) ) ? 'has-winner' : ''; ?> <?php echo ! $enough_data ? 'cro-test-status-box--insufficient' : ''; ?>">
 		<p><?php echo esc_html( $status_message ); ?></p>
 		<?php if ( $stats && isset( $stats['confidence_level'] ) ) : ?>
-			<p class="cro-test-meta"><?php esc_html_e( 'Confidence level for this test:', 'cro-toolkit' ); ?> <strong><?php echo esc_html( (int) $stats['confidence_level'] ); ?>%</strong></p>
+			<p class="cro-test-meta"><?php esc_html_e( 'Confidence level for this test:', 'meyvora-convert' ); ?> <strong><?php echo esc_html( (int) $stats['confidence_level'] ); ?>%</strong></p>
 		<?php endif; ?>
 	</div>
 	<?php endif; ?>
@@ -133,49 +133,49 @@ if ( ! is_array( $original_content ) ) {
 			<?php if ( count( $test->variations ) >= 2 ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>"
 			   class="button button-primary button-large">
-				<?php esc_html_e( 'Start Test', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Start Test', 'meyvora-convert' ); ?>
 			</a>
 			<?php else : ?>
-			<button class="button button-primary button-large" disabled title="<?php esc_attr_e( 'Add at least one variation first', 'cro-toolkit' ); ?>">
-				<?php esc_html_e( 'Start Test', 'cro-toolkit' ); ?>
+			<button class="button button-primary button-large" disabled title="<?php esc_attr_e( 'Add at least one variation first', 'meyvora-convert' ); ?>">
+				<?php esc_html_e( 'Start Test', 'meyvora-convert' ); ?>
 			</button>
-			<span class="description"><?php esc_html_e( 'Add at least one variation to start the test', 'cro-toolkit' ); ?></span>
+			<span class="description"><?php esc_html_e( 'Add at least one variation to start the test', 'meyvora-convert' ); ?></span>
 			<?php endif; ?>
 		<?php elseif ( $test->status === 'running' ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=pause&id=' . $test->id ), 'pause_ab_test' ) ); ?>"
 			   class="button">
-				<?php esc_html_e( 'Pause Test', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Pause Test', 'meyvora-convert' ); ?>
 			</a>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=complete&id=' . $test->id ), 'complete_ab_test' ) ); ?>"
 			   class="button"
-			   onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to end this test?', 'cro-toolkit' ) ); ?>');">
-				<?php esc_html_e( 'End Test', 'cro-toolkit' ); ?>
+			   onclick="return confirm('<?php echo esc_js( __( 'Are you sure you want to end this test?', 'meyvora-convert' ) ); ?>');">
+				<?php esc_html_e( 'End Test', 'meyvora-convert' ); ?>
 			</a>
 		<?php elseif ( $test->status === 'paused' ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=start&id=' . $test->id ), 'start_ab_test' ) ); ?>"
 			   class="button button-primary">
-				<?php esc_html_e( 'Resume Test', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Resume Test', 'meyvora-convert' ); ?>
 			</a>
 		<?php endif; ?>
 
 		<?php if ( $stats && ! empty( $stats['has_winner'] ) && ! empty( $stats['enough_data'] ) && $test->status === 'running' && ! empty( $stats['winner']['variation_id'] ) ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=apply_winner&id=' . $test->id . '&winner=' . $stats['winner']['variation_id'] ), 'apply_winner' ) ); ?>"
 			   class="button button-primary"
-			   onclick="return confirm('<?php echo esc_js( __( 'This will update the original campaign with the winning variation. Continue?', 'cro-toolkit' ) ); ?>');">
-				<?php esc_html_e( 'Apply Winner & End Test', 'cro-toolkit' ); ?>
+			   onclick="return confirm('<?php echo esc_js( __( 'This will update the original campaign with the winning variation. Continue?', 'meyvora-convert' ) ); ?>');">
+				<?php esc_html_e( 'Apply Winner & End Test', 'meyvora-convert' ); ?>
 			</a>
 		<?php endif; ?>
 
-		<?php if ( current_user_can( 'manage_woocommerce' ) ) : ?>
+		<?php if ( current_user_can( 'manage_meyvora_convert' ) ) : ?>
 			<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cro-ab-tests&action=delete&id=' . $test->id ), 'delete_ab_test' ) ); ?>"
 			   class="button"
-			   onclick="return confirm('<?php echo esc_js( __( 'Delete this A/B test? This cannot be undone.', 'cro-toolkit' ) ); ?>');">
-				<?php esc_html_e( 'Delete', 'cro-toolkit' ); ?>
+			   onclick="return confirm('<?php echo esc_js( __( 'Delete this A/B test? This cannot be undone.', 'meyvora-convert' ) ); ?>');">
+				<?php esc_html_e( 'Delete', 'meyvora-convert' ); ?>
 			</a>
 		<?php endif; ?>
 	</div>
 
-	<h2><?php esc_html_e( 'Variations', 'cro-toolkit' ); ?></h2>
+	<h2><?php esc_html_e( 'Variations', 'meyvora-convert' ); ?></h2>
 
 	<div class="cro-variations-grid">
 		<?php
@@ -188,24 +188,24 @@ if ( ! is_array( $original_content ) ) {
 		<div class="cro-variation-card <?php echo $is_control ? 'is-control' : ''; ?> <?php echo $is_winner ? 'is-winner' : ''; ?>">
 			<div class="cro-variation-header">
 				<?php if ( $is_winner ) : ?>
-					<span class="cro-badge cro-badge--winner"><?php echo CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Winner', 'cro-toolkit' ); ?></span>
+					<span class="cro-badge cro-badge--winner"><?php echo CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Winner', 'meyvora-convert' ); ?></span>
 				<?php elseif ( $is_control ) : ?>
-					<span class="cro-badge cro-badge--control"><?php esc_html_e( 'Control', 'cro-toolkit' ); ?></span>
+					<span class="cro-badge cro-badge--control"><?php esc_html_e( 'Control', 'meyvora-convert' ); ?></span>
 				<?php else : ?>
-					<span class="cro-badge"><?php esc_html_e( 'Challenger', 'cro-toolkit' ); ?></span>
+					<span class="cro-badge"><?php esc_html_e( 'Challenger', 'meyvora-convert' ); ?></span>
 				<?php endif; ?>
 				<h3><?php echo esc_html( $variation->name ); ?></h3>
-				<span class="cro-traffic-weight"><?php echo esc_html( (int) $variation->traffic_weight ); ?>% <?php esc_html_e( 'traffic', 'cro-toolkit' ); ?></span>
+				<span class="cro-traffic-weight"><?php echo esc_html( (int) $variation->traffic_weight ); ?>% <?php esc_html_e( 'traffic', 'meyvora-convert' ); ?></span>
 			</div>
 
 			<div class="cro-variation-stats">
 				<div class="cro-stat">
 					<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( (int) $variation->impressions ) ); ?></span>
-					<span class="cro-stat-label"><?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?></span>
+					<span class="cro-stat-label"><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></span>
 				</div>
 				<div class="cro-stat">
 					<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( (int) $variation->conversions ) ); ?></span>
-					<span class="cro-stat-label"><?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?></span>
+					<span class="cro-stat-label"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></span>
 				</div>
 				<div class="cro-stat cro-stat--highlight">
 					<span class="cro-stat-value">
@@ -216,7 +216,7 @@ if ( ! is_array( $original_content ) ) {
 						echo esc_html( number_format( $rate, 2 ) . '%' );
 						?>
 					</span>
-					<span class="cro-stat-label"><?php esc_html_e( 'Conv. Rate', 'cro-toolkit' ); ?></span>
+					<span class="cro-stat-label"><?php esc_html_e( 'Conv. Rate', 'meyvora-convert' ); ?></span>
 				</div>
 				<div class="cro-stat">
 					<span class="cro-stat-value">
@@ -229,7 +229,7 @@ if ( ! is_array( $original_content ) ) {
 						}
 						?>
 					</span>
-					<span class="cro-stat-label"><?php esc_html_e( 'Revenue', 'cro-toolkit' ); ?></span>
+					<span class="cro-stat-label"><?php esc_html_e( 'Revenue', 'meyvora-convert' ); ?></span>
 				</div>
 			</div>
 
@@ -240,13 +240,13 @@ if ( ! is_array( $original_content ) ) {
 			<div class="cro-variation-comparison">
 				<?php if ( ! $var_enough_data ) : ?>
 					<div class="cro-variation-not-enough-data">
-						<?php esc_html_e( 'Not enough data', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'Not enough data', 'meyvora-convert' ); ?>
 						<?php
 						echo ' ';
 						echo esc_html(
 							sprintf(
 								/* translators: 1: current impressions, 2: required min */
-								__( '(%1$s / %2$s impressions)', 'cro-toolkit' ),
+								__( '(%1$s / %2$s impressions)', 'meyvora-convert' ),
 								number_format_i18n( (int) $variation->impressions ),
 								number_format_i18n( (int) $test->min_sample_size )
 							)
@@ -254,20 +254,20 @@ if ( ! is_array( $original_content ) ) {
 						?>
 					</div>
 				<?php else : ?>
-					<span class="cro-baseline"><?php esc_html_e( 'Baseline for comparison', 'cro-toolkit' ); ?></span>
+					<span class="cro-baseline"><?php esc_html_e( 'Baseline for comparison', 'meyvora-convert' ); ?></span>
 				<?php endif; ?>
 			</div>
 			<?php elseif ( ! $is_control && $var_stats && is_array( $var_stats ) ) : ?>
 			<div class="cro-variation-comparison">
 				<?php if ( ! $var_enough_data ) : ?>
 					<div class="cro-variation-not-enough-data">
-						<?php esc_html_e( 'Not enough data', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'Not enough data', 'meyvora-convert' ); ?>
 						<?php
 						echo ' ';
 						echo esc_html(
 							sprintf(
 								/* translators: 1: current impressions, 2: required min */
-								__( '(%1$s / %2$s impressions)', 'cro-toolkit' ),
+								__( '(%1$s / %2$s impressions)', 'meyvora-convert' ),
 								number_format_i18n( (int) $variation->impressions ),
 								number_format_i18n( (int) $test->min_sample_size )
 							)
@@ -276,17 +276,17 @@ if ( ! is_array( $original_content ) ) {
 					</div>
 				<?php else : ?>
 					<div class="cro-significance-row">
-						<span class="cro-significance-label"><?php esc_html_e( 'Significance', 'cro-toolkit' ); ?>:</span>
+						<span class="cro-significance-label"><?php esc_html_e( 'Significance', 'meyvora-convert' ); ?>:</span>
 						<span class="cro-significance-value <?php echo ! empty( $var_stats['is_significant'] ) ? 'significant' : 'not-significant'; ?>">
-							<?php echo ! empty( $var_stats['is_significant'] ) ? esc_html__( 'Significant', 'cro-toolkit' ) : esc_html__( 'Not significant', 'cro-toolkit' ); ?>
+							<?php echo ! empty( $var_stats['is_significant'] ) ? esc_html__( 'Significant', 'meyvora-convert' ) : esc_html__( 'Not significant', 'meyvora-convert' ); ?>
 						</span>
 					</div>
 					<div class="cro-improvement <?php echo ( $var_stats['improvement'] ?? 0 ) >= 0 ? 'positive' : 'negative'; ?>">
 						<?php echo esc_html( $var_stats['improvement_formatted'] ?? '0%' ); ?>
-						<?php esc_html_e( 'vs Control', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'vs Control', 'meyvora-convert' ); ?>
 					</div>
 					<div class="cro-confidence">
-						<span class="cro-confidence-label"><?php esc_html_e( 'Confidence', 'cro-toolkit' ); ?>:</span>
+						<span class="cro-confidence-label"><?php esc_html_e( 'Confidence', 'meyvora-convert' ); ?>:</span>
 						<div class="cro-confidence-bar">
 							<div class="cro-confidence-fill cro-bar-fill <?php echo ! empty( $var_stats['is_significant'] ) ? 'significant' : ''; ?>"
 								 style="--cro-bar-width: <?php echo esc_attr( min( 100, (float) ( $var_stats['confidence'] ?? 0 ) ) ); ?>%"></div>
@@ -302,22 +302,22 @@ if ( ! is_array( $original_content ) ) {
 
 	<?php if ( $test->status === 'draft' ) : ?>
 	<div class="cro-add-variation">
-		<h2><?php esc_html_e( 'Add New Variation', 'cro-toolkit' ); ?></h2>
+		<h2><?php esc_html_e( 'Add New Variation', 'meyvora-convert' ); ?></h2>
 
 		<form method="post" class="cro-variation-form">
 			<?php wp_nonce_field( 'cro_add_variation' ); ?>
 
 			<div class="cro-form-row">
 				<div class="cro-form-col">
-					<label for="variation_name"><?php esc_html_e( 'Variation Name', 'cro-toolkit' ); ?></label>
+					<label for="variation_name"><?php esc_html_e( 'Variation Name', 'meyvora-convert' ); ?></label>
 					<input type="text"
 						   id="variation_name"
 						   name="variation_name"
 						   required
-						   placeholder="<?php esc_attr_e( 'e.g., Version B - New Headline', 'cro-toolkit' ); ?>" />
+						   placeholder="<?php esc_attr_e( 'e.g., Version B - New Headline', 'meyvora-convert' ); ?>" />
 				</div>
 				<div class="cro-form-col cro-form-col--small">
-					<label for="traffic_weight"><?php esc_html_e( 'Traffic %', 'cro-toolkit' ); ?></label>
+					<label for="traffic_weight"><?php esc_html_e( 'Traffic %', 'meyvora-convert' ); ?></label>
 					<input type="number"
 						   id="traffic_weight"
 						   name="traffic_weight"
@@ -327,18 +327,18 @@ if ( ! is_array( $original_content ) ) {
 				</div>
 			</div>
 
-			<h4><?php esc_html_e( 'What to Change', 'cro-toolkit' ); ?></h4>
-			<p class="description"><?php esc_html_e( 'Leave blank to keep the original value', 'cro-toolkit' ); ?></p>
+			<h4><?php esc_html_e( 'What to Change', 'meyvora-convert' ); ?></h4>
+			<p class="description"><?php esc_html_e( 'Leave blank to keep the original value', 'meyvora-convert' ); ?></p>
 
 			<div class="cro-form-row">
 				<div class="cro-form-col">
-					<label for="variation_headline"><?php esc_html_e( 'Headline', 'cro-toolkit' ); ?></label>
+					<label for="variation_headline"><?php esc_html_e( 'Headline', 'meyvora-convert' ); ?></label>
 					<input type="text"
 						   id="variation_headline"
 						   name="variation_headline"
 						   placeholder="<?php echo esc_attr( $original_content['headline'] ?? '' ); ?>" />
 					<span class="cro-original">
-						<?php esc_html_e( 'Original:', 'cro-toolkit' ); ?>
+						<?php esc_html_e( 'Original:', 'meyvora-convert' ); ?>
 						<?php echo esc_html( $original_content['headline'] ?? 'N/A' ); ?>
 					</span>
 				</div>
@@ -346,7 +346,7 @@ if ( ! is_array( $original_content ) ) {
 
 			<div class="cro-form-row">
 				<div class="cro-form-col">
-					<label for="variation_subheadline"><?php esc_html_e( 'Subheadline', 'cro-toolkit' ); ?></label>
+					<label for="variation_subheadline"><?php esc_html_e( 'Subheadline', 'meyvora-convert' ); ?></label>
 					<input type="text"
 						   id="variation_subheadline"
 						   name="variation_subheadline"
@@ -356,7 +356,7 @@ if ( ! is_array( $original_content ) ) {
 
 			<div class="cro-form-row">
 				<div class="cro-form-col">
-					<label for="variation_cta"><?php esc_html_e( 'CTA Button Text', 'cro-toolkit' ); ?></label>
+					<label for="variation_cta"><?php esc_html_e( 'CTA Button Text', 'meyvora-convert' ); ?></label>
 					<input type="text"
 						   id="variation_cta"
 						   name="variation_cta"
@@ -366,7 +366,7 @@ if ( ! is_array( $original_content ) ) {
 
 			<p class="submit">
 				<button type="submit" name="cro_add_variation" class="button button-primary">
-					<?php esc_html_e( 'Add Variation', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Add Variation', 'meyvora-convert' ); ?>
 				</button>
 			</p>
 		</form>
@@ -374,10 +374,10 @@ if ( ! is_array( $original_content ) ) {
 	<?php endif; ?>
 
 	<div class="cro-test-settings">
-		<h2><?php esc_html_e( 'Test Settings', 'cro-toolkit' ); ?></h2>
+		<h2><?php esc_html_e( 'Test Settings', 'meyvora-convert' ); ?></h2>
 		<div class="cro-fields-grid cro-fields-grid--1col">
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Original Campaign', 'cro-toolkit' ); ?></span>
+				<span class="cro-field__label"><?php esc_html_e( 'Original Campaign', 'meyvora-convert' ); ?></span>
 				<div class="cro-field__control">
 					<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-campaign-edit&campaign_id=' . (int) $test->original_campaign_id ) ); ?>">
 						<?php echo esc_html( $original_campaign->name ?? 'N/A' ); ?>
@@ -385,30 +385,30 @@ if ( ! is_array( $original_content ) ) {
 				</div>
 			</div>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Primary Metric', 'cro-toolkit' ); ?></span>
+				<span class="cro-field__label"><?php esc_html_e( 'Primary Metric', 'meyvora-convert' ); ?></span>
 				<div class="cro-field__control"><?php echo esc_html( ucwords( str_replace( '_', ' ', $test->metric ) ) ); ?></div>
 			</div>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Minimum Sample Size', 'cro-toolkit' ); ?></span>
-				<div class="cro-field__control"><?php echo esc_html( number_format( (int) $test->min_sample_size ) ); ?> <?php esc_html_e( 'per variation', 'cro-toolkit' ); ?></div>
+				<span class="cro-field__label"><?php esc_html_e( 'Minimum Sample Size', 'meyvora-convert' ); ?></span>
+				<div class="cro-field__control"><?php echo esc_html( number_format( (int) $test->min_sample_size ) ); ?> <?php esc_html_e( 'per variation', 'meyvora-convert' ); ?></div>
 			</div>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Confidence Level', 'cro-toolkit' ); ?></span>
+				<span class="cro-field__label"><?php esc_html_e( 'Confidence Level', 'meyvora-convert' ); ?></span>
 				<div class="cro-field__control"><?php echo esc_html( (int) $test->confidence_level ); ?>%</div>
 			</div>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Auto-apply Winner', 'cro-toolkit' ); ?></span>
-				<div class="cro-field__control"><?php echo $test->auto_apply_winner ? CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) . ' ' . esc_html__( 'Yes', 'cro-toolkit' ) : esc_html__( 'No', 'cro-toolkit' ); ?></div>
+				<span class="cro-field__label"><?php esc_html_e( 'Auto-apply Winner', 'meyvora-convert' ); ?></span>
+				<div class="cro-field__control"><?php echo $test->auto_apply_winner ? CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) . ' ' . esc_html__( 'Yes', 'meyvora-convert' ) : esc_html__( 'No', 'meyvora-convert' ); ?></div>
 			</div>
 			<?php if ( ! empty( $test->started_at ) ) : ?>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Started', 'cro-toolkit' ); ?></span>
+				<span class="cro-field__label"><?php esc_html_e( 'Started', 'meyvora-convert' ); ?></span>
 				<div class="cro-field__control"><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $test->started_at ) ) ); ?></div>
 			</div>
 			<?php endif; ?>
 			<?php if ( ! empty( $test->completed_at ) ) : ?>
 			<div class="cro-field cro-col-12">
-				<span class="cro-field__label"><?php esc_html_e( 'Completed', 'cro-toolkit' ); ?></span>
+				<span class="cro-field__label"><?php esc_html_e( 'Completed', 'meyvora-convert' ); ?></span>
 				<div class="cro-field__control"><?php echo esc_html( date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), strtotime( $test->completed_at ) ) ); ?></div>
 			</div>
 			<?php endif; ?>

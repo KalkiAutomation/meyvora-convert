@@ -1,5 +1,5 @@
 /**
- * CRO Toolkit – Cart & Checkout Blocks extension (Slot/Fill).
+ * Meyvora Convert – Cart & Checkout Blocks extension (Slot/Fill).
  *
  * Renders into WooCommerce Blocks slots (cart sidebar, checkout order summary, place order area):
  * - TrustStrip: icons + microcopy (secure checkout, fast shipping, easy returns)
@@ -8,7 +8,7 @@
  * - Optional Urgency: "Limited stock" only when provided via settings
  * - Offer banner (when enabled)
  *
- * Data: getSetting('cro-toolkit_data') for config (threshold, labels, enabled flags).
+ * Data: getSetting('meyvora-convert_data') for config (threshold, labels, enabled flags).
  * Cart: Store API cart from slot props – updates live as cart totals change.
  * No PHP hooks relied upon for Blocks; script data is from IntegrationInterface get_script_data().
  */
@@ -25,10 +25,10 @@ function getCROData() {
 	try {
 		const settings = window.wc?.wcSettings;
 		if ( settings && typeof settings.getSetting === 'function' ) {
-			return settings.getSetting( 'cro-toolkit_data', {} );
+			return settings.getSetting( 'meyvora-convert_data', {} );
 		}
-		if ( window.wcSettings && window.wcSettings['cro-toolkit_data'] ) {
-			return window.wcSettings['cro-toolkit_data'];
+		if ( window.wcSettings && window.wcSettings['meyvora-convert_data'] ) {
+			return window.wcSettings['meyvora-convert_data'];
 		}
 	} catch ( e ) {
 		// ignore
@@ -38,7 +38,7 @@ function getCROData() {
 
 let _debugLogged = false;
 
-// Fixed badge shown when cro_toolkit_data.debug is true (Blocks debug mode).
+// Fixed badge shown when debug is true (Blocks debug mode).
 function DebugBadge() {
 	return createElement(
 		'div',
@@ -58,7 +58,7 @@ function DebugBadge() {
 				boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
 			},
 		},
-		__( 'CRO Toolkit Blocks Extension Loaded', 'cro-toolkit' )
+		__( 'Meyvora Convert Blocks Extension Loaded', 'meyvora-convert' )
 	);
 }
 
@@ -121,9 +121,9 @@ function recordBannerShow( type, cookieName ) {
 
 // Default trust labels (secure checkout, fast shipping, easy returns).
 const DEFAULT_TRUST_LABELS = [
-	__( 'Secure checkout', 'cro-toolkit' ),
-	__( 'Fast shipping', 'cro-toolkit' ),
-	__( 'Easy returns', 'cro-toolkit' ),
+	__( 'Secure checkout', 'meyvora-convert' ),
+	__( 'Fast shipping', 'meyvora-convert' ),
+	__( 'Easy returns', 'meyvora-convert' ),
 ];
 const TRUST_ICONS = [ '🔒', '🚚', '↩' ];
 
@@ -159,7 +159,7 @@ function TrustStrip( { context, cartOptimizerEnabled, checkoutOptimizerEnabled, 
 	if ( isCheckout && checkoutOptimizerEnabled && ( checkoutSettings?.show_secure_badge || checkoutSettings?.show_trust_message ) ) {
 		enabled = true;
 		if ( checkoutSettings.show_secure_badge ) {
-			trustMessage = __( 'Secure Checkout', 'cro-toolkit' );
+			trustMessage = __( 'Secure Checkout', 'meyvora-convert' );
 		}
 		if ( checkoutSettings.show_trust_message && checkoutSettings.trust_message_text ) {
 			trustMessage = trustMessage ? `${ trustMessage } – ${ checkoutSettings.trust_message_text }` : checkoutSettings.trust_message_text;
@@ -209,8 +209,8 @@ function UrgencyMessage( { context, cartOptimizerEnabled, cartSettings, bannerFr
 	const customMessage = cartSettings.urgency_message || '';
 	const message =
 		urgencyType === 'stock'
-			? ( customMessage || __( 'Limited stock', 'cro-toolkit' ) )
-			: ( customMessage || __( 'Items in your cart are in high demand!', 'cro-toolkit' ) );
+			? ( customMessage || __( 'Limited stock', 'meyvora-convert' ) )
+			: ( customMessage || __( 'Items in your cart are in high demand!', 'meyvora-convert' ) );
 	if ( ! message ) return null;
 	return createElement(
 		'div',
@@ -224,7 +224,7 @@ function GuaranteeNote( { context, checkoutOptimizerEnabled, checkoutSettings } 
 	if ( context !== 'woocommerce/checkout' || ! checkoutOptimizerEnabled || ! checkoutSettings?.show_guarantee ) {
 		return null;
 	}
-	const text = checkoutSettings.guarantee_text || __( '30-day money-back guarantee', 'cro-toolkit' );
+	const text = checkoutSettings.guarantee_text || __( '30-day money-back guarantee', 'meyvora-convert' );
 	if ( ! text ) return null;
 	return createElement(
 		'div',
@@ -272,7 +272,7 @@ function OfferBanner( {
 				setLoading( false );
 			} )
 			.catch( ( err ) => {
-				setError( err && err.message ? err.message : __( 'Could not load offer.', 'cro-toolkit' ) );
+				setError( err && err.message ? err.message : __( 'Could not load offer.', 'meyvora-convert' ) );
 				setData( null );
 				setLoading( false );
 			} );
@@ -309,13 +309,13 @@ function OfferBanner( {
 					return;
 				}
 				const msg = bodyData?.message || bodyData?.code || 'apply_failed';
-				let userMessage = __( 'Could not apply coupon. Please try again.', 'cro-toolkit' );
+				let userMessage = __( 'Could not apply coupon. Please try again.', 'meyvora-convert' );
 				if ( msg === 'forbidden' || status === 403 ) {
-					userMessage = __( 'This coupon is not assigned to you.', 'cro-toolkit' );
+					userMessage = __( 'This coupon is not assigned to you.', 'meyvora-convert' );
 				} else if ( msg === 'invalid_coupon' || msg === 'This coupon is not valid.' || status === 404 ) {
-					userMessage = __( 'This coupon is invalid or has expired.', 'cro-toolkit' );
+					userMessage = __( 'This coupon is invalid or has expired.', 'meyvora-convert' );
 				} else if ( msg === 'rate_limited' || status === 429 ) {
-					userMessage = __( 'Too many attempts. Please try again later.', 'cro-toolkit' );
+					userMessage = __( 'Too many attempts. Please try again later.', 'meyvora-convert' );
 				} else if ( typeof bodyData?.message === 'string' && bodyData.message.length > 0 ) {
 					userMessage = bodyData.message;
 				}
@@ -323,14 +323,14 @@ function OfferBanner( {
 				setApplying( false );
 			} )
 			.catch( ( err ) => {
-				setError( err && err.message ? err.message : __( 'Could not apply coupon. Please try again.', 'cro-toolkit' ) );
+				setError( err && err.message ? err.message : __( 'Could not apply coupon. Please try again.', 'meyvora-convert' ) );
 				setApplying( false );
 			} );
 	}, [ data, applying, restUrl, restNonce, fetchOffer ] );
 
 	if ( ! enabled ) return null;
 	if ( loading && ! data ) {
-		return createElement( 'div', { className: 'cro-blocks-slot cro-blocks-offer cro-blocks-offer--loading' }, createElement( 'p', {}, __( 'Loading…', 'cro-toolkit' ) ) );
+		return createElement( 'div', { className: 'cro-blocks-slot cro-blocks-offer cro-blocks-offer--loading' }, createElement( 'p', {}, __( 'Loading…', 'meyvora-convert' ) ) );
 	}
 	if ( ! data?.eligible || ! data?.offer ) return null;
 	if ( ! canShowBanner( 'offer', bannerFrequencyCapMax || 0, bannerViewsCookieName ) ) return null;
@@ -340,7 +340,7 @@ function OfferBanner( {
 	}
 
 	const offer = data.offer;
-	const headline = offer.headline || __( 'A discount', 'cro-toolkit' );
+	const headline = offer.headline || __( 'A discount', 'meyvora-convert' );
 	const description = offer.description || '';
 
 	if ( applied || ! data.can_apply ) {
@@ -348,7 +348,7 @@ function OfferBanner( {
 			'div',
 			{ className: 'cro-blocks-slot cro-blocks-offer cro-blocks-offer--applied' },
 			createElement( 'p', { className: 'cro-blocks-offer__headline' }, headline ),
-			createElement( 'p', { className: 'cro-blocks-offer__success' }, __( 'Discount applied.', 'cro-toolkit' ) )
+			createElement( 'p', { className: 'cro-blocks-offer__success' }, __( 'Discount applied.', 'meyvora-convert' ) )
 		);
 	}
 
@@ -365,13 +365,13 @@ function OfferBanner( {
 				onClick: applyCoupon,
 				disabled: applying,
 			},
-			applying ? __( 'Applying…', 'cro-toolkit' ) : __( 'Apply coupon', 'cro-toolkit' )
+			applying ? __( 'Applying…', 'meyvora-convert' ) : __( 'Apply coupon', 'meyvora-convert' )
 		),
 		error ? createElement( 'p', { className: 'cro-blocks-offer__error', role: 'alert' }, error ) : null
 	);
 }
 
-// ShippingProgress: "You're X away from free shipping" – uses Store API cart from slot props (updates live). Threshold from cro_toolkit_data. Respects frequency cap.
+// ShippingProgress: "You're X away from free shipping" – uses Store API cart from slot props (updates live). Threshold from settings data. Respects frequency cap.
 function ShippingProgress( { cart, freeShippingThreshold, bannerFrequencyCapMax, bannerViewsCookieName } ) {
 	const recorded = useRef( false );
 	if ( ! cart || ! freeShippingThreshold || freeShippingThreshold <= 0 ) {
@@ -392,13 +392,13 @@ function ShippingProgress( { cart, freeShippingThreshold, bannerFrequencyCapMax,
 		return createElement(
 			'div',
 			{ className: 'cro-blocks-slot cro-blocks-shipping-progress cro-blocks-shipping-achieved' },
-			createElement( 'p', { className: 'cro-blocks-shipping-achieved-message' }, __( "You've got free shipping!", 'cro-toolkit' ) )
+			createElement( 'p', { className: 'cro-blocks-shipping-achieved-message' }, __( "You've got free shipping!", 'meyvora-convert' ) )
 		);
 	}
 	const remaining = freeShippingThreshold - total;
 	const percentage = Math.min( 100, ( total / freeShippingThreshold ) * 100 );
 	const amountFormatted = typeof remaining.toFixed === 'function' ? remaining.toFixed( 2 ) : String( remaining );
-	const message = __( "You're {{amount}} away from free shipping", 'cro-toolkit' ).replace( '{{amount}}', amountFormatted );
+	const message = __( "You're {{amount}} away from free shipping", 'meyvora-convert' ).replace( '{{amount}}', amountFormatted );
 	return createElement(
 		'div',
 		{ className: 'cro-blocks-slot cro-blocks-shipping-progress' },
@@ -508,7 +508,7 @@ function render() {
 	const data = getCROData();
 	const debug = data.debug === true;
 	if ( debug && ! _debugLogged ) {
-		console.log( 'CRO Toolkit Blocks Extension – settings:', data );
+		console.log( 'Meyvora Convert Blocks Extension – settings:', data );
 		_debugLogged = true;
 	}
 
@@ -532,11 +532,11 @@ function render() {
 }
 
 // Register for both Cart and Checkout blocks so Slot/Fills render on both.
-registerPlugin( 'cro-toolkit-cart-checkout-checkout', {
+registerPlugin( 'meyvora-convert-cart-checkout-checkout', {
 	render,
 	scope: 'woocommerce-checkout',
 } );
-registerPlugin( 'cro-toolkit-cart-checkout-cart', {
+registerPlugin( 'meyvora-convert-cart-checkout-cart', {
 	render,
 	scope: 'woocommerce-cart',
 } );

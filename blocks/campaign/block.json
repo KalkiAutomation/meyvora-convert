@@ -1,12 +1,12 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "cro-toolkit/campaign",
+	"name": "meyvora-convert/campaign",
 	"version": "1.0.0",
-	"title": "CRO Toolkit / Campaign",
+	"title": "Meyvora Convert / Campaign",
 	"category": "widgets",
-	"description": "Display a CRO Toolkit campaign by ID. Works on Classic pages via shortcode.",
-	"textdomain": "cro-toolkit",
+	"description": "Display a Meyvora Convert campaign by ID. Works on Classic pages via shortcode.",
+	"textdomain": "meyvora-convert",
 	"attributes": {
 		"campaignId": {
 			"type": "number",

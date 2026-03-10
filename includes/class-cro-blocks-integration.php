@@ -8,9 +8,9 @@
  * - Enqueue of CRO styles on cart/checkout so block pages look correct.
  *
  * Scripts and data for blocks are registered via CRO_Blocks_Integration_WC
- * (IntegrationInterface) so extension JS loads reliably with getSetting('cro-toolkit_data').
+ * (IntegrationInterface) so extension JS loads reliably with getSetting('meyvora-convert_data').
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -98,7 +98,7 @@ class CRO_Blocks_Integration {
 		if ( ! empty( $settings['show_trust_under_total'] ) ) {
 			$msg = isset( $settings['trust_message'] ) && (string) $settings['trust_message'] !== ''
 				? (string) $settings['trust_message']
-				: __( 'Secure payment - Fast shipping - Easy returns', 'cro-toolkit' );
+				: __( 'Secure payment - Fast shipping - Easy returns', 'meyvora-convert' );
 			$parts[] = '<div class="cro-cart-trust cro-blocks-trust"><p>' . esc_html( $msg ) . '</p></div>';
 		}
 
@@ -106,7 +106,7 @@ class CRO_Blocks_Integration {
 		if ( ! empty( $settings['show_urgency'] ) ) {
 			$msg = isset( $settings['urgency_message'] ) && (string) $settings['urgency_message'] !== ''
 				? (string) $settings['urgency_message']
-				: __( 'Items in your cart are in high demand!', 'cro-toolkit' );
+				: __( 'Items in your cart are in high demand!', 'meyvora-convert' );
 			$parts[] = '<div class="cro-cart-urgency cro-blocks-urgency"><p>' . esc_html( $msg ) . '</p></div>';
 		}
 
@@ -172,7 +172,7 @@ class CRO_Blocks_Integration {
 		$remaining = $threshold - $cart_total;
 		$message   = sprintf(
 			/* translators: %s: remaining amount (HTML from wc_price) */
-			__( 'Add %s more to get free shipping!', 'cro-toolkit' ),
+			__( 'Add %s more to get free shipping!', 'meyvora-convert' ),
 			wp_kses_post( wc_price( $remaining ) )
 		);
 		return '<div class="cro-cart-message cro-free-shipping"><p>' . wp_kses_post( $message ) . '</p></div>';
@@ -236,7 +236,7 @@ class CRO_Blocks_Integration {
 			return '';
 		}
 
-		$text = $settings['guarantee_text'] ?? __( '30-day money-back guarantee', 'cro-toolkit' );
+		$text = $settings['guarantee_text'] ?? __( '30-day money-back guarantee', 'meyvora-convert' );
 		if ( empty( $text ) ) {
 			return '';
 		}
@@ -253,16 +253,16 @@ class CRO_Blocks_Integration {
 		?>
 		<div class="cro-coupon-form-wrapper cro-blocks-coupon">
 			<div class="cro-coupon-toggle">
-				<a href="#" class="cro-coupon-toggle-link"><?php esc_html_e( 'Have a coupon?', 'cro-toolkit' ); ?></a>
+				<a href="#" class="cro-coupon-toggle-link"><?php esc_html_e( 'Have a coupon?', 'meyvora-convert' ); ?></a>
 			</div>
 			<div class="cro-coupon-form" style="display: none;">
 				<form class="checkout_coupon woocommerce-form-coupon" method="post">
-					<p><?php esc_html_e( 'Enter your coupon code below.', 'cro-toolkit' ); ?></p>
+					<p><?php esc_html_e( 'Enter your coupon code below.', 'meyvora-convert' ); ?></p>
 					<p class="form-row form-row-first">
-						<input type="text" name="coupon_code" class="input-text" placeholder="<?php esc_attr_e( 'Coupon code', 'cro-toolkit' ); ?>" />
+						<input type="text" name="coupon_code" class="input-text" placeholder="<?php esc_attr_e( 'Coupon code', 'meyvora-convert' ); ?>" />
 					</p>
 					<p class="form-row form-row-last">
-						<button type="submit" class="button" name="apply_coupon" value="<?php esc_attr_e( 'Apply', 'cro-toolkit' ); ?>"><?php esc_html_e( 'Apply', 'cro-toolkit' ); ?></button>
+						<button type="submit" class="button" name="apply_coupon" value="<?php esc_attr_e( 'Apply', 'meyvora-convert' ); ?>"><?php esc_html_e( 'Apply', 'meyvora-convert' ); ?></button>
 					</p>
 					<div class="clear"></div>
 				</form>
@@ -293,10 +293,10 @@ class CRO_Blocks_Integration {
 		$settings = cro_settings()->get_checkout_settings();
 		$out      = '<div class="cro-checkout-trust cro-blocks-trust">';
 		if ( ! empty( $settings['show_secure_badge'] ) ) {
-			$out .= '<div class="cro-secure-badge"><span class="cro-secure-icon">' . CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ) . '</span><span class="cro-secure-text">' . esc_html__( 'Secure Checkout', 'cro-toolkit' ) . '</span></div>';
+			$out .= '<div class="cro-secure-badge"><span class="cro-secure-icon">' . CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ) . '</span><span class="cro-secure-text">' . esc_html__( 'Secure Checkout', 'meyvora-convert' ) . '</span></div>';
 		}
 		if ( ! empty( $settings['show_trust_message'] ) ) {
-			$msg = $settings['trust_message_text'] ?? __( 'Secure checkout - Your data is protected', 'cro-toolkit' );
+			$msg = $settings['trust_message_text'] ?? __( 'Secure checkout - Your data is protected', 'meyvora-convert' );
 			$out .= '<div class="cro-trust-message">' . esc_html( (string) $msg ) . '</div>';
 		}
 		$out .= '</div>';

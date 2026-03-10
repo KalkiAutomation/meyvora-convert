@@ -2,7 +2,7 @@
 /**
  * Offer engine: evaluate offers against context and return the best matching offer by priority.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -201,36 +201,36 @@ class CRO_Offer_Engine {
 	public static function condition_label( $key, $value ) {
 		switch ( $key ) {
 			case 'min_cart_total':
-				return sprintf( __( 'Cart ≥ %s', 'cro-toolkit' ), self::format_amount_display( $value ) );
+				return sprintf( __( 'Cart ≥ %s', 'meyvora-convert' ), self::format_amount_display( $value ) );
 			case 'max_cart_total':
-				return sprintf( __( 'Cart ≤ %s', 'cro-toolkit' ), self::format_amount_display( $value ) );
+				return sprintf( __( 'Cart ≤ %s', 'meyvora-convert' ), self::format_amount_display( $value ) );
 			case 'min_items':
-				return sprintf( _n( '%d item', '%d items', (int) $value, 'cro-toolkit' ), (int) $value );
+				return sprintf( _n( '%d item', '%d items', (int) $value, 'meyvora-convert' ), (int) $value );
 			case 'first_time_customer':
-				return __( 'First-time customer', 'cro-toolkit' );
+				return __( 'First-time customer', 'meyvora-convert' );
 			case 'returning_customer_min_orders':
 			case 'returning_customer':
-				return sprintf( __( 'Returning customer (≥%d orders)', 'cro-toolkit' ), (int) $value );
+				return sprintf( __( 'Returning customer (≥%d orders)', 'meyvora-convert' ), (int) $value );
 			case 'lifetime_spend_min':
-				return sprintf( __( 'Lifetime spend ≥ %s', 'cro-toolkit' ), self::format_amount_display( $value ) );
+				return sprintf( __( 'Lifetime spend ≥ %s', 'meyvora-convert' ), self::format_amount_display( $value ) );
 			case 'allowed_roles':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Allowed roles', 'cro-toolkit' ) . ': ' . implode( ', ', array_map( 'esc_html', $value ) ) : __( 'Allowed roles', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? __( 'Allowed roles', 'meyvora-convert' ) . ': ' . implode( ', ', array_map( 'esc_html', $value ) ) : __( 'Allowed roles', 'meyvora-convert' );
 			case 'excluded_roles':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Excluded roles', 'cro-toolkit' ) . ': ' . implode( ', ', array_map( 'esc_html', $value ) ) : __( 'Excluded roles', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? __( 'Excluded roles', 'meyvora-convert' ) . ': ' . implode( ', ', array_map( 'esc_html', $value ) ) : __( 'Excluded roles', 'meyvora-convert' );
 			case 'include_categories':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Categories only (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Include categories', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Categories only (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Include categories', 'meyvora-convert' );
 			case 'exclude_categories':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Exclude categories (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Exclude categories', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Exclude categories (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Exclude categories', 'meyvora-convert' );
 			case 'include_products':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Include products (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Include products', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Include products (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Include products', 'meyvora-convert' );
 			case 'exclude_products':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Exclude products (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Exclude products', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Exclude products (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Exclude products', 'meyvora-convert' );
 			case 'exclude_sale_items':
-				return $value ? __( 'No sale items in cart', 'cro-toolkit' ) : __( 'Sale items allowed', 'cro-toolkit' );
+				return $value ? __( 'No sale items in cart', 'meyvora-convert' ) : __( 'Sale items allowed', 'meyvora-convert' );
 			case 'min_qty_for_category':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Min qty per category (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Min qty for category', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Min qty per category (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Min qty for category', 'meyvora-convert' );
 			case 'cart_contains_category':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Cart contains category (%d)', 'cro-toolkit' ), count( $value ) ) : __( 'Cart contains category', 'cro-toolkit' );
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Cart contains category (%d)', 'meyvora-convert' ), count( $value ) ) : __( 'Cart contains category', 'meyvora-convert' );
 			default:
 				return (string) $key;
 		}
@@ -258,8 +258,8 @@ class CRO_Offer_Engine {
 				$actual   = (string) ( isset( $context['cart_items_count'] ) ? (int) $context['cart_items_count'] : 0 );
 				break;
 			case 'first_time_customer':
-				$expected = $value ? __( '0 orders', 'cro-toolkit' ) : '-';
-				$actual   = (string) ( isset( $context['order_count'] ) ? (int) $context['order_count'] : 0 ) . ' ' . __( 'orders', 'cro-toolkit' );
+				$expected = $value ? __( '0 orders', 'meyvora-convert' ) : '-';
+				$actual   = (string) ( isset( $context['order_count'] ) ? (int) $context['order_count'] : 0 ) . ' ' . __( 'orders', 'meyvora-convert' );
 				break;
 			case 'returning_customer_min_orders':
 			case 'returning_customer':
@@ -271,12 +271,12 @@ class CRO_Offer_Engine {
 				$actual   = self::format_amount_display( isset( $context['lifetime_spend'] ) ? $context['lifetime_spend'] : 0 );
 				break;
 			case 'allowed_roles':
-				$expected = is_array( $value ) && ! empty( $value ) ? implode( ', ', $value ) : __( 'Any', 'cro-toolkit' );
-				$actual   = isset( $context['user_role'] ) && (string) $context['user_role'] !== '' ? (string) $context['user_role'] : ( ! empty( $context['is_logged_in'] ) ? __( '—', 'cro-toolkit' ) : __( 'Guest', 'cro-toolkit' ) );
+				$expected = is_array( $value ) && ! empty( $value ) ? implode( ', ', $value ) : __( 'Any', 'meyvora-convert' );
+				$actual   = isset( $context['user_role'] ) && (string) $context['user_role'] !== '' ? (string) $context['user_role'] : ( ! empty( $context['is_logged_in'] ) ? __( '—', 'meyvora-convert' ) : __( 'Guest', 'meyvora-convert' ) );
 				break;
 			case 'excluded_roles':
-				$expected = is_array( $value ) && ! empty( $value ) ? implode( ', ', $value ) : __( 'None', 'cro-toolkit' );
-				$actual   = isset( $context['user_role'] ) && (string) $context['user_role'] !== '' ? (string) $context['user_role'] : ( ! empty( $context['is_logged_in'] ) ? __( '—', 'cro-toolkit' ) : __( 'Guest', 'cro-toolkit' ) );
+				$expected = is_array( $value ) && ! empty( $value ) ? implode( ', ', $value ) : __( 'None', 'meyvora-convert' );
+				$actual   = isset( $context['user_role'] ) && (string) $context['user_role'] !== '' ? (string) $context['user_role'] : ( ! empty( $context['is_logged_in'] ) ? __( '—', 'meyvora-convert' ) : __( 'Guest', 'meyvora-convert' ) );
 				break;
 			case 'include_categories':
 			case 'exclude_categories':
@@ -290,7 +290,7 @@ class CRO_Offer_Engine {
 				$actual   = self::format_cart_products_for_display( isset( $context['cart_items'] ) ? $context['cart_items'] : array() );
 				break;
 			case 'exclude_sale_items':
-				$expected = $value ? __( 'No sale items', 'cro-toolkit' ) : '—';
+				$expected = $value ? __( 'No sale items', 'meyvora-convert' ) : '—';
 				$actual   = self::format_cart_has_sale_for_display( isset( $context['cart_items'] ) ? $context['cart_items'] : array() );
 				break;
 			case 'min_qty_for_category':
@@ -315,37 +315,37 @@ class CRO_Offer_Engine {
 	public static function condition_suggestion( $key, $value, array $context ) {
 		switch ( $key ) {
 			case 'min_cart_total':
-				return sprintf( __( 'Increase cart total to at least %s', 'cro-toolkit' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
+				return sprintf( __( 'Increase cart total to at least %s', 'meyvora-convert' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
 			case 'max_cart_total':
-				return sprintf( __( 'Lower cart total to at most %s', 'cro-toolkit' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
+				return sprintf( __( 'Lower cart total to at most %s', 'meyvora-convert' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
 			case 'min_items':
 				$n = is_numeric( $value ) ? (int) $value : 0;
-				return sprintf( _n( 'Add at least %d item to cart', 'Add at least %d items to cart', $n, 'cro-toolkit' ), $n );
+				return sprintf( _n( 'Add at least %d item to cart', 'Add at least %d items to cart', $n, 'meyvora-convert' ), $n );
 			case 'first_time_customer':
-				return __( 'Use a first-time customer (0 orders)', 'cro-toolkit' );
+				return __( 'Use a first-time customer (0 orders)', 'meyvora-convert' );
 			case 'returning_customer_min_orders':
 			case 'returning_customer':
-				return sprintf( __( 'Use a returning customer (≥%d orders)', 'cro-toolkit' ), is_numeric( $value ) ? (int) $value : 1 );
+				return sprintf( __( 'Use a returning customer (≥%d orders)', 'meyvora-convert' ), is_numeric( $value ) ? (int) $value : 1 );
 			case 'lifetime_spend_min':
-				return sprintf( __( 'Increase lifetime spend to at least %s', 'cro-toolkit' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
+				return sprintf( __( 'Increase lifetime spend to at least %s', 'meyvora-convert' ), self::format_amount_display( is_numeric( $value ) ? $value : 0 ) );
 			case 'allowed_roles':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Log in as one of: %s', 'cro-toolkit' ), implode( ', ', $value ) ) : '';
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Log in as one of: %s', 'meyvora-convert' ), implode( ', ', $value ) ) : '';
 			case 'excluded_roles':
-				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Use a role not in: %s', 'cro-toolkit' ), implode( ', ', $value ) ) : '';
+				return is_array( $value ) && ! empty( $value ) ? sprintf( __( 'Use a role not in: %s', 'meyvora-convert' ), implode( ', ', $value ) ) : '';
 			case 'include_categories':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Add only products from the selected categories', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Add only products from the selected categories', 'meyvora-convert' ) : '';
 			case 'exclude_categories':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Remove products from the excluded categories', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Remove products from the excluded categories', 'meyvora-convert' ) : '';
 			case 'include_products':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Add at least one of the selected products to cart', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Add at least one of the selected products to cart', 'meyvora-convert' ) : '';
 			case 'exclude_products':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Remove the excluded products from cart', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Remove the excluded products from cart', 'meyvora-convert' ) : '';
 			case 'exclude_sale_items':
-				return $value ? __( 'Remove sale items from cart', 'cro-toolkit' ) : '';
+				return $value ? __( 'Remove sale items from cart', 'meyvora-convert' ) : '';
 			case 'min_qty_for_category':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Add more items from the required categories', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Add more items from the required categories', 'meyvora-convert' ) : '';
 			case 'cart_contains_category':
-				return is_array( $value ) && ! empty( $value ) ? __( 'Add a product from one of the selected categories', 'cro-toolkit' ) : '';
+				return is_array( $value ) && ! empty( $value ) ? __( 'Add a product from one of the selected categories', 'meyvora-convert' ) : '';
 			default:
 				return '';
 		}
@@ -365,7 +365,7 @@ class CRO_Offer_Engine {
 			}
 		}
 		$ids = array_unique( array_map( 'absint', $ids ) );
-		return empty( $ids ) ? __( '—', 'cro-toolkit' ) : implode( ', ', $ids );
+		return empty( $ids ) ? __( '—', 'meyvora-convert' ) : implode( ', ', $ids );
 	}
 
 	/**
@@ -381,7 +381,7 @@ class CRO_Offer_Engine {
 				$ids[] = (int) $item['product_id'];
 			}
 		}
-		return empty( $ids ) ? __( '—', 'cro-toolkit' ) : implode( ', ', $ids );
+		return empty( $ids ) ? __( '—', 'meyvora-convert' ) : implode( ', ', $ids );
 	}
 
 	/**
@@ -393,10 +393,10 @@ class CRO_Offer_Engine {
 	private static function format_cart_has_sale_for_display( array $cart_items ) {
 		foreach ( $cart_items as $item ) {
 			if ( ! empty( $item['on_sale'] ) ) {
-				return __( 'Has sale items', 'cro-toolkit' );
+				return __( 'Has sale items', 'meyvora-convert' );
 			}
 		}
-		return __( 'No sale items', 'cro-toolkit' );
+		return __( 'No sale items', 'meyvora-convert' );
 	}
 
 	/**
@@ -459,18 +459,18 @@ class CRO_Offer_Engine {
 		$type   = isset( $reward['type'] ) ? $reward['type'] : 'percent';
 		$amount = isset( $reward['amount'] ) ? $reward['amount'] : 0;
 		if ( 'free_shipping' === $type ) {
-			return __( 'Free shipping', 'cro-toolkit' );
+			return __( 'Free shipping', 'meyvora-convert' );
 		}
 		if ( 'percent' === $type ) {
-			return sprintf( /* translators: %s: percentage */ __( '%s off', 'cro-toolkit' ), absint( $amount ) . '%' );
+			return sprintf( /* translators: %s: percentage */ __( '%s off', 'meyvora-convert' ), absint( $amount ) . '%' );
 		}
 		if ( 'fixed' === $type && function_exists( 'wc_price' ) ) {
-			return sprintf( /* translators: %s: formatted amount */ __( '%s off', 'cro-toolkit' ), wc_price( $amount ) );
+			return sprintf( /* translators: %s: formatted amount */ __( '%s off', 'meyvora-convert' ), wc_price( $amount ) );
 		}
 		if ( 'fixed' === $type ) {
-			return sprintf( __( '%s off', 'cro-toolkit' ), (string) $amount );
+			return sprintf( __( '%s off', 'meyvora-convert' ), (string) $amount );
 		}
-		return __( 'A discount', 'cro-toolkit' );
+		return __( 'A discount', 'meyvora-convert' );
 	}
 
 	/**
@@ -719,6 +719,15 @@ class CRO_Offer_Engine {
 	 * @return array|null Payload { id, headline, description, reward, priority } or null.
 	 */
 	public static function get_best_offer( $context = null ) {
+		// Don't show dynamic offers during subscription renewal checkout.
+		if ( function_exists( 'WC' ) && WC()->cart && class_exists( 'WC_Subscriptions_Cart' ) ) {
+			foreach ( WC()->cart->get_cart() as $item ) {
+				if ( ! empty( $item['subscription_renewal'] ) ) {
+					return null;
+				}
+			}
+		}
+
 		if ( $context === null ) {
 			$context = self::build_context();
 		}
@@ -819,7 +828,7 @@ class CRO_Offer_Engine {
 		if ( empty( $context['user_id'] ) ) {
 			return false;
 		}
-		return current_user_can( 'manage_woocommerce' ) || user_can( $context['user_id'], 'administrator' );
+		return current_user_can( 'manage_meyvora_convert' ) || user_can( $context['user_id'], 'administrator' );
 	}
 
 	/**
@@ -873,7 +882,7 @@ class CRO_Offer_Engine {
 	}
 
 	/**
-	 * Generate a unique code: CRO-{offerId}-{random6}.
+	 * Generate a unique code: MYV-{offerId}-{random6}.
 	 *
 	 * @param int $offer_id Offer ID.
 	 * @return string
@@ -886,7 +895,7 @@ class CRO_Offer_Engine {
 			for ( $i = 0; $i < 6; $i++ ) {
 				$rand .= $chars[ wp_rand( 0, strlen( $chars ) - 1 ) ];
 			}
-			$code = 'CRO-' . $offer_id . '-' . $rand;
+			$code = 'MYV-' . $offer_id . '-' . $rand;
 		} while ( function_exists( 'wc_get_coupon_id_by_code' ) && wc_get_coupon_id_by_code( $code ) );
 		return $code;
 	}

@@ -7,7 +7,7 @@
  * Only sends if status=active, email_consent=1, email exists, cart not recovered, and email_N not already sent.
  * Logs sent timestamps (email_1/2/3_sent_at) and last_error in DB.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -23,6 +23,7 @@ class CRO_Abandoned_Cart_Reminder {
 	const HOOK  = 'cro_abandoned_cart_reminder';
 	const GROUP = 'cro_abandoned_cart';
 	const MAX_EMAILS = 3;
+	const MAX_REMINDERS = 3;
 
 	/**
 	 * Register the action hook and (for wp-cron fallback) ensure cron is scheduled.
@@ -46,7 +47,7 @@ class CRO_Abandoned_Cart_Reminder {
 		}
 		$schedules['cro_every_fifteen_minutes'] = array(
 			'interval' => 15 * 60,
-			'display'  => __( 'Every 15 minutes', 'cro-toolkit' ),
+			'display'  => __( 'Every 15 minutes', 'meyvora-convert' ),
 		);
 		return $schedules;
 	}
@@ -134,6 +135,11 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( ! self::row_can_receive_reminder( $row ) ) {
 			return;
 		}
+		// Throttle: never send more than MAX_REMINDERS emails per abandoned cart.
+		$reminder_count = isset( $row->reminder_count ) ? (int) $row->reminder_count : 0;
+		if ( $reminder_count >= self::MAX_REMINDERS ) {
+			return; // Already sent maximum reminders
+		}
 		$sent_col = 'email_' . $email_number . '_sent_at';
 		if ( ! empty( $row->$sent_col ) ) {
 			return;
@@ -159,6 +165,10 @@ class CRO_Abandoned_Cart_Reminder {
 				array( '%s', '%s', '%s' ),
 				array( '%d' )
 			);
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$table} SET reminder_count = reminder_count + 1 WHERE id = %d",
+				$abandoned_cart_id
+			) );
 			// Schedule next email if N < 3.
 			if ( $email_number < self::MAX_EMAILS ) {
 				$opts = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
@@ -175,7 +185,7 @@ class CRO_Abandoned_Cart_Reminder {
 			$err = self::get_last_send_error();
 			$wpdb->update(
 				$table,
-				array( 'last_error' => $err ? substr( $err, 0, 500 ) : __( 'Send failed', 'cro-toolkit' ), 'updated_at' => current_time( 'mysql' ) ),
+				array( 'last_error' => $err ? substr( $err, 0, 500 ) : __( 'Send failed', 'meyvora-convert' ), 'updated_at' => current_time( 'mysql' ) ),
 				array( 'id' => $abandoned_cart_id ),
 				array( '%s', '%s' ),
 				array( '%d' )
@@ -202,6 +212,11 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( ! self::row_can_receive_reminder( $row ) ) {
 			return false;
 		}
+		// Throttle: never send more than MAX_REMINDERS emails per abandoned cart.
+		$reminder_count = isset( $row->reminder_count ) ? (int) $row->reminder_count : 0;
+		if ( $reminder_count >= self::MAX_REMINDERS ) {
+			return false; // Already sent maximum reminders
+		}
 		$opts = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
 		$generate_for = isset( $opts['generate_coupon_for_email'] ) ? max( 1, min( 3, (int) $opts['generate_coupon_for_email'] ) ) : 1;
 		$coupon_code  = null;
@@ -224,6 +239,10 @@ class CRO_Abandoned_Cart_Reminder {
 				array( '%s', '%s', '%s' ),
 				array( '%d' )
 			);
+			$wpdb->query( $wpdb->prepare(
+				"UPDATE {$table} SET reminder_count = reminder_count + 1 WHERE id = %d",
+				$cart_id
+			) );
 		}
 		return $sent;
 	}
@@ -330,16 +349,17 @@ class CRO_Abandoned_Cart_Reminder {
 	/**
 	 * Build placeholder values for template replacement. Used when sending or previewing.
 	 *
-	 * @param object|null $row          Abandoned cart row (or null for sample).
-	 * @param string|null $coupon_code  Optional coupon code.
-	 * @param bool        $html         Whether cart_items should be HTML (for email body).
+	 * @param object|null $row             Abandoned cart row (or null for sample).
+	 * @param string|null $coupon_code    Optional coupon code.
+	 * @param bool        $html           Whether cart_items should be HTML (for email body).
+	 * @param string      $unsubscribe_url Optional unsubscribe URL for {unsubscribe_url} placeholder.
 	 * @return array Map of placeholder name => value.
 	 */
-	public static function get_placeholder_values( ?object $row = null, $coupon_code = null, $html = true ) {
+	public static function get_placeholder_values( ?object $row = null, $coupon_code = null, $html = true, $unsubscribe_url = '' ) {
 		$store_name   = get_bloginfo( 'name' );
 		$checkout_url = function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : home_url( '/checkout/' );
-		$first_name   = __( 'there', 'cro-toolkit' );
-		$cart_items   = __( 'Your cart items', 'cro-toolkit' );
+		$first_name   = __( 'there', 'meyvora-convert' );
+		$cart_items   = __( 'Your cart items', 'meyvora-convert' );
 		$cart_total   = '';
 		if ( $row ) {
 			if ( ! empty( $row->user_id ) ) {
@@ -357,16 +377,17 @@ class CRO_Abandoned_Cart_Reminder {
 		}
 		$discount_text = '';
 		if ( ! empty( $coupon_code ) ) {
-			$discount_text = '<p>' . sprintf( __( 'Use code <strong>%1$s</strong> at checkout for your discount.', 'cro-toolkit' ), esc_html( $coupon_code ) ) . '</p>';
+			$discount_text = '<p>' . sprintf( __( 'Use code <strong>%1$s</strong> at checkout for your discount.', 'meyvora-convert' ), esc_html( $coupon_code ) ) . '</p>';
 		}
 		return array(
-			'first_name'    => $first_name,
-			'cart_items'    => $cart_items,
-			'cart_total'    => $cart_total,
-			'checkout_url'  => $checkout_url,
-			'coupon_code'   => $coupon_code ? $coupon_code : '',
-			'discount_text' => $discount_text,
-			'store_name'    => $store_name,
+			'first_name'      => $first_name,
+			'cart_items'      => $cart_items,
+			'cart_total'      => $cart_total,
+			'checkout_url'    => $checkout_url,
+			'coupon_code'     => $coupon_code ? $coupon_code : '',
+			'discount_text'   => $discount_text,
+			'store_name'      => $store_name,
+			'unsubscribe_url' => $unsubscribe_url,
 		);
 	}
 
@@ -408,15 +429,15 @@ class CRO_Abandoned_Cart_Reminder {
 	 */
 	private static function get_cart_summary_html( $row ) {
 		if ( empty( $row->cart_json ) ) {
-			return '<p>' . esc_html( __( 'Your cart items', 'cro-toolkit' ) ) . '</p>';
+			return '<p>' . esc_html( __( 'Your cart items', 'meyvora-convert' ) ) . '</p>';
 		}
 		$data = json_decode( $row->cart_json, true );
 		if ( ! is_array( $data ) || empty( $data['items'] ) ) {
-			return '<p>' . esc_html( __( 'Your cart items', 'cro-toolkit' ) ) . '</p>';
+			return '<p>' . esc_html( __( 'Your cart items', 'meyvora-convert' ) ) . '</p>';
 		}
 		$out = '<ul style="margin:0.5em 0;padding-left:1.2em;">';
 		foreach ( $data['items'] as $item ) {
-			$name = isset( $item['name'] ) ? esc_html( $item['name'] ) : esc_html( __( 'Item', 'cro-toolkit' ) );
+			$name = isset( $item['name'] ) ? esc_html( $item['name'] ) : esc_html( __( 'Item', 'meyvora-convert' ) );
 			$qty  = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
 			$out .= '<li>' . $name . ' x ' . $qty . '</li>';
 		}
@@ -437,19 +458,37 @@ class CRO_Abandoned_Cart_Reminder {
 		$opts    = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
 		$subject = isset( $opts['email_subject_template'] ) && trim( (string) $opts['email_subject_template'] ) !== ''
 			? $opts['email_subject_template']
-			: __( 'You left something in your cart – {store_name}', 'cro-toolkit' );
+			: __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
 		$body_tpl = isset( $opts['email_body_template'] ) && trim( (string) $opts['email_body_template'] ) !== ''
 			? $opts['email_body_template']
 			: ( function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_email_body_default() : '' );
-		$values = self::get_placeholder_values( $row, $coupon_code, true );
+
+		$unsubscribe_token = wp_hash( $row->email . '|' . $row->id . '|unsubscribe' );
+		$unsubscribe_url   = add_query_arg( array(
+			'cro_action' => 'unsubscribe_cart',
+			'cart_id'    => (int) $row->id,
+			'token'      => $unsubscribe_token,
+		), home_url( '/' ) );
+
+		$values = self::get_placeholder_values( $row, $coupon_code, true, $unsubscribe_url );
 		$subject = self::replace_placeholders( $subject, $values );
 		$body    = self::replace_placeholders( $body_tpl, $values );
+
+		$message  = $body;
+		$message .= '<p style="font-size:11px;color:#999999;text-align:center;margin-top:32px;border-top:1px solid #eeeeee;padding-top:16px;">'
+			. esc_html__( "You're receiving this email because you left items in your cart.", 'meyvora-convert' )
+			. '<br><a href="' . esc_url( $unsubscribe_url ) . '" style="color:#999999;text-decoration:underline;">'
+			. esc_html__( 'Unsubscribe from cart recovery emails', 'meyvora-convert' )
+			. '</a></p>';
 		self::set_last_send_error( null );
-		$headers = array( 'Content-Type: text/html; charset=UTF-8' );
-		$result  = wp_mail( $to, $subject, $body, $headers );
+		$headers = array(
+			'Content-Type: text/html; charset=UTF-8',
+			'List-Unsubscribe: <' . esc_url( $unsubscribe_url ) . '>',
+		);
+		$result  = wp_mail( $to, $subject, $message, $headers );
 		if ( ! $result ) {
 			global $phpmailer;
-			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo ) ? $phpmailer->ErrorInfo : __( 'wp_mail failed', 'cro-toolkit' );
+			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo ) ? $phpmailer->ErrorInfo : __( 'wp_mail failed', 'meyvora-convert' );
 			self::set_last_send_error( $err );
 		}
 		return $result;
@@ -463,21 +502,21 @@ class CRO_Abandoned_Cart_Reminder {
 	 */
 	private static function get_cart_summary( $row ) {
 		if ( empty( $row->cart_json ) ) {
-			return __( 'Your cart items', 'cro-toolkit' );
+			return __( 'Your cart items', 'meyvora-convert' );
 		}
 		$data = json_decode( $row->cart_json, true );
 		if ( ! is_array( $data ) || empty( $data['items'] ) ) {
-			return __( 'Your cart items', 'cro-toolkit' );
+			return __( 'Your cart items', 'meyvora-convert' );
 		}
 		$lines = array();
 		$currency = ! empty( $row->currency ) ? $row->currency : get_woocommerce_currency();
 		foreach ( $data['items'] as $item ) {
-			$name = isset( $item['name'] ) ? $item['name'] : __( 'Item', 'cro-toolkit' );
+			$name = isset( $item['name'] ) ? $item['name'] : __( 'Item', 'meyvora-convert' );
 			$qty = isset( $item['quantity'] ) ? (int) $item['quantity'] : 1;
 			$lines[] = sprintf( '%s x %d', $name, $qty );
 		}
 		if ( ! empty( $data['totals']['total'] ) ) {
-			$lines[] = sprintf( __( 'Total: %s %s', 'cro-toolkit' ), $currency, number_format_i18n( (float) $data['totals']['total'], 2 ) );
+			$lines[] = sprintf( __( 'Total: %s %s', 'meyvora-convert' ), $currency, number_format_i18n( (float) $data['totals']['total'], 2 ) );
 		}
 		return implode( "\n", $lines );
 	}

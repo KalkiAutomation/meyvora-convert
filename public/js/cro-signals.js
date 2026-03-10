@@ -5,7 +5,7 @@
  * time on page, interactions, typing state, tab blur, back button.
  * Dispatches 'cro:signal' when signals change. Uses throttling for performance.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function() {
 	'use strict';

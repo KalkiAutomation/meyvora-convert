@@ -6,7 +6,7 @@
  * Use CRO_SelectWoo.initWithin(containerElement) when opening a drawer/modal so
  * selects inside get dropdownParent set to the panel and dropdown appears above overlay.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 (function ($) {

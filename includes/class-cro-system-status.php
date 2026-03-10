@@ -1,8 +1,8 @@
 <?php
 /**
- * System status checks for CRO Toolkit (WooCommerce, HPOS, DB, cron, REST, cache).
+ * System status checks for Meyvora Convert (WooCommerce, HPOS, DB, cron, REST, cache).
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -15,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class CRO_System_Status {
 
-	const REPORT_HEADER = 'CRO Toolkit System Status';
+	const REPORT_HEADER = 'Meyvora Convert System Status';
 
 	/**
 	 * Run all checks and return structured results.
@@ -34,6 +34,8 @@ class CRO_System_Status {
 		$checks[] = self::check_asset_loading_mode();
 		$checks[] = self::check_cron();
 		$checks[] = self::check_cache_plugins();
+		$checks[] = self::check_wc_subscriptions();
+		$checks[] = self::check_multisite();
 
 		return $checks;
 	}
@@ -57,14 +59,14 @@ class CRO_System_Status {
 				}
 			}
 		} else {
-			$missing_tables[] = __( 'CRO_Database not loaded', 'cro-toolkit' );
+			$missing_tables[] = __( 'CRO_Database not loaded', 'meyvora-convert' );
 		}
 		$results[] = array(
-			'label'   => __( 'Required database tables', 'cro-toolkit' ),
+			'label'   => __( 'Required database tables', 'meyvora-convert' ),
 			'pass'    => empty( $missing_tables ),
 			'message' => empty( $missing_tables )
-				? __( 'All CRO tables present', 'cro-toolkit' )
-				: sprintf( __( 'Missing: %s', 'cro-toolkit' ), implode( ', ', $missing_tables ) ),
+				? __( 'All CRO tables present', 'meyvora-convert' )
+				: sprintf( __( 'Missing: %s', 'meyvora-convert' ), implode( ', ', $missing_tables ) ),
 		);
 
 		// 2) Blocks build assets exist
@@ -72,12 +74,12 @@ class CRO_System_Status {
 		$has_js   = $build_dir && is_readable( $build_dir . 'index.js' );
 		$has_php  = $build_dir && is_readable( $build_dir . 'index.asset.php' );
 		$results[] = array(
-			'label'   => __( 'Blocks build assets', 'cro-toolkit' ),
+			'label'   => __( 'Blocks build assets', 'meyvora-convert' ),
 			'pass'    => $has_js && $has_php,
 			'message' => $has_js && $has_php
-				? __( 'index.js and index.asset.php present', 'cro-toolkit' )
+				? __( 'index.js and index.asset.php present', 'meyvora-convert' )
 				: sprintf(
-					__( 'Missing: %s', 'cro-toolkit' ),
+					__( 'Missing: %s', 'meyvora-convert' ),
 					implode( ', ', array_filter( array(
 						$has_js ? '' : 'blocks/cart-checkout-extension/build/index.js',
 						$has_php ? '' : 'blocks/cart-checkout-extension/build/index.asset.php',
@@ -91,11 +93,11 @@ class CRO_System_Status {
 			$forced_global = apply_filters( 'cro_should_enqueue_assets', null, 'global' );
 		}
 		$results[] = array(
-			'label'   => __( 'Asset loading not site-wide', 'cro-toolkit' ),
+			'label'   => __( 'Asset loading not site-wide', 'meyvora-convert' ),
 			'pass'    => true !== $forced_global,
 			'message' => true === $forced_global
-				? __( 'Assets are enqueued site-wide (filter override). Prefer conditional loading.', 'cro-toolkit' )
-				: __( 'Conditional loading (WooCommerce/feature pages only)', 'cro-toolkit' ),
+				? __( 'Assets are enqueued site-wide (filter override). Prefer conditional loading.', 'meyvora-convert' )
+				: __( 'Conditional loading (WooCommerce/feature pages only)', 'meyvora-convert' ),
 		);
 
 		return $results;
@@ -115,11 +117,11 @@ class CRO_System_Status {
 		// 1) WooCommerce active
 		$wc_active = class_exists( 'WooCommerce' ) && function_exists( 'WC' );
 		$results[] = array(
-			'label'   => __( 'WooCommerce active', 'cro-toolkit' ),
+			'label'   => __( 'WooCommerce active', 'meyvora-convert' ),
 			'pass'    => $wc_active,
 			'message' => $wc_active
-				? ( defined( 'WC_VERSION' ) ? sprintf( __( 'Active (version %s)', 'cro-toolkit' ), WC_VERSION ) : __( 'Active', 'cro-toolkit' ) )
-				: __( 'WooCommerce is not active.', 'cro-toolkit' ),
+				? ( defined( 'WC_VERSION' ) ? sprintf( __( 'Active (version %s)', 'meyvora-convert' ), WC_VERSION ) : __( 'Active', 'meyvora-convert' ) )
+				: __( 'WooCommerce is not active.', 'meyvora-convert' ),
 		);
 
 		// 2) Blocks integration registered (CRO IntegrationInterface with WooCommerce Blocks)
@@ -127,13 +129,13 @@ class CRO_System_Status {
 		$integration_hook  = has_action( 'woocommerce_blocks_cart_block_registration' ) || has_action( 'woocommerce_blocks_checkout_block_registration' );
 		$blocks_registered = $integration_class && $integration_hook;
 		$results[] = array(
-			'label'   => __( 'Blocks integration registered', 'cro-toolkit' ),
+			'label'   => __( 'Blocks integration registered', 'meyvora-convert' ),
 			'pass'    => $blocks_registered,
 			'message' => $blocks_registered
-				? __( 'CRO Blocks integration is registered with WooCommerce Blocks.', 'cro-toolkit' )
+				? __( 'CRO Blocks integration is registered with WooCommerce Blocks.', 'meyvora-convert' )
 				: ( $integration_class
-					? __( 'Integration class exists but registration hooks not found (WooCommerce Blocks may be inactive).', 'cro-toolkit' )
-					: __( 'CRO Blocks integration class not loaded.', 'cro-toolkit' ) ),
+					? __( 'Integration class exists but registration hooks not found (WooCommerce Blocks may be inactive).', 'meyvora-convert' )
+					: __( 'CRO Blocks integration class not loaded.', 'meyvora-convert' ) ),
 		);
 
 		// 3) Blocks build assets exist
@@ -141,12 +143,12 @@ class CRO_System_Status {
 		$has_js    = $build_dir && is_readable( $build_dir . 'index.js' );
 		$has_php   = $build_dir && is_readable( $build_dir . 'index.asset.php' );
 		$results[] = array(
-			'label'   => __( 'Blocks build assets exist', 'cro-toolkit' ),
+			'label'   => __( 'Blocks build assets exist', 'meyvora-convert' ),
 			'pass'    => $has_js && $has_php,
 			'message' => $has_js && $has_php
-				? __( 'index.js and index.asset.php present.', 'cro-toolkit' )
+				? __( 'index.js and index.asset.php present.', 'meyvora-convert' )
 				: sprintf(
-					__( 'Missing: %s', 'cro-toolkit' ),
+					__( 'Missing: %s', 'meyvora-convert' ),
 					implode( ', ', array_filter( array(
 						$has_js ? '' : 'blocks/cart-checkout-extension/build/index.js',
 						$has_php ? '' : 'blocks/cart-checkout-extension/build/index.asset.php',
@@ -167,11 +169,11 @@ class CRO_System_Status {
 		$offer_err  = is_wp_error( $offer_resp ) ? $offer_resp->get_error_message() : '';
 		$offer_ok   = ! is_wp_error( $offer_resp ) && in_array( (int) $offer_code, array( 200, 401, 403 ), true );
 		$results[] = array(
-			'label'   => __( 'REST offer endpoints reachable', 'cro-toolkit' ),
+			'label'   => __( 'REST offer endpoints reachable', 'meyvora-convert' ),
 			'pass'    => $offer_ok,
 			'message' => $offer_ok
-				? sprintf( __( 'Reachable (HTTP %d)', 'cro-toolkit' ), $offer_code )
-				: ( $offer_err ? $offer_err : sprintf( __( 'Unexpected response: HTTP %s', 'cro-toolkit' ), $offer_code ) ),
+				? sprintf( __( 'Reachable (HTTP %d)', 'meyvora-convert' ), $offer_code )
+				: ( $offer_err ? $offer_err : sprintf( __( 'Unexpected response: HTTP %s', 'meyvora-convert' ), $offer_code ) ),
 		);
 
 		// 5) Required DB tables exist; if missing run create_tables() and show result + last_error
@@ -190,44 +192,44 @@ class CRO_System_Status {
 			$last_error = $wpdb->last_error;
 			$dbdelta_str = ! empty( $delta_output ) ? ' dbDelta: ' . wp_json_encode( $delta_output ) : '';
 			$results[] = array(
-				'label'   => __( 'Required DB tables exist', 'cro-toolkit' ),
+				'label'   => __( 'Required DB tables exist', 'meyvora-convert' ),
 				'pass'    => $ok,
 				'message' => $ok
-					? __( 'Tables created or updated successfully.', 'cro-toolkit' ) . ( $dbdelta_str ? ' ' . trim( $dbdelta_str ) : '' )
+					? __( 'Tables created or updated successfully.', 'meyvora-convert' ) . ( $dbdelta_str ? ' ' . trim( $dbdelta_str ) : '' )
 					: sprintf(
 						/* translators: 1: list of missing tables, 2: db error and optional dbDelta */
-						__( 'Missing: %1$s. create_tables() failed. %2$s%3$s', 'cro-toolkit' ),
+						__( 'Missing: %1$s. create_tables() failed. %2$s%3$s', 'meyvora-convert' ),
 						implode( ', ', $missing_tables ),
-						$last_error ? ( __( 'last_error:', 'cro-toolkit' ) . ' ' . $last_error ) : __( 'Check DB user permissions.', 'cro-toolkit' ),
+						$last_error ? ( __( 'last_error:', 'meyvora-convert' ) . ' ' . $last_error ) : __( 'Check DB user permissions.', 'meyvora-convert' ),
 						$dbdelta_str
 					),
 			);
 		} else {
 			$results[] = array(
-				'label'   => __( 'Required DB tables exist', 'cro-toolkit' ),
+				'label'   => __( 'Required DB tables exist', 'meyvora-convert' ),
 				'pass'    => true,
-				'message' => __( 'All CRO tables present.', 'cro-toolkit' ),
+				'message' => __( 'All CRO tables present.', 'meyvora-convert' ),
 			);
 		}
 
 		// 6) Email scheduler available (Action Scheduler else wp-cron fallback)
 		$action_scheduler = function_exists( 'as_has_scheduled_action' );
 		$results[] = array(
-			'label'   => __( 'Email scheduler available', 'cro-toolkit' ),
+			'label'   => __( 'Email scheduler available', 'meyvora-convert' ),
 			'pass'    => true,
 			'message' => $action_scheduler
-				? __( 'Action Scheduler available (WooCommerce).', 'cro-toolkit' )
-				: __( 'wp-cron fallback (Action Scheduler not detected).', 'cro-toolkit' ),
+				? __( 'Action Scheduler available (WooCommerce).', 'meyvora-convert' )
+				: __( 'wp-cron fallback (Action Scheduler not detected).', 'meyvora-convert' ),
 		);
 
 		// 7) Test email send capability (wp_mail) basic check
 		$wp_mail_ok = is_callable( 'wp_mail' );
 		$results[] = array(
-			'label'   => __( 'Test email send capability (wp_mail)', 'cro-toolkit' ),
+			'label'   => __( 'Test email send capability (wp_mail)', 'meyvora-convert' ),
 			'pass'    => $wp_mail_ok,
 			'message' => $wp_mail_ok
-				? __( 'wp_mail() is available.', 'cro-toolkit' )
-				: __( 'wp_mail() is not callable.', 'cro-toolkit' ),
+				? __( 'wp_mail() is available.', 'meyvora-convert' )
+				: __( 'wp_mail() is not callable.', 'meyvora-convert' ),
 		);
 
 		// 8) SelectWoo assets (for admin selects)
@@ -238,23 +240,23 @@ class CRO_System_Status {
 			$selectwoo_ok  = ! empty( $selectwoo_css ) && ! empty( $selectwoo_js );
 		}
 		$results[] = array(
-			'label'   => __( 'SelectWoo assets (admin)', 'cro-toolkit' ),
+			'label'   => __( 'SelectWoo assets (admin)', 'meyvora-convert' ),
 			'pass'    => $selectwoo_ok,
 			'message' => $selectwoo_ok
-				? __( 'SelectWoo CSS and JS available.', 'cro-toolkit' )
-				: __( 'WooCommerce or SelectWoo assets not found. Admin selects may fall back to native.', 'cro-toolkit' ),
+				? __( 'SelectWoo CSS and JS available.', 'meyvora-convert' )
+				: __( 'WooCommerce or SelectWoo assets not found. Admin selects may fall back to native.', 'meyvora-convert' ),
 		);
 
 		// 9) Campaign builder assets
 		$builder_css = defined( 'CRO_PLUGIN_DIR' ) && is_readable( CRO_PLUGIN_DIR . 'admin/css/cro-campaign-builder.css' );
 		$builder_js  = defined( 'CRO_PLUGIN_DIR' ) && is_readable( CRO_PLUGIN_DIR . 'admin/js/cro-campaign-builder.js' );
 		$results[] = array(
-			'label'   => __( 'Campaign builder assets exist', 'cro-toolkit' ),
+			'label'   => __( 'Campaign builder assets exist', 'meyvora-convert' ),
 			'pass'    => $builder_css && $builder_js,
 			'message' => ( $builder_css && $builder_js )
-				? __( 'cro-campaign-builder.css and .js present.', 'cro-toolkit' )
+				? __( 'cro-campaign-builder.css and .js present.', 'meyvora-convert' )
 				: sprintf(
-					__( 'Missing: %s', 'cro-toolkit' ),
+					__( 'Missing: %s', 'meyvora-convert' ),
 					implode( ', ', array_filter( array(
 						$builder_css ? '' : 'admin/css/cro-campaign-builder.css',
 						$builder_js ? '' : 'admin/js/cro-campaign-builder.js',
@@ -280,12 +282,12 @@ class CRO_System_Status {
 			}
 		}
 		$results[] = array(
-			'label'   => __( 'UI & Builder: no legacy CRO admin CSS', 'cro-toolkit' ),
+			'label'   => __( 'UI & Builder: no legacy CRO admin CSS', 'meyvora-convert' ),
 			'pass'    => empty( $legacy_cro_css ),
 			'message' => empty( $legacy_cro_css )
-				? ( empty( $cro_css_handles ) ? __( 'Design system and page-specific only.', 'cro-toolkit' ) : sprintf( __( 'CRO CSS loaded: %s', 'cro-toolkit' ), implode( ', ', $cro_css_handles ) ) )
+				? ( empty( $cro_css_handles ) ? __( 'Design system and page-specific only.', 'meyvora-convert' ) : sprintf( __( 'CRO CSS loaded: %s', 'meyvora-convert' ), implode( ', ', $cro_css_handles ) ) )
 				: sprintf(
-					__( 'Legacy CSS enqueued (remove from code): %s', 'cro-toolkit' ),
+					__( 'Legacy CSS enqueued (remove from code): %s', 'meyvora-convert' ),
 					implode( ', ', $legacy_cro_css )
 				),
 		);
@@ -293,11 +295,11 @@ class CRO_System_Status {
 		// 11) Builder script registered (in register_campaign_builder_assets); enqueued on page=cro-campaign-edit or cro-campaign-builder
 		$builder_registered = wp_script_is( 'cro-campaign-builder', 'registered' );
 		$results[] = array(
-			'label'   => __( 'Campaign builder script registered', 'cro-toolkit' ),
+			'label'   => __( 'Campaign builder script registered', 'meyvora-convert' ),
 			'pass'    => $builder_registered,
 			'message' => $builder_registered
-				? __( 'Builder JS registered; enqueued on campaign edit/builder pages.', 'cro-toolkit' )
-				: __( 'cro-campaign-builder script not registered. Check register_campaign_builder_assets.', 'cro-toolkit' ),
+				? __( 'Builder JS registered; enqueued on campaign edit/builder pages.', 'meyvora-convert' )
+				: __( 'cro-campaign-builder script not registered. Check register_campaign_builder_assets.', 'meyvora-convert' ),
 		);
 
 		return $results;
@@ -312,12 +314,12 @@ class CRO_System_Status {
 		$active = class_exists( 'WooCommerce' ) && function_exists( 'WC' );
 		$version = $active && defined( 'WC_VERSION' ) ? WC_VERSION : '';
 		return array(
-			'label'   => __( 'WooCommerce active', 'cro-toolkit' ),
+			'label'   => __( 'WooCommerce active', 'meyvora-convert' ),
 			'status'  => $active ? 'ok' : 'warning',
 			'message'  => $active
-				? ( $version ? sprintf( __( 'Active (version %s)', 'cro-toolkit' ), $version ) : __( 'Active', 'cro-toolkit' ) )
-				: __( 'Not active', 'cro-toolkit' ),
-			'detail'  => $active ? '' : __( 'Some features (shipping bar, sticky cart, cart/checkout optimizer) require WooCommerce.', 'cro-toolkit' ),
+				? ( $version ? sprintf( __( 'Active (version %s)', 'meyvora-convert' ), $version ) : __( 'Active', 'meyvora-convert' ) )
+				: __( 'Not active', 'meyvora-convert' ),
+			'detail'  => $active ? '' : __( 'Some features (shipping bar, sticky cart, cart/checkout optimizer) require WooCommerce.', 'meyvora-convert' ),
 		);
 	}
 
@@ -329,9 +331,9 @@ class CRO_System_Status {
 	private static function check_hpos() {
 		if ( ! class_exists( 'WooCommerce' ) ) {
 			return array(
-				'label'   => __( 'WooCommerce HPOS', 'cro-toolkit' ),
+				'label'   => __( 'WooCommerce HPOS', 'meyvora-convert' ),
 				'status'  => 'warning',
-				'message'  => __( 'N/A — WooCommerce not active', 'cro-toolkit' ),
+				'message'  => __( 'N/A — WooCommerce not active', 'meyvora-convert' ),
 				'detail'  => '',
 			);
 		}
@@ -340,10 +342,10 @@ class CRO_System_Status {
 			$hpos_enabled = \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
 		}
 		return array(
-			'label'   => __( 'HPOS enabled/disabled', 'cro-toolkit' ),
+			'label'   => __( 'HPOS enabled/disabled', 'meyvora-convert' ),
 			'status'  => 'ok',
-			'message'  => $hpos_enabled ? __( 'HPOS enabled', 'cro-toolkit' ) : __( 'HPOS disabled (classic order tables)', 'cro-toolkit' ),
-			'detail'  => __( 'CRO Toolkit is compatible with both HPOS and classic storage.', 'cro-toolkit' ),
+			'message'  => $hpos_enabled ? __( 'HPOS enabled', 'meyvora-convert' ) : __( 'HPOS disabled (classic order tables)', 'meyvora-convert' ),
+			'detail'  => __( 'Meyvora Convert is compatible with both HPOS and classic storage.', 'meyvora-convert' ),
 		);
 	}
 
@@ -355,9 +357,9 @@ class CRO_System_Status {
 	private static function check_cart_checkout_blocks() {
 		if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'wc_get_page_id' ) ) {
 			return array(
-				'label'   => __( 'Cart/Checkout block detection', 'cro-toolkit' ),
+				'label'   => __( 'Cart/Checkout block detection', 'meyvora-convert' ),
 				'status'  => 'warning',
-				'message'  => __( 'N/A — WooCommerce not active', 'cro-toolkit' ),
+				'message'  => __( 'N/A — WooCommerce not active', 'meyvora-convert' ),
 				'detail'  => '',
 			);
 		}
@@ -375,17 +377,17 @@ class CRO_System_Status {
 		}
 		$parts = array();
 		if ( $cart_block ) {
-			$parts[] = __( 'Cart: block', 'cro-toolkit' );
+			$parts[] = __( 'Cart: block', 'meyvora-convert' );
 		} else {
-			$parts[] = __( 'Cart: shortcode', 'cro-toolkit' );
+			$parts[] = __( 'Cart: shortcode', 'meyvora-convert' );
 		}
 		if ( $checkout_block ) {
-			$parts[] = __( 'Checkout: block', 'cro-toolkit' );
+			$parts[] = __( 'Checkout: block', 'meyvora-convert' );
 		} else {
-			$parts[] = __( 'Checkout: shortcode', 'cro-toolkit' );
+			$parts[] = __( 'Checkout: shortcode', 'meyvora-convert' );
 		}
 		return array(
-			'label'   => __( 'Cart/Checkout block detection', 'cro-toolkit' ),
+			'label'   => __( 'Cart/Checkout block detection', 'meyvora-convert' ),
 			'status'  => 'ok',
 			'message'  => implode( ' · ', $parts ),
 			'detail'  => '',
@@ -424,17 +426,17 @@ class CRO_System_Status {
 		}
 		if ( empty( $missing ) ) {
 			return array(
-				'label'   => __( 'Custom tables status', 'cro-toolkit' ),
+				'label'   => __( 'Custom tables status', 'meyvora-convert' ),
 				'status'  => 'ok',
-				'message'  => __( 'All CRO tables present', 'cro-toolkit' ),
+				'message'  => __( 'All CRO tables present', 'meyvora-convert' ),
 				'detail'  => implode( ', ', $present ),
 			);
 		}
 		return array(
-			'label'   => __( 'Custom tables status', 'cro-toolkit' ),
+			'label'   => __( 'Custom tables status', 'meyvora-convert' ),
 			'status'  => count( $missing ) === count( $tables ) ? 'error' : 'warning',
-			'message'  => sprintf( __( 'Missing: %s', 'cro-toolkit' ), implode( ', ', $missing ) ),
-			'detail'  => __( 'Deactivate and reactivate the plugin to create tables, or run the activation routine.', 'cro-toolkit' ),
+			'message'  => sprintf( __( 'Missing: %s', 'meyvora-convert' ), implode( ', ', $missing ) ),
+			'detail'  => __( 'Deactivate and reactivate the plugin to create tables, or run the activation routine.', 'meyvora-convert' ),
 		);
 	}
 
@@ -446,21 +448,21 @@ class CRO_System_Status {
 	private static function check_active_boosters() {
 		if ( ! function_exists( 'cro_settings' ) ) {
 			return array(
-				'label'   => __( 'Active boosters list', 'cro-toolkit' ),
+				'label'   => __( 'Active boosters list', 'meyvora-convert' ),
 				'status'  => 'warning',
-				'message'  => __( 'Settings unavailable', 'cro-toolkit' ),
+				'message'  => __( 'Settings unavailable', 'meyvora-convert' ),
 				'detail'  => '',
 			);
 		}
 		$settings = cro_settings();
 		$boosters = array(
-			'sticky_cart'     => __( 'Sticky add-to-cart', 'cro-toolkit' ),
-			'shipping_bar'    => __( 'Free shipping bar', 'cro-toolkit' ),
-			'trust_badges'    => __( 'Trust badges', 'cro-toolkit' ),
-			'stock_urgency'   => __( 'Stock urgency', 'cro-toolkit' ),
-			'campaigns'       => __( 'Conversion campaigns', 'cro-toolkit' ),
-			'cart_optimizer'  => __( 'Cart optimizer', 'cro-toolkit' ),
-			'checkout_optimizer' => __( 'Checkout optimizer', 'cro-toolkit' ),
+			'sticky_cart'     => __( 'Sticky add-to-cart', 'meyvora-convert' ),
+			'shipping_bar'    => __( 'Free shipping bar', 'meyvora-convert' ),
+			'trust_badges'    => __( 'Trust badges', 'meyvora-convert' ),
+			'stock_urgency'   => __( 'Stock urgency', 'meyvora-convert' ),
+			'campaigns'       => __( 'Conversion campaigns', 'meyvora-convert' ),
+			'cart_optimizer'  => __( 'Cart optimizer', 'meyvora-convert' ),
+			'checkout_optimizer' => __( 'Checkout optimizer', 'meyvora-convert' ),
 		);
 		$active = array();
 		foreach ( $boosters as $key => $label ) {
@@ -468,9 +470,9 @@ class CRO_System_Status {
 				$active[] = $label;
 			}
 		}
-		$message = empty( $active ) ? __( 'None enabled', 'cro-toolkit' ) : implode( ', ', $active );
+		$message = empty( $active ) ? __( 'None enabled', 'meyvora-convert' ) : implode( ', ', $active );
 		return array(
-			'label'   => __( 'Active boosters list', 'cro-toolkit' ),
+			'label'   => __( 'Active boosters list', 'meyvora-convert' ),
 			'status'  => 'ok',
 			'message'  => $message,
 			'detail'  => '',
@@ -488,17 +490,17 @@ class CRO_System_Status {
 			$forced_global = apply_filters( 'cro_should_enqueue_assets', null, 'global' );
 		}
 		if ( true === $forced_global ) {
-			$mode = __( 'Global (filter override)', 'cro-toolkit' );
+			$mode = __( 'Global (filter override)', 'meyvora-convert' );
 		} elseif ( false === $forced_global ) {
-			$mode = __( 'Disabled (filter override)', 'cro-toolkit' );
+			$mode = __( 'Disabled (filter override)', 'meyvora-convert' );
 		} else {
-			$mode = __( 'Conditional — WooCommerce and feature pages only', 'cro-toolkit' );
+			$mode = __( 'Conditional — WooCommerce and feature pages only', 'meyvora-convert' );
 		}
 		return array(
-			'label'   => __( 'Plugin asset loading mode', 'cro-toolkit' ),
+			'label'   => __( 'Plugin asset loading mode', 'meyvora-convert' ),
 			'status'  => 'ok',
 			'message'  => $mode,
-			'detail'  => __( 'Assets load only where CRO features are active unless overridden by cro_should_enqueue_assets.', 'cro-toolkit' ),
+			'detail'  => __( 'Assets load only where CRO features are active unless overridden by cro_should_enqueue_assets.', 'meyvora-convert' ),
 		);
 	}
 
@@ -521,18 +523,18 @@ class CRO_System_Status {
 		}
 		if ( empty( $found ) ) {
 			return array(
-				'label'   => __( 'Cron (scheduled tasks)', 'cro-toolkit' ),
+				'label'   => __( 'Cron (scheduled tasks)', 'meyvora-convert' ),
 				'status'  => 'warning',
-				'message'  => __( 'No CRO cron events scheduled', 'cro-toolkit' ),
-				'detail'  => __( 'Background processing and daily cleanup may not run. Ensure WP-Cron is not disabled, or use a system cron.', 'cro-toolkit' ),
+				'message'  => __( 'No CRO cron events scheduled', 'meyvora-convert' ),
+				'detail'  => __( 'Background processing and daily cleanup may not run. Ensure WP-Cron is not disabled, or use a system cron.', 'meyvora-convert' ),
 			);
 		}
 		$next = min( array_values( $found ) );
 		$next_readable = $next ? date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), $next ) : '—';
 		return array(
-			'label'   => __( 'Cron (scheduled tasks)', 'cro-toolkit' ),
+			'label'   => __( 'Cron (scheduled tasks)', 'meyvora-convert' ),
 			'status'  => 'ok',
-			'message'  => sprintf( __( 'Scheduled (next: %s)', 'cro-toolkit' ), $next_readable ),
+			'message'  => sprintf( __( 'Scheduled (next: %s)', 'meyvora-convert' ), $next_readable ),
 			'detail'  => implode( ', ', array_keys( $found ) ),
 		);
 	}
@@ -543,7 +545,7 @@ class CRO_System_Status {
 	 * @return array
 	 */
 	private static function check_rest_endpoints() {
-		$url = rest_url( 'cro-toolkit/v1/campaigns' );
+		$url = rest_url( 'meyvora-convert/v1/campaigns' );
 		$resp = wp_remote_get( $url, array(
 			'timeout' => 10,
 			'sslverify' => false,
@@ -553,7 +555,7 @@ class CRO_System_Status {
 		$body = wp_remote_retrieve_body( $resp );
 		if ( is_wp_error( $resp ) ) {
 			return array(
-				'label'   => __( 'REST API reachable', 'cro-toolkit' ),
+				'label'   => __( 'REST API reachable', 'meyvora-convert' ),
 				'status'  => 'error',
 				'message'  => $resp->get_error_message(),
 				'detail'  => $url,
@@ -562,16 +564,16 @@ class CRO_System_Status {
 		// 200 = success, 401 = auth required (endpoint exists)
 		if ( in_array( (int) $code, array( 200, 401 ), true ) ) {
 			return array(
-				'label'   => __( 'REST API reachable', 'cro-toolkit' ),
+				'label'   => __( 'REST API reachable', 'meyvora-convert' ),
 				'status'  => 'ok',
-				'message'  => sprintf( __( 'Reachable (HTTP %d)', 'cro-toolkit' ), $code ),
+				'message'  => sprintf( __( 'Reachable (HTTP %d)', 'meyvora-convert' ), $code ),
 				'detail'  => $url,
 			);
 		}
 		return array(
-			'label'   => __( 'REST API reachable', 'cro-toolkit' ),
+			'label'   => __( 'REST API reachable', 'meyvora-convert' ),
 			'status'  => ( $code >= 500 || $code === 0 ) ? 'error' : 'warning',
-			'message'  => sprintf( __( 'Unexpected response: HTTP %d', 'cro-toolkit' ), $code ),
+			'message'  => sprintf( __( 'Unexpected response: HTTP %d', 'meyvora-convert' ), $code ),
 			'detail'  => $url,
 		);
 	}
@@ -600,17 +602,43 @@ class CRO_System_Status {
 		}
 		if ( empty( $detected ) ) {
 			return array(
-				'label'   => __( 'Cache plugins', 'cro-toolkit' ),
+				'label'   => __( 'Cache plugins', 'meyvora-convert' ),
 				'status'  => 'ok',
-				'message'  => __( 'None detected', 'cro-toolkit' ),
-				'detail'  => __( 'No known page/cache plugins detected. If you use object or fragment caching, exclude CRO cookies/endpoints if needed.', 'cro-toolkit' ),
+				'message'  => __( 'None detected', 'meyvora-convert' ),
+				'detail'  => __( 'No known page/cache plugins detected. If you use object or fragment caching, exclude CRO cookies/endpoints if needed.', 'meyvora-convert' ),
 			);
 		}
 		return array(
-			'label'   => __( 'Cache plugins', 'cro-toolkit' ),
+			'label'   => __( 'Cache plugins', 'meyvora-convert' ),
 			'status'  => 'warning',
 			'message'  => implode( ', ', $detected ),
-			'detail'  => __( 'Ensure REST and campaign endpoints are not heavily cached; exclude CRO_Visitor_State cookie from cache key if applicable.', 'cro-toolkit' ),
+			'detail'  => __( 'Ensure REST and campaign endpoints are not heavily cached; exclude CRO_Visitor_State cookie from cache key if applicable.', 'meyvora-convert' ),
+		);
+	}
+
+	private static function check_wc_subscriptions() {
+		$active = class_exists( 'WC_Subscriptions' );
+		return array(
+			'label'   => __( 'WooCommerce Subscriptions', 'meyvora-convert' ),
+			'status'  => 'ok',
+			'message' => $active
+				? __( 'Active — renewal carts and orders are excluded from CRO tracking and offers.', 'meyvora-convert' )
+				: __( 'Not installed.', 'meyvora-convert' ),
+		);
+	}
+
+	private static function check_multisite() {
+		if ( ! is_multisite() ) {
+			return array(
+				'label'   => __( 'Multisite', 'meyvora-convert' ),
+				'status'  => 'ok',
+				'message' => __( 'Single-site installation.', 'meyvora-convert' ),
+			);
+		}
+		return array(
+			'label'   => __( 'Multisite', 'meyvora-convert' ),
+			'status'  => 'ok',
+			'message' => __( 'Multisite detected. Plugin is per-site only — each site has isolated tables and settings. Network-wide activation is blocked.', 'meyvora-convert' ),
 		);
 	}
 
@@ -631,7 +659,7 @@ class CRO_System_Status {
 		$lines[] = 'Site: ' . home_url();
 		$lines[] = 'WP: ' . get_bloginfo( 'version' );
 		$lines[] = 'PHP: ' . PHP_VERSION;
-		$lines[] = 'CRO Toolkit: ' . ( defined( 'CRO_VERSION' ) ? CRO_VERSION : 'n/a' );
+		$lines[] = 'Meyvora Convert: ' . ( defined( 'CRO_VERSION' ) ? CRO_VERSION : 'n/a' );
 		if ( class_exists( 'WooCommerce' ) && defined( 'WC_VERSION' ) ) {
 			$lines[] = 'WooCommerce: ' . WC_VERSION;
 		}

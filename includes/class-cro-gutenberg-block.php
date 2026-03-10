@@ -1,11 +1,11 @@
 <?php
 /**
- * Gutenberg block: CRO Toolkit / Campaign
+ * Gutenberg block: Meyvora Convert / Campaign
  *
  * Dynamic block that renders on the server using the same shortcode renderer.
  * Saves only campaignId; works on Classic pages via shortcode.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -23,7 +23,7 @@ class CRO_Gutenberg_Block {
 	 *
 	 * @var string
 	 */
-	const BLOCK_NAME = 'cro-toolkit/campaign';
+	const BLOCK_NAME = 'meyvora-convert/campaign';
 
 	/**
 	 * Initialize the block registration and editor assets.
@@ -50,7 +50,7 @@ class CRO_Gutenberg_Block {
 			$block_json,
 			array(
 				'render_callback' => array( __CLASS__, 'render_campaign_block' ),
-				'editor_script'   => 'cro-toolkit-campaign-block',
+				'editor_script'   => 'meyvora-convert-campaign-block',
 			)
 		);
 	}
@@ -104,7 +104,7 @@ class CRO_Gutenberg_Block {
 		}
 
 		wp_register_script(
-			'cro-toolkit-campaign-block',
+			'meyvora-convert-campaign-block',
 			$script_url,
 			$dependencies,
 			$version
@@ -112,14 +112,14 @@ class CRO_Gutenberg_Block {
 
 		$campaigns = self::get_campaigns_for_block();
 		wp_localize_script(
-			'cro-toolkit-campaign-block',
+			'meyvora-convert-campaign-block',
 			'croCampaignBlock',
 			array(
 				'campaigns' => $campaigns,
 			)
 		);
 
-		wp_enqueue_script( 'cro-toolkit-campaign-block' );
+		wp_enqueue_script( 'meyvora-convert-campaign-block' );
 	}
 
 	/**

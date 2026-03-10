@@ -7,8 +7,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
-$placeholder  = isset( $content['email_placeholder'] ) ? $content['email_placeholder'] : __( 'Enter your email', 'cro-toolkit' );
-$button_text  = isset( $content['email_button_text'] ) ? $content['email_button_text'] : __( 'Subscribe', 'cro-toolkit' );
+$placeholder  = isset( $content['email_placeholder'] ) ? $content['email_placeholder'] : __( 'Enter your email', 'meyvora-convert' );
+$button_text  = isset( $content['email_button_text'] ) ? $content['email_button_text'] : __( 'Subscribe', 'meyvora-convert' );
 $campaign_id  = isset( $campaign_id ) ? $campaign_id : '';
 ?>
 <form class="cro-popup__email-form" data-campaign-id="<?php echo esc_attr( $campaign_id ); ?>">
@@ -25,6 +25,6 @@ $campaign_id  = isset( $campaign_id ) ? $campaign_id : '';
     </div>
     <div class="cro-popup__email-error" style="display: none;"></div>
     <div class="cro-popup__email-success" style="display: none;">
-        <?php esc_html_e( 'Thank you for subscribing!', 'cro-toolkit' ); ?>
+        <?php esc_html_e( 'Thank you for subscribing!', 'meyvora-convert' ); ?>
     </div>
 </form>

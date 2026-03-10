@@ -1,7 +1,7 @@
 /**
  * CRO Shipping Bar – progress bar and message, updates on cart events
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function($) {
 	'use strict';

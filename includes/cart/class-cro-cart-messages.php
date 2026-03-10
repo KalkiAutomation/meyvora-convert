@@ -2,7 +2,7 @@
 /**
  * Cart messages
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -39,7 +39,7 @@ class CRO_Cart_Messages {
 			$remaining = $free_shipping_threshold - $cart_total;
 			$message = sprintf(
 				/* translators: %s: remaining amount */
-				esc_html__( 'Add %s more to get free shipping!', 'cro-toolkit' ),
+				esc_html__( 'Add %s more to get free shipping!', 'meyvora-convert' ),
 				wc_price( $remaining )
 			);
 

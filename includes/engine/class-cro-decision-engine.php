@@ -7,7 +7,7 @@
  * to the decision's debug_log, returns early on any failure. Only ONE campaign
  * per pageview.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -63,12 +63,12 @@ class CRO_Decision_Engine {
 
 		// Step 1: Consent check
 		if ( ! $this->check_consent() ) {
-			$decision->log( 'SKIP', __( 'Consent not given; popups disabled.', 'cro-toolkit' ), array( 'step' => 1 ) );
-			$decision->reason = __( 'Consent not given.', 'cro-toolkit' );
+			$decision->log( 'SKIP', __( 'Consent not given; popups disabled.', 'meyvora-convert' ), array( 'step' => 1 ) );
+			$decision->reason = __( 'Consent not given.', 'meyvora-convert' );
 			$decision->reason_code = 'consent';
 			return $decision;
 		}
-		$decision->log( 'INFO', __( 'Consent OK.', 'cro-toolkit' ), array( 'step' => 1 ) );
+		$decision->log( 'INFO', __( 'Consent OK.', 'meyvora-convert' ), array( 'step' => 1 ) );
 
 		// Step 2: Visitor suppression (admin, shown this pageview, max per session, post-conversion, checkout)
 		$suppression = $this->check_visitor_suppression( $context, $visitor_state );
@@ -78,17 +78,17 @@ class CRO_Decision_Engine {
 			$decision->reason_code = 'suppression';
 			return $decision;
 		}
-		$decision->log( 'INFO', __( 'Visitor suppression OK.', 'cro-toolkit' ), array( 'step' => 2 ) );
+		$decision->log( 'INFO', __( 'Visitor suppression OK.', 'meyvora-convert' ), array( 'step' => 2 ) );
 
 		// Step 3: Get active campaigns from database
 		$campaigns = $this->get_active_campaigns();
 		if ( empty( $campaigns ) ) {
-			$decision->log( 'SKIP', __( 'No active campaigns.', 'cro-toolkit' ), array( 'step' => 3 ) );
-			$decision->reason = __( 'No active campaigns.', 'cro-toolkit' );
+			$decision->log( 'SKIP', __( 'No active campaigns.', 'meyvora-convert' ), array( 'step' => 3 ) );
+			$decision->reason = __( 'No active campaigns.', 'meyvora-convert' );
 			$decision->reason_code = 'no_campaigns';
 			return $decision;
 		}
-		$decision->log( 'INFO', sprintf( __( 'Found %d active campaign(s).', 'cro-toolkit' ), count( $campaigns ) ), array( 'step' => 3, 'count' => count( $campaigns ) ) );
+		$decision->log( 'INFO', sprintf( __( 'Found %d active campaign(s).', 'meyvora-convert' ), count( $campaigns ) ), array( 'step' => 3, 'count' => count( $campaigns ) ) );
 
 		// Step 4: Evaluate each campaign against targeting rules
 		$rule_engine = new CRO_Rule_Engine();
@@ -99,9 +99,9 @@ class CRO_Decision_Engine {
 			$decision->record_campaign_result( $campaign->id, $result['passed'], $result['details'] );
 			if ( $result['passed'] ) {
 				$eligible[] = $campaign;
-				$decision->log( 'RULE', sprintf( __( 'Campaign %d passed targeting.', 'cro-toolkit' ), $campaign->id ), array( 'campaign_id' => $campaign->id ) );
+				$decision->log( 'RULE', sprintf( __( 'Campaign %d passed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id ) );
 			} else {
-				$decision->log( 'RULE', sprintf( __( 'Campaign %d failed targeting.', 'cro-toolkit' ), $campaign->id ), array( 'campaign_id' => $campaign->id, 'details' => $result['details'] ) );
+				$decision->log( 'RULE', sprintf( __( 'Campaign %d failed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id, 'details' => $result['details'] ) );
 			}
 		}
 
@@ -109,12 +109,12 @@ class CRO_Decision_Engine {
 			$fallback = $this->get_fallback_campaign();
 			if ( $fallback !== null ) {
 				$eligible = array( $fallback );
-				$decision->log( 'INFO', __( 'Using fallback campaign.', 'cro-toolkit' ), array( 'campaign_id' => $fallback->id ) );
+				$decision->log( 'INFO', __( 'Using fallback campaign.', 'meyvora-convert' ), array( 'campaign_id' => $fallback->id ) );
 			}
 		}
 		if ( empty( $eligible ) ) {
-			$decision->log( 'SKIP', __( 'No campaigns passed targeting.', 'cro-toolkit' ), array( 'step' => 4 ) );
-			$decision->reason = __( 'No matching campaigns.', 'cro-toolkit' );
+			$decision->log( 'SKIP', __( 'No campaigns passed targeting.', 'meyvora-convert' ), array( 'step' => 4 ) );
+			$decision->reason = __( 'No matching campaigns.', 'meyvora-convert' );
 			$decision->reason_code = 'no_targeting_match';
 			return $decision;
 		}
@@ -123,14 +123,14 @@ class CRO_Decision_Engine {
 		if ( $trigger_type !== '' && $trigger_type !== null ) {
 			$eligible = $this->filter_eligible_by_trigger( $eligible, $trigger_type, $context, $decision );
 			if ( empty( $eligible ) ) {
-				$decision->log( 'SKIP', __( 'No campaigns match current trigger.', 'cro-toolkit' ), array( 'step' => 'trigger_filter', 'trigger_type' => $trigger_type ) );
-				$decision->reason = __( 'No campaign for this trigger.', 'cro-toolkit' );
+				$decision->log( 'SKIP', __( 'No campaigns match current trigger.', 'meyvora-convert' ), array( 'step' => 'trigger_filter', 'trigger_type' => $trigger_type ) );
+				$decision->reason = __( 'No campaign for this trigger.', 'meyvora-convert' );
 				$decision->reason_code = 'trigger_mismatch';
 				return $decision;
 			}
 		}
 
-		$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed targeting.', 'cro-toolkit' ), count( $eligible ) ), array( 'step' => 4 ) );
+		$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed targeting.', 'meyvora-convert' ), count( $eligible ) ), array( 'step' => 4 ) );
 
 		// Step 5: Intent score and threshold (for exit_intent) or treat trigger condition as met (time/scroll/inactivity/page_load)
 		$trigger_only_types = array( 'time', 'scroll', 'inactivity', 'page_load', 'click' );
@@ -140,7 +140,7 @@ class CRO_Decision_Engine {
 			foreach ( $eligible as $campaign ) {
 				$passed_intent[] = array( 'campaign' => $campaign, 'score' => 100, 'threshold' => 0 );
 			}
-			$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed (trigger condition met).', 'cro-toolkit' ), count( $passed_intent ) ), array( 'step' => 5, 'trigger_type' => $trigger_type ) );
+			$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed (trigger condition met).', 'meyvora-convert' ), count( $passed_intent ) ), array( 'step' => 5, 'trigger_type' => $trigger_type ) );
 		} else {
 			$intent_scorer = new CRO_Intent_Scorer();
 			foreach ( $eligible as $campaign ) {
@@ -150,21 +150,21 @@ class CRO_Decision_Engine {
 				$meets = $intent_scorer->meets_threshold( $score, $threshold );
 				if ( $meets ) {
 					$passed_intent[] = array( 'campaign' => $campaign, 'score' => $score, 'threshold' => $threshold );
-					$decision->log( 'UX', sprintf( __( 'Campaign %d passed intent (score %s >= %s).', 'cro-toolkit' ), $campaign->id, $score, $threshold ), array( 'campaign_id' => $campaign->id, 'score' => $score, 'threshold' => $threshold ) );
+					$decision->log( 'UX', sprintf( __( 'Campaign %d passed intent (score %s >= %s).', 'meyvora-convert' ), $campaign->id, $score, $threshold ), array( 'campaign_id' => $campaign->id, 'score' => $score, 'threshold' => $threshold ) );
 				} else {
-					$decision->log( 'UX', sprintf( __( 'Campaign %d failed intent (score %s < %s).', 'cro-toolkit' ), $campaign->id, $score, $threshold ), array( 'campaign_id' => $campaign->id, 'score' => $score, 'threshold' => $threshold ) );
+					$decision->log( 'UX', sprintf( __( 'Campaign %d failed intent (score %s < %s).', 'meyvora-convert' ), $campaign->id, $score, $threshold ), array( 'campaign_id' => $campaign->id, 'score' => $score, 'threshold' => $threshold ) );
 				}
 			}
 		}
 
 		if ( empty( $passed_intent ) ) {
-			$decision->log( 'SKIP', __( 'No campaign met intent threshold.', 'cro-toolkit' ), array( 'step' => 5 ) );
-			$decision->reason = __( 'Intent threshold not met.', 'cro-toolkit' );
+			$decision->log( 'SKIP', __( 'No campaign met intent threshold.', 'meyvora-convert' ), array( 'step' => 5 ) );
+			$decision->reason = __( 'Intent threshold not met.', 'meyvora-convert' );
 			$decision->reason_code = 'intent_threshold';
 			return $decision;
 		}
 
-		$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed intent.', 'cro-toolkit' ), count( $passed_intent ) ), array( 'step' => 5 ) );
+		$decision->log( 'INFO', sprintf( __( '%d campaign(s) passed intent.', 'meyvora-convert' ), count( $passed_intent ) ), array( 'step' => 5 ) );
 
 		// Step 6: Priority resolution (highest priority wins)
 		usort(
@@ -177,21 +177,21 @@ class CRO_Decision_Engine {
 		);
 		$winner_entry = $passed_intent[0];
 		$winner = $winner_entry['campaign'];
-		$decision->log( 'INFO', sprintf( __( 'Priority winner: campaign %d.', 'cro-toolkit' ), $winner->id ), array( 'step' => 6, 'campaign_id' => $winner->id, 'priority' => $winner->priority ) );
+		$decision->log( 'INFO', sprintf( __( 'Priority winner: campaign %d.', 'meyvora-convert' ), $winner->id ), array( 'step' => 6, 'campaign_id' => $winner->id, 'priority' => $winner->priority ) );
 
 		// Step 7: Frequency check (once_ever, once_per_session, etc.)
 		if ( ! $this->check_frequency( $winner, $visitor_state ) ) {
-			$decision->log( 'SKIP', sprintf( __( 'Campaign %d suppressed by frequency.', 'cro-toolkit' ), $winner->id ), array( 'step' => 7 ) );
-			$decision->reason = __( 'Frequency limit reached.', 'cro-toolkit' );
+			$decision->log( 'SKIP', sprintf( __( 'Campaign %d suppressed by frequency.', 'meyvora-convert' ), $winner->id ), array( 'step' => 7 ) );
+			$decision->reason = __( 'Frequency limit reached.', 'meyvora-convert' );
 			$decision->reason_code = 'frequency';
 			return $decision;
 		}
-		$decision->log( 'INFO', __( 'Frequency OK for winner.', 'cro-toolkit' ), array( 'step' => 7 ) );
+		$decision->log( 'INFO', __( 'Frequency OK for winner.', 'meyvora-convert' ), array( 'step' => 7 ) );
 
 		// Offer eligibility (e.g. coupon one-per-visitor) — gate before show
 		if ( ! $this->check_offer_eligibility( $winner, $visitor_state ) ) {
-			$decision->log( 'SKIP', sprintf( __( 'Campaign %d failed offer eligibility.', 'cro-toolkit' ), $winner->id ), array( 'step' => 'offer' ) );
-			$decision->reason = __( 'Offer not eligible.', 'cro-toolkit' );
+			$decision->log( 'SKIP', sprintf( __( 'Campaign %d failed offer eligibility.', 'meyvora-convert' ), $winner->id ), array( 'step' => 'offer' ) );
+			$decision->reason = __( 'Offer not eligible.', 'meyvora-convert' );
 			$decision->reason_code = 'offer_eligibility';
 			return $decision;
 		}
@@ -212,7 +212,7 @@ class CRO_Decision_Engine {
 						$decision->variation_id = (int) $variation->id;
 						$decision->is_control   = ! empty( $variation->is_control );
 						// Impression recorded in REST decide handler (once per pageview via transient guard)
-						$decision->log( 'INFO', sprintf( __( 'A/B test %d: showing variation %d (control: %s).', 'cro-toolkit' ), $decision->ab_test_id, $decision->variation_id, $decision->is_control ? 'yes' : 'no' ), array( 'step' => 'ab_test', 'ab_test_id' => $decision->ab_test_id, 'variation_id' => $decision->variation_id ) );
+						$decision->log( 'INFO', sprintf( __( 'A/B test %d: showing variation %d (control: %s).', 'meyvora-convert' ), $decision->ab_test_id, $decision->variation_id, $decision->is_control ? 'yes' : 'no' ), array( 'step' => 'ab_test', 'ab_test_id' => $decision->ab_test_id, 'variation_id' => $decision->variation_id ) );
 					}
 				}
 			}
@@ -223,10 +223,10 @@ class CRO_Decision_Engine {
 		$decision->show         = true;
 		$decision->campaign     = $campaign_to_show;
 		$decision->campaign_id = $winner->id;
-		$decision->reason      = __( 'Campaign selected.', 'cro-toolkit' );
+		$decision->reason      = __( 'Campaign selected.', 'meyvora-convert' );
 		$decision->reason_code = 'show';
 		$decision->set_intent( $winner_entry['score'], $winner_entry['threshold'] );
-		$decision->log( 'SUCCESS', sprintf( __( 'Show campaign %d.', 'cro-toolkit' ), $winner->id ), array( 'step' => 8, 'campaign_id' => $winner->id ) );
+		$decision->log( 'SUCCESS', sprintf( __( 'Show campaign %d.', 'meyvora-convert' ), $winner->id ), array( 'step' => 8, 'campaign_id' => $winner->id ) );
 		return $decision;
 	}
 
@@ -257,20 +257,20 @@ class CRO_Decision_Engine {
 		// Admin exclusion
 		if ( function_exists( 'cro_settings' ) && cro_settings()->get( 'general', 'exclude_admins', true ) ) {
 			if ( $context->get( 'user.is_admin', false ) ) {
-				return __( 'Admins are excluded.', 'cro-toolkit' );
+				return __( 'Admins are excluded.', 'meyvora-convert' );
 			}
 		}
 
 		// Already shown this pageview (only one per request)
 		if ( $this->shown_this_pageview ) {
-			return __( 'Already shown this pageview.', 'cro-toolkit' );
+			return __( 'Already shown this pageview.', 'meyvora-convert' );
 		}
 
 		// Max popups per session
 		if ( function_exists( 'cro_settings' ) ) {
 			$max = (int) cro_settings()->get( 'general', 'max_popups_per_session', 3 );
 			if ( $max > 0 && $visitor_state->get_session_shown_count() >= $max ) {
-				return __( 'Max popups per session reached.', 'cro-toolkit' );
+				return __( 'Max popups per session reached.', 'meyvora-convert' );
 			}
 		}
 
@@ -279,13 +279,13 @@ class CRO_Decision_Engine {
 		if ( $last_conversion !== null ) {
 			$window = (int) apply_filters( 'cro_conversion_suppression_window', DAY_IN_SECONDS );
 			if ( ( time() - $last_conversion ) < $window ) {
-				return __( 'Within post-conversion suppression window.', 'cro-toolkit' );
+				return __( 'Within post-conversion suppression window.', 'meyvora-convert' );
 			}
 		}
 
 		// Checkout page: never show
 		if ( $context->get( 'page_type', '' ) === 'checkout' ) {
-			return __( 'Checkout page; popups disabled.', 'cro-toolkit' );
+			return __( 'Checkout page; popups disabled.', 'meyvora-convert' );
 		}
 
 		return null;
@@ -337,7 +337,7 @@ class CRO_Decision_Engine {
 			$camp_type = (string) ( $rules['type'] ?? 'exit_intent' );
 
 			if ( $camp_type !== $effective_trigger && ( $trigger_type !== 'page_load' || $camp_type !== 'time' ) ) {
-				$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: trigger type %s does not match %s.', 'cro-toolkit' ), $campaign->id, $camp_type, $trigger_type ), array( 'campaign_id' => $campaign->id, 'trigger_type' => $trigger_type ) );
+				$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: trigger type %s does not match %s.', 'meyvora-convert' ), $campaign->id, $camp_type, $trigger_type ), array( 'campaign_id' => $campaign->id, 'trigger_type' => $trigger_type ) );
 				continue;
 			}
 
@@ -346,7 +346,7 @@ class CRO_Decision_Engine {
 				$delay = (int) ( $rules['time_delay_seconds'] ?? $rules['delay_seconds'] ?? $rules['time_on_page_seconds'] ?? 0 );
 				$time_on_page = (int) $context->get( 'behavior.time_on_page', 0 );
 				if ( $time_on_page < $delay ) {
-					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: time on page %d < delay %d.', 'cro-toolkit' ), $campaign->id, $time_on_page, $delay ), array( 'campaign_id' => $campaign->id ) );
+					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: time on page %d < delay %d.', 'meyvora-convert' ), $campaign->id, $time_on_page, $delay ), array( 'campaign_id' => $campaign->id ) );
 					continue;
 				}
 			}
@@ -356,7 +356,7 @@ class CRO_Decision_Engine {
 				$required = (int) ( $rules['scroll_depth_percent'] ?? $rules['scroll_depth'] ?? 50 );
 				$scroll_depth = (int) $context->get( 'behavior.scroll_depth', 0 );
 				if ( $scroll_depth < $required ) {
-					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: scroll depth %d < required %d.', 'cro-toolkit' ), $campaign->id, $scroll_depth, $required ), array( 'campaign_id' => $campaign->id ) );
+					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: scroll depth %d < required %d.', 'meyvora-convert' ), $campaign->id, $scroll_depth, $required ), array( 'campaign_id' => $campaign->id ) );
 					continue;
 				}
 			}
@@ -366,7 +366,7 @@ class CRO_Decision_Engine {
 				$required = (int) ( $rules['idle_seconds'] ?? $rules['idle_time'] ?? 30 );
 				$idle = (int) $context->get( 'behavior.idle_seconds', 0 );
 				if ( $idle < $required ) {
-					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: idle %d < required %d.', 'cro-toolkit' ), $campaign->id, $idle, $required ), array( 'campaign_id' => $campaign->id ) );
+					$decision->log( 'RULE', sprintf( __( 'Campaign %d skipped: idle %d < required %d.', 'meyvora-convert' ), $campaign->id, $idle, $required ), array( 'campaign_id' => $campaign->id ) );
 					continue;
 				}
 			}

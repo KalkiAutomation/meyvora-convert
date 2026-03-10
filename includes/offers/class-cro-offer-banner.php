@@ -2,7 +2,7 @@
 /**
  * Frontend offer banner for classic cart/checkout: "You qualify for X off — Apply coupon".
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -102,10 +102,10 @@ class CRO_Offer_Banner {
 			<?php endif; ?>
 			<?php if ( $can_apply ) : ?>
 			<p class="cro-offer-banner__actions">
-				<button type="button" class="button cro-offer-apply-coupon"><?php esc_html_e( 'Apply coupon', 'cro-toolkit' ); ?></button>
+				<button type="button" class="button cro-offer-apply-coupon"><?php esc_html_e( 'Apply coupon', 'meyvora-convert' ); ?></button>
 			</p>
 			<?php else : ?>
-			<p class="cro-offer-banner__applied"><?php esc_html_e( 'Discount applied.', 'cro-toolkit' ); ?></p>
+			<p class="cro-offer-banner__applied"><?php esc_html_e( 'Discount applied.', 'meyvora-convert' ); ?></p>
 			<?php endif; ?>
 			<p class="cro-offer-banner__msg cro-offer-banner__msg--success" style="display:none;"></p>
 			<p class="cro-offer-banner__msg cro-offer-banner__msg--error" style="display:none;"></p>
@@ -186,8 +186,11 @@ class CRO_Offer_Banner {
 	public function ajax_apply_offer_coupon() {
 		check_ajax_referer( 'cro_apply_offer_coupon', 'nonce' );
 
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
+		}
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
-			wp_send_json_error( array( 'message' => __( 'Cart unavailable.', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Cart unavailable.', 'meyvora-convert' ) ) );
 		}
 
 		$code = isset( $_POST['coupon_code'] ) && is_string( $_POST['coupon_code'] ) ? sanitize_text_field( wp_unslash( $_POST['coupon_code'] ) ) : '';
@@ -197,7 +200,7 @@ class CRO_Offer_Banner {
 			// Validate coupon belongs to visitor/user (same as REST).
 			$coupon_id = function_exists( 'wc_get_coupon_id_by_code' ) ? wc_get_coupon_id_by_code( $code ) : 0;
 			if ( ! $coupon_id ) {
-				wp_send_json_error( array( 'message' => __( 'This coupon is invalid or has expired.', 'cro-toolkit' ) ) );
+				wp_send_json_error( array( 'message' => __( 'This coupon is invalid or has expired.', 'meyvora-convert' ) ) );
 			}
 			$meta_visitor = get_post_meta( $coupon_id, '_cro_visitor_id', true );
 			$meta_user    = (int) get_post_meta( $coupon_id, '_cro_user_id', true );
@@ -210,20 +213,20 @@ class CRO_Offer_Banner {
 				$allowed = (string) $meta_visitor === $visitor_id && $visitor_id !== '';
 			}
 			if ( ! $allowed ) {
-				wp_send_json_error( array( 'message' => __( 'This coupon is not assigned to you.', 'cro-toolkit' ) ) );
+				wp_send_json_error( array( 'message' => __( 'This coupon is not assigned to you.', 'meyvora-convert' ) ) );
 			}
 		} else {
 			// No code provided: get or create from best offer (same engine as blocks).
 			$code = class_exists( 'CRO_Offer_Engine' ) ? CRO_Offer_Engine::get_or_create_coupon_for_best_offer() : null;
 			if ( empty( $code ) ) {
-				wp_send_json_error( array( 'message' => __( 'No offer available or rate limit reached.', 'cro-toolkit' ) ) );
+				wp_send_json_error( array( 'message' => __( 'No offer available or rate limit reached.', 'meyvora-convert' ) ) );
 			}
 			$code = wc_format_coupon_code( $code );
 		}
 
 		$applied = WC()->cart->get_applied_coupons();
 		if ( in_array( $code, $applied, true ) ) {
-			$this->send_fragments_response( __( 'Coupon already applied.', 'cro-toolkit' ), true );
+			$this->send_fragments_response( __( 'Coupon already applied.', 'meyvora-convert' ), true );
 		}
 
 		$result = WC()->cart->apply_coupon( $code );
@@ -232,7 +235,7 @@ class CRO_Offer_Banner {
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
-		$this->send_fragments_response( __( 'Coupon applied.', 'cro-toolkit' ), true );
+		$this->send_fragments_response( __( 'Coupon applied.', 'meyvora-convert' ), true );
 	}
 
 	/**

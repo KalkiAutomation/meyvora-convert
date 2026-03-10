@@ -2,7 +2,7 @@
 /**
  * Coupon and offer protection
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -29,13 +29,13 @@ class CRO_Offer_Guard {
 		$errors = array();
 
 		if ( empty( $coupon_code ) || ! is_string( $coupon_code ) ) {
-			return new WP_Error( 'invalid_coupon', __( 'Invalid coupon code.', 'cro-toolkit' ) );
+			return new WP_Error( 'invalid_coupon', __( 'Invalid coupon code.', 'meyvora-convert' ) );
 		}
 
 		// Check 1: Coupon exists and is valid.
 		$coupon = new WC_Coupon( $coupon_code );
 		if ( ! $coupon->get_id() ) {
-			return new WP_Error( 'invalid_coupon', __( 'Coupon does not exist.', 'cro-toolkit' ) );
+			return new WP_Error( 'invalid_coupon', __( 'Coupon does not exist.', 'meyvora-convert' ) );
 		}
 
 		// Check 2: Minimum cart value.
@@ -45,7 +45,7 @@ class CRO_Offer_Guard {
 		if ( $min_amount && $cart_total < floatval( $min_amount ) ) {
 			$errors[] = sprintf(
 				/* translators: %s: minimum amount */
-				__( 'Cart value below minimum (%s)', 'cro-toolkit' ),
+				__( 'Cart value below minimum (%s)', 'meyvora-convert' ),
 				wc_price( $min_amount )
 			);
 		}
@@ -53,13 +53,13 @@ class CRO_Offer_Guard {
 		// Check 3: One coupon per visitor (prevent abuse).
 		$visitor_state = CRO_Visitor_State::get_instance();
 		if ( $this->visitor_already_used_coupon( $visitor_state, $coupon_code ) ) {
-			$errors[] = __( 'Visitor already used this coupon.', 'cro-toolkit' );
+			$errors[] = __( 'Visitor already used this coupon.', 'meyvora-convert' );
 		}
 
 		// Check 4: Exclude sale items check.
 		if ( $coupon->get_exclude_sale_items() ) {
 			if ( $this->cart_has_only_sale_items( $context ) ) {
-				$errors[] = __( 'Cart contains only sale items.', 'cro-toolkit' );
+				$errors[] = __( 'Cart contains only sale items.', 'meyvora-convert' );
 			}
 		}
 
@@ -72,7 +72,7 @@ class CRO_Offer_Guard {
 				$cart_ids    = array_map( 'intval', $cart_products );
 				$all_excluded = count( array_diff( $cart_ids, $excluded_ids ) ) === 0;
 				if ( $all_excluded ) {
-					$errors[] = __( 'All cart items are excluded from coupon.', 'cro-toolkit' );
+					$errors[] = __( 'All cart items are excluded from coupon.', 'meyvora-convert' );
 				}
 			}
 		}
@@ -80,13 +80,13 @@ class CRO_Offer_Guard {
 		// Check 6: Usage limit not reached.
 		$usage_limit = $coupon->get_usage_limit();
 		if ( $usage_limit && $coupon->get_usage_count() >= $usage_limit ) {
-			$errors[] = __( 'Coupon usage limit reached.', 'cro-toolkit' );
+			$errors[] = __( 'Coupon usage limit reached.', 'meyvora-convert' );
 		}
 
 		// Check 7: Expiry.
 		$expiry = $coupon->get_date_expires();
 		if ( $expiry && $expiry->getTimestamp() < time() ) {
-			$errors[] = __( 'Coupon has expired.', 'cro-toolkit' );
+			$errors[] = __( 'Coupon has expired.', 'meyvora-convert' );
 		}
 
 		if ( ! empty( $errors ) ) {

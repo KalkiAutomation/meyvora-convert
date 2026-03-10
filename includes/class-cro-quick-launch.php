@@ -2,7 +2,7 @@
 /**
  * Quick Launch: apply recommended CRO setup in one go.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

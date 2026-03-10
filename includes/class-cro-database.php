@@ -4,7 +4,7 @@
  *
  * Wraps all database operations with error handling and validation
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -596,6 +596,7 @@ class CRO_Database {
 			email_3_sent_at datetime DEFAULT NULL,
 			last_error varchar(500) DEFAULT NULL,
 			discount_coupon varchar(50) DEFAULT NULL,
+			reminder_count int(11) NOT NULL DEFAULT 0,
 			PRIMARY KEY  (id),
 			UNIQUE KEY session_key (session_key),
 			KEY status (status),

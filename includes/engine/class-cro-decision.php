@@ -6,7 +6,7 @@
  * reason_code, cooldown, debug_log. Every decision is explainable with a
  * reason and full debug log.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -133,7 +133,7 @@ class CRO_Decision {
 				$id = (int) $campaign['id'];
 			}
 		}
-		$d = new self( true, $campaign, $reason ?: __( 'Campaign selected.', 'cro-toolkit' ), $reason_code );
+		$d = new self( true, $campaign, $reason ?: __( 'Campaign selected.', 'meyvora-convert' ), $reason_code );
 		$d->campaign_id = $id;
 		$d->log( 'SUCCESS', sprintf( 'Show campaign %s', $id !== null ? (string) $id : 'unknown' ), array( 'reason' => $reason, 'reason_code' => $reason_code ) );
 		return $d;
@@ -147,7 +147,7 @@ class CRO_Decision {
 	 * @return CRO_Decision
 	 */
 	public static function dont_show( $reason = '', $reason_code = 'skip' ) {
-		$d = new self( false, null, $reason ?: __( 'No campaign to show.', 'cro-toolkit' ), $reason_code );
+		$d = new self( false, null, $reason ?: __( 'No campaign to show.', 'meyvora-convert' ), $reason_code );
 		$d->log( 'SKIP', $d->reason, array( 'reason_code' => $reason_code ) );
 		return $d;
 	}

@@ -6,7 +6,7 @@
  * from_db_row/create_new, intent signals/threshold, is_active/is_within_schedule,
  * and to_frontend_array. Parses JSON fields from the database and merges with defaults.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

@@ -2,7 +2,7 @@
 /**
  * Offer model: CRUD for cro_offers and audit log for cro_offer_logs.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

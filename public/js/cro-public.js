@@ -1,7 +1,7 @@
 /**
- * CRO Toolkit – public behavioral tracking
+ * Meyvora Convert – public behavioral tracking
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function() {
 	'use strict';
@@ -159,7 +159,7 @@
 		init() {
 			// Use BroadcastChannel if available.
 			if (typeof BroadcastChannel !== 'undefined') {
-				this.channel = new BroadcastChannel('cro_toolkit');
+				this.channel = new BroadcastChannel('meyvora_convert');
 				this.channel.onmessage = (e) => this.handleMessage(e);
 			} else {
 				// Fallback to storage events (other tabs only).
@@ -226,7 +226,7 @@
 	try {
 		initCROToolkit();
 	} catch (err) {
-		console.error('CRO Toolkit Error:', err);
+		console.error('Meyvora Convert Error:', err);
 		reportError(err);
 	}
 })();

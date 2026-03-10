@@ -2,7 +2,7 @@
  * Cart/checkout exit-intent nudge: "Complete your order now — your discount is ready".
  * Once per session, mobile-safe (desktop = mouseleave; mobile = once after delay).
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 (function () {
 	'use strict';

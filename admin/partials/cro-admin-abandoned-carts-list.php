@@ -2,7 +2,7 @@
 /**
  * Admin page: Abandoned Carts list – table, filters, search, pagination, row actions, detail drawer.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -10,7 +10,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
-	echo '<div class="cro-admin-message"><p>' . esc_html__( 'Abandoned cart module is not available.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="cro-admin-message"><p>' . esc_html__( 'Abandoned cart module is not available.', 'meyvora-convert' ) . '</p></div>';
 	return;
 }
 
@@ -47,10 +47,10 @@ $resend_url = add_query_arg( $action_query, admin_url( 'admin-post.php?action=cr
 
 $cro_notice = isset( $_GET['cro_notice'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_notice'] ) ) : '';
 $notices = array(
-	'cancel_reminders' => __( 'Reminders cancelled.', 'cro-toolkit' ),
-	'mark_recovered'   => __( 'Cart marked as recovered.', 'cro-toolkit' ),
-	'resend_ok'        => __( 'Reminder email sent.', 'cro-toolkit' ),
-	'resend_fail'      => __( 'Could not send reminder (cart may be recovered or ineligible).', 'cro-toolkit' ),
+	'cancel_reminders' => __( 'Reminders cancelled.', 'meyvora-convert' ),
+	'mark_recovered'   => __( 'Cart marked as recovered.', 'meyvora-convert' ),
+	'resend_ok'        => __( 'Reminder email sent.', 'meyvora-convert' ),
+	'resend_fail'      => __( 'Could not send reminder (cart may be recovered or ineligible).', 'meyvora-convert' ),
 );
 $currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '';
 
@@ -119,29 +119,29 @@ $can_resend = function( $row ) {
 				<div class="cro-card__body">
 			<div class="cro-ac-list-toolbar">
 				<ul class="cro-ac-list-filters" role="tablist">
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'all', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'all' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'All', 'cro-toolkit' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'active', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'active' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Active', 'cro-toolkit' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'emailed', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'emailed' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Emailed', 'cro-toolkit' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'recovered', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'recovered' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Recovered', 'cro-toolkit' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'all', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'all' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'All', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'active', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'active' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Active', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'emailed', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'emailed' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Emailed', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'recovered', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'recovered' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Recovered', 'meyvora-convert' ); ?></a></li>
 				</ul>
 				<form method="get" class="cro-ac-list-search" action="<?php echo esc_url( $list_url ); ?>">
 					<input type="hidden" name="page" value="cro-abandoned-carts" />
 					<?php if ( $status_filter !== 'all' ) : ?>
 						<input type="hidden" name="status_filter" value="<?php echo esc_attr( $status_filter ); ?>" />
 					<?php endif; ?>
-					<label for="cro-ac-search" class="screen-reader-text"><?php esc_html_e( 'Search by email', 'cro-toolkit' ); ?></label>
-					<input type="search" id="cro-ac-search" name="search" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search by email…', 'cro-toolkit' ); ?>" />
-					<button type="submit" class="button"><?php esc_html_e( 'Search', 'cro-toolkit' ); ?></button>
+					<label for="cro-ac-search" class="screen-reader-text"><?php esc_html_e( 'Search by email', 'meyvora-convert' ); ?></label>
+					<input type="search" id="cro-ac-search" name="search" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search by email…', 'meyvora-convert' ); ?>" />
+					<button type="submit" class="button"><?php esc_html_e( 'Search', 'meyvora-convert' ); ?></button>
 				</form>
 			</div>
 
 			<?php if ( empty( $items ) ) : ?>
 					<div class="cro-ui-empty-state">
 						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></span>
-						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No abandoned carts', 'cro-toolkit' ); ?></h2>
-						<p class="cro-ui-empty-state__desc"><?php esc_html_e( 'No carts match your filters. Carts will appear here when customers leave items without checking out.', 'cro-toolkit' ); ?></p>
+						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No abandoned carts', 'meyvora-convert' ); ?></h2>
+						<p class="cro-ui-empty-state__desc"><?php esc_html_e( 'No carts match your filters. Carts will appear here when customers leave items without checking out.', 'meyvora-convert' ); ?></p>
 						<div class="cro-ui-empty-state__actions">
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-abandoned-cart' ) ); ?>" class="button button-primary cro-ui-btn-primary"><?php esc_html_e( 'Configure email reminders', 'cro-toolkit' ); ?></a>
+							<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-abandoned-cart' ) ); ?>" class="button button-primary cro-ui-btn-primary"><?php esc_html_e( 'Configure email reminders', 'meyvora-convert' ); ?></a>
 						</div>
 					</div>
 			<?php else : ?>
@@ -149,14 +149,14 @@ $can_resend = function( $row ) {
 					<table class="cro-table cro-ac-list-table">
 						<thead>
 							<tr>
-								<th scope="col"><?php esc_html_e( 'Email / User', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Cart Total', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Items', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Last Activity', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Status', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Emails Sent', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Coupon', 'cro-toolkit' ); ?></th>
-								<th scope="col"><?php esc_html_e( 'Actions', 'cro-toolkit' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Email / User', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Cart Total', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Items', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Last Activity', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Status', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Emails Sent', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Coupon', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Actions', 'meyvora-convert' ); ?></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -189,13 +189,13 @@ $can_resend = function( $row ) {
 									<td><?php echo absint( $emails_sent ); ?></td>
 									<td><?php echo $row->discount_coupon ? esc_html( $row->discount_coupon ) : '—'; ?></td>
 									<td class="cro-table-actions cro-ac-actions">
-										<button type="button" class="cro-table-action-link cro-ac-btn-detail" data-id="<?php echo esc_attr( $row->id ); ?>"><?php esc_html_e( 'View', 'cro-toolkit' ); ?></button>
+										<button type="button" class="cro-table-action-link cro-ac-btn-detail" data-id="<?php echo esc_attr( $row->id ); ?>"><?php esc_html_e( 'View', 'meyvora-convert' ); ?></button>
 										<?php if ( $allow_resend ) : ?>
-											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $resend_url ) ); ?>"><?php esc_html_e( 'Resend', 'cro-toolkit' ); ?></a>
+											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $resend_url ) ); ?>"><?php esc_html_e( 'Resend', 'meyvora-convert' ); ?></a>
 										<?php endif; ?>
 										<?php if ( $row->status === CRO_Abandoned_Cart_Tracker::STATUS_ACTIVE ) : ?>
-											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $cancel_url ) ); ?>"><?php esc_html_e( 'Cancel reminders', 'cro-toolkit' ); ?></a>
-											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $recovered_url ) ); ?>"><?php esc_html_e( 'Mark recovered', 'cro-toolkit' ); ?></a>
+											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $cancel_url ) ); ?>"><?php esc_html_e( 'Cancel reminders', 'meyvora-convert' ); ?></a>
+											<a href="<?php echo esc_url( add_query_arg( array( 'id' => $row->id, '_wpnonce' => $nonce ), $recovered_url ) ); ?>"><?php esc_html_e( 'Mark recovered', 'meyvora-convert' ); ?></a>
 										<?php endif; ?>
 									</td>
 								</tr>
@@ -218,21 +218,21 @@ $can_resend = function( $row ) {
 					?>
 					<div class="cro-ac-pagination tablenav bottom">
 						<div class="tablenav-pages">
-							<span class="displaying-num"><?php echo esc_html( sprintf( _n( '%s item', '%s items', $total, 'cro-toolkit' ), number_format_i18n( $total ) ) ); ?></span>
+							<span class="displaying-num"><?php echo esc_html( sprintf( _n( '%s item', '%s items', $total, 'meyvora-convert' ), number_format_i18n( $total ) ) ); ?></span>
 							<span class="pagination-links">
 								<?php if ( $prev_url ) : ?>
-									<a class="prev-page button" href="<?php echo esc_url( $prev_url ); ?>"><?php esc_html_e( '&laquo; Previous', 'cro-toolkit' ); ?></a>
+									<a class="prev-page button" href="<?php echo esc_url( $prev_url ); ?>"><?php esc_html_e( '&laquo; Previous', 'meyvora-convert' ); ?></a>
 								<?php else : ?>
-									<span class="tablenav-pages-navspan button disabled"><?php esc_html_e( '&laquo; Previous', 'cro-toolkit' ); ?></span>
+									<span class="tablenav-pages-navspan button disabled"><?php esc_html_e( '&laquo; Previous', 'meyvora-convert' ); ?></span>
 								<?php endif; ?>
 								<span class="paging-input">
-									<label for="current-page-selector" class="screen-reader-text"><?php esc_html_e( 'Current page', 'cro-toolkit' ); ?></label>
-									<span class="tablenav-paging-text"><?php echo esc_html( $paged ); ?> <?php esc_html_e( 'of', 'cro-toolkit' ); ?> <span class="total-pages"><?php echo esc_html( $pages ); ?></span></span>
+									<label for="current-page-selector" class="screen-reader-text"><?php esc_html_e( 'Current page', 'meyvora-convert' ); ?></label>
+									<span class="tablenav-paging-text"><?php echo esc_html( $paged ); ?> <?php esc_html_e( 'of', 'meyvora-convert' ); ?> <span class="total-pages"><?php echo esc_html( $pages ); ?></span></span>
 								</span>
 								<?php if ( $next_url ) : ?>
-									<a class="next-page button" href="<?php echo esc_url( $next_url ); ?>"><?php esc_html_e( 'Next &raquo;', 'cro-toolkit' ); ?></a>
+									<a class="next-page button" href="<?php echo esc_url( $next_url ); ?>"><?php esc_html_e( 'Next &raquo;', 'meyvora-convert' ); ?></a>
 								<?php else : ?>
-									<span class="tablenav-pages-navspan button disabled"><?php esc_html_e( 'Next &raquo;', 'cro-toolkit' ); ?></span>
+									<span class="tablenav-pages-navspan button disabled"><?php esc_html_e( 'Next &raquo;', 'meyvora-convert' ); ?></span>
 								<?php endif; ?>
 							</span>
 						</div>
@@ -247,11 +247,11 @@ $can_resend = function( $row ) {
 		<div class="cro-ac-drawer__backdrop"></div>
 		<div class="cro-ac-drawer__panel">
 			<header class="cro-ac-drawer__header">
-				<h2 id="cro-ac-drawer-title"><?php esc_html_e( 'Cart details', 'cro-toolkit' ); ?></h2>
-				<button type="button" class="cro-ac-drawer__close" aria-label="<?php esc_attr_e( 'Close', 'cro-toolkit' ); ?>"><?php echo CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<h2 id="cro-ac-drawer-title"><?php esc_html_e( 'Cart details', 'meyvora-convert' ); ?></h2>
+				<button type="button" class="cro-ac-drawer__close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
 			</header>
 			<div class="cro-ac-drawer__body">
-				<div id="cro-ac-drawer-loading" class="cro-ac-drawer__loading"><?php esc_html_e( 'Loading…', 'cro-toolkit' ); ?></div>
+				<div id="cro-ac-drawer-loading" class="cro-ac-drawer__loading"><?php esc_html_e( 'Loading…', 'meyvora-convert' ); ?></div>
 				<div id="cro-ac-drawer-content" class="cro-ac-drawer__content cro-hidden"></div>
 			</div>
 		</div>
@@ -313,24 +313,24 @@ $can_resend = function( $row ) {
 		var currency = data.currency || '';
 		var total = data.cart_total != null ? currency + ' ' + Number(data.cart_total).toFixed(2) : '—';
 		var html = '<p><strong>' + (data.email || '—') + '</strong></p>';
-		html += '<h3><?php echo esc_js( __( 'Cart items', 'cro-toolkit' ) ); ?></h3>';
+		html += '<h3><?php echo esc_js( __( 'Cart items', 'meyvora-convert' ) ); ?></h3>';
 		if (data.cart_items && data.cart_items.length) {
 			html += '<ul>';
 			data.cart_items.forEach(function(it) {
 				html += '<li>' + (it.name || '') + ' × ' + (it.quantity || 1) + '</li>';
 			});
-			html += '</ul><p><strong><?php echo esc_js( __( 'Total', 'cro-toolkit' ) ); ?>:</strong> ' + total + '</p>';
+			html += '</ul><p><strong><?php echo esc_js( __( 'Total', 'meyvora-convert' ) ); ?>:</strong> ' + total + '</p>';
 		} else {
 			html += '<p>—</p>';
 		}
-		html += '<h3><?php echo esc_js( __( 'Checkout link', 'cro-toolkit' ) ); ?></h3>';
-		html += '<a href="' + (data.checkout_url || '#') + '" class="button button-primary cro-ac-drawer-checkout" target="_blank" rel="noopener"><?php echo esc_js( __( 'Open checkout', 'cro-toolkit' ) ); ?></a>';
-		html += '<h3><?php echo esc_js( __( 'Email log', 'cro-toolkit' ) ); ?></h3><ul>';
+		html += '<h3><?php echo esc_js( __( 'Checkout link', 'meyvora-convert' ) ); ?></h3>';
+		html += '<a href="' + (data.checkout_url || '#') + '" class="button button-primary cro-ac-drawer-checkout" target="_blank" rel="noopener"><?php echo esc_js( __( 'Open checkout', 'meyvora-convert' ) ); ?></a>';
+		html += '<h3><?php echo esc_js( __( 'Email log', 'meyvora-convert' ) ); ?></h3><ul>';
 		var log = data.email_log || {};
-		html += '<li>Email 1: ' + (log.email_1 || '<?php echo esc_js( __( 'Not sent', 'cro-toolkit' ) ); ?>') + '</li>';
-		html += '<li>Email 2: ' + (log.email_2 || '<?php echo esc_js( __( 'Not sent', 'cro-toolkit' ) ); ?>') + '</li>';
-		html += '<li>Email 3: ' + (log.email_3 || '<?php echo esc_js( __( 'Not sent', 'cro-toolkit' ) ); ?>') + '</li></ul>';
-		html += '<h3><?php echo esc_js( __( 'Coupon', 'cro-toolkit' ) ); ?></h3><p>' + (data.discount_coupon || '—') + '</p>';
+		html += '<li>Email 1: ' + (log.email_1 || '<?php echo esc_js( __( 'Not sent', 'meyvora-convert' ) ); ?>') + '</li>';
+		html += '<li>Email 2: ' + (log.email_2 || '<?php echo esc_js( __( 'Not sent', 'meyvora-convert' ) ); ?>') + '</li>';
+		html += '<li>Email 3: ' + (log.email_3 || '<?php echo esc_js( __( 'Not sent', 'meyvora-convert' ) ); ?>') + '</li></ul>';
+		html += '<h3><?php echo esc_js( __( 'Coupon', 'meyvora-convert' ) ); ?></h3><p>' + (data.discount_coupon || '—') + '</p>';
 		drawerContent.innerHTML = html;
 		drawerContent.style.display = 'block';
 		drawerLoading.style.display = 'none';
@@ -352,10 +352,10 @@ $can_resend = function( $row ) {
 			.then(function(r) { return r.json(); })
 			.then(function(res) {
 				if (res.success && res.data) renderDrawer(res.data);
-				else { drawerContent.innerHTML = '<p><?php echo esc_js( __( 'Could not load details.', 'cro-toolkit' ) ); ?></p>'; drawerContent.style.display = 'block'; drawerLoading.style.display = 'none'; }
+				else { drawerContent.innerHTML = '<p><?php echo esc_js( __( 'Could not load details.', 'meyvora-convert' ) ); ?></p>'; drawerContent.style.display = 'block'; drawerLoading.style.display = 'none'; }
 			})
 			.catch(function() {
-				drawerContent.innerHTML = '<p><?php echo esc_js( __( 'Request failed.', 'cro-toolkit' ) ); ?></p>';
+				drawerContent.innerHTML = '<p><?php echo esc_js( __( 'Request failed.', 'meyvora-convert' ) ); ?></p>';
 				drawerContent.style.display = 'block';
 				drawerLoading.style.display = 'none';
 			});

@@ -2,7 +2,7 @@
 /**
  * Revenue tracker
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

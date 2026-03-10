@@ -4,7 +4,7 @@
  * 
  * Horizontal bar fixed to top of viewport
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 defined( 'ABSPATH' ) || exit;
 
@@ -62,7 +62,7 @@ if ( $is_preview ) {
     </div>
     
     <!-- Close Button -->
-    <button type="button" class="cro-popup__close" aria-label="<?php esc_attr_e( 'Close', 'cro-toolkit' ); ?>" data-action="close">
+    <button type="button" class="cro-popup__close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>" data-action="close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M18 6L6 18M6 6l12 12"/>
         </svg>

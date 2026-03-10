@@ -5,7 +5,7 @@
  * Evaluates rules against CRO_Context. Supports must (AND), should (OR), must_not (NOT)
  * groups, field/operator/value rules, and type-based special rules.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

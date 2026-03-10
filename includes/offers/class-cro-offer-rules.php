@@ -3,7 +3,7 @@
  * Offer rules: pure evaluation helpers for configuration-driven offer conditions.
  * No DB, no coupons — rule_key => callable( $value, $context ) returning bool.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.

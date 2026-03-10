@@ -2,7 +2,7 @@
 /**
  * Fired during plugin deactivation
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -19,6 +19,14 @@ class CRO_Deactivator {
 	 * Deactivate the plugin.
 	 */
 	public static function deactivate() {
+		// Remove custom capability on deactivation.
+		foreach ( array( 'administrator', 'shop_manager' ) as $role_name ) {
+			$role = get_role( $role_name );
+			if ( $role ) {
+				$role->remove_cap( 'manage_meyvora_convert' );
+			}
+		}
+
 		// Clear scheduled events.
 		wp_clear_scheduled_hook( 'cro_daily_cleanup' );
 		wp_clear_scheduled_hook( 'cro_analytics_aggregate' );

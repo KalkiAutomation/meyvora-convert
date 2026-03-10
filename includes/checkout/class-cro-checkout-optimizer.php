@@ -2,7 +2,7 @@
 /**
  * Checkout optimizer
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -105,19 +105,19 @@ class CRO_Checkout_Optimizer {
 		<div class="cro-coupon-form-wrapper">
 			<div class="cro-coupon-toggle">
 				<a href="#" class="cro-coupon-toggle-link">
-					<?php esc_html_e( 'Have a coupon?', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Have a coupon?', 'meyvora-convert' ); ?>
 				</a>
 			</div>
 			<div class="cro-coupon-form" style="display: none;">
 				<form class="checkout_coupon woocommerce-form-coupon" method="post">
-					<p><?php esc_html_e( 'Enter your coupon code below.', 'cro-toolkit' ); ?></p>
+					<p><?php esc_html_e( 'Enter your coupon code below.', 'meyvora-convert' ); ?></p>
 					<p class="form-row form-row-first">
 						<input type="text" name="coupon_code" class="input-text" 
-							   placeholder="<?php esc_attr_e( 'Coupon code', 'cro-toolkit' ); ?>" />
+							   placeholder="<?php esc_attr_e( 'Coupon code', 'meyvora-convert' ); ?>" />
 					</p>
 					<p class="form-row form-row-last">
-						<button type="submit" class="button" name="apply_coupon" value="<?php esc_attr_e( 'Apply', 'cro-toolkit' ); ?>">
-							<?php esc_html_e( 'Apply', 'cro-toolkit' ); ?>
+						<button type="submit" class="button" name="apply_coupon" value="<?php esc_attr_e( 'Apply', 'meyvora-convert' ); ?>">
+							<?php esc_html_e( 'Apply', 'meyvora-convert' ); ?>
 						</button>
 					</p>
 					<div class="clear"></div>
@@ -146,13 +146,13 @@ class CRO_Checkout_Optimizer {
 			<?php if ( ! empty( $this->settings['show_secure_badge'] ) ) : ?>
 			<div class="cro-secure-badge">
 				<span class="cro-secure-icon"><?php echo CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ); ?></span>
-				<span class="cro-secure-text"><?php esc_html_e( 'Secure Checkout', 'cro-toolkit' ); ?></span>
+				<span class="cro-secure-text"><?php esc_html_e( 'Secure Checkout', 'meyvora-convert' ); ?></span>
 			</div>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $this->settings['show_trust_message'] ) ) : ?>
 			<div class="cro-trust-message">
-				<?php echo esc_html( $this->settings['trust_message_text'] ?? __( 'Secure checkout - Your data is protected', 'cro-toolkit' ) ); ?>
+				<?php echo esc_html( $this->settings['trust_message_text'] ?? __( 'Secure checkout - Your data is protected', 'meyvora-convert' ) ); ?>
 			</div>
 			<?php endif; ?>
 		</div>
@@ -164,7 +164,7 @@ class CRO_Checkout_Optimizer {
 	 * Render guarantee message after submit button.
 	 */
 	public function render_guarantee() {
-		$guarantee_text = $this->settings['guarantee_text'] ?? __( '30-day money-back guarantee', 'cro-toolkit' );
+		$guarantee_text = $this->settings['guarantee_text'] ?? __( '30-day money-back guarantee', 'meyvora-convert' );
 		if ( empty( $guarantee_text ) ) {
 			return;
 		}

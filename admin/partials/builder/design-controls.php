@@ -12,41 +12,41 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 
 	<!-- Color Scheme -->
 	<div class="cro-control-group">
-		<h3><?php esc_html_e( 'Colors', 'cro-toolkit' ); ?></h3>
+		<h3><?php esc_html_e( 'Colors', 'meyvora-convert' ); ?></h3>
 
 		<div class="cro-color-grid">
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Background', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Background', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-bg-color"
 					   value="<?php echo esc_attr( $styling['bg_color'] ?? '#ffffff' ); ?>" />
 			</div>
 
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Text', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Text', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-text-color"
 					   value="<?php echo esc_attr( $styling['text_color'] ?? '#333333' ); ?>" />
 			</div>
 
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Headline', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Headline', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-headline-color"
 					   value="<?php echo esc_attr( $styling['headline_color'] ?? '#000000' ); ?>" />
 			</div>
 
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Button Background', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Button Background', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-button-bg"
 					   value="<?php echo esc_attr( $styling['button_bg_color'] ?? '#333333' ); ?>" />
 			</div>
 
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Button Text', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Button Text', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-button-text"
 					   value="<?php echo esc_attr( $styling['button_text_color'] ?? '#ffffff' ); ?>" />
 			</div>
 
 			<div class="cro-color-field">
-				<label><?php esc_html_e( 'Overlay', 'cro-toolkit' ); ?></label>
+				<label><?php esc_html_e( 'Overlay', 'meyvora-convert' ); ?></label>
 				<input type="text" class="cro-color-picker" id="design-overlay-color"
 					   value="<?php echo esc_attr( $styling['overlay_color'] ?? '#000000' ); ?>" />
 			</div>
@@ -55,7 +55,7 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 
 	<!-- Overlay Opacity -->
 	<div class="cro-control-group">
-		<label><?php esc_html_e( 'Overlay Opacity', 'cro-toolkit' ); ?></label>
+		<label><?php esc_html_e( 'Overlay Opacity', 'meyvora-convert' ); ?></label>
 		<div class="cro-range-slider">
 			<input type="range" id="design-overlay-opacity"
 				   min="0" max="100"
@@ -66,7 +66,7 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 
 	<!-- Border Radius -->
 	<div class="cro-control-group">
-		<label><?php esc_html_e( 'Border Radius', 'cro-toolkit' ); ?></label>
+		<label><?php esc_html_e( 'Border Radius', 'meyvora-convert' ); ?></label>
 		<div class="cro-range-slider">
 			<input type="range" id="design-border-radius"
 				   min="0" max="30"
@@ -77,52 +77,52 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 
 	<!-- Popup Size -->
 	<div class="cro-control-group">
-		<label><?php esc_html_e( 'Popup Size', 'cro-toolkit' ); ?></label>
+		<label><?php esc_html_e( 'Popup Size', 'meyvora-convert' ); ?></label>
 		<div class="cro-size-options">
 			<label class="cro-size-option">
 				<input type="radio" name="design-size" value="small"
 					   <?php checked( $styling['size'] ?? 'medium', 'small' ); ?> />
-				<span><?php esc_html_e( 'Small', 'cro-toolkit' ); ?></span>
+				<span><?php esc_html_e( 'Small', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-size-option">
 				<input type="radio" name="design-size" value="medium"
 					   <?php checked( $styling['size'] ?? 'medium', 'medium' ); ?> />
-				<span><?php esc_html_e( 'Medium', 'cro-toolkit' ); ?></span>
+				<span><?php esc_html_e( 'Medium', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-size-option">
 				<input type="radio" name="design-size" value="large"
 					   <?php checked( $styling['size'] ?? 'medium', 'large' ); ?> />
-				<span><?php esc_html_e( 'Large', 'cro-toolkit' ); ?></span>
+				<span><?php esc_html_e( 'Large', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-size-option">
 				<input type="radio" name="design-size" value="fullscreen"
 					   <?php checked( $styling['size'] ?? 'medium', 'fullscreen' ); ?> />
-				<span><?php esc_html_e( 'Fullscreen', 'cro-toolkit' ); ?></span>
+				<span><?php esc_html_e( 'Fullscreen', 'meyvora-convert' ); ?></span>
 			</label>
 		</div>
 	</div>
 
 	<!-- Animation -->
 	<div class="cro-control-group">
-		<label><?php esc_html_e( 'Animation', 'cro-toolkit' ); ?></label>
-		<select id="design-animation" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Fade In', 'cro-toolkit' ); ?>">
+		<label><?php esc_html_e( 'Animation', 'meyvora-convert' ); ?></label>
+		<select id="design-animation" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Fade In', 'meyvora-convert' ); ?>">
 			<option value="fade" <?php selected( $styling['animation'] ?? 'fade', 'fade' ); ?>>
-				<?php esc_html_e( 'Fade In', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Fade In', 'meyvora-convert' ); ?>
 			</option>
 			<option value="slide-up" <?php selected( $styling['animation'] ?? 'fade', 'slide-up' ); ?>>
-				<?php esc_html_e( 'Slide Up', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Slide Up', 'meyvora-convert' ); ?>
 			</option>
 			<option value="slide-down" <?php selected( $styling['animation'] ?? 'fade', 'slide-down' ); ?>>
-				<?php esc_html_e( 'Slide Down', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Slide Down', 'meyvora-convert' ); ?>
 			</option>
 			<option value="zoom" <?php selected( $styling['animation'] ?? 'fade', 'zoom' ); ?>>
-				<?php esc_html_e( 'Zoom In', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Zoom In', 'meyvora-convert' ); ?>
 			</option>
 			<option value="bounce" <?php selected( $styling['animation'] ?? 'fade', 'bounce' ); ?>>
-				<?php esc_html_e( 'Bounce', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'Bounce', 'meyvora-convert' ); ?>
 			</option>
 			<option value="none" <?php selected( $styling['animation'] ?? 'fade', 'none' ); ?>>
-				<?php esc_html_e( 'None', 'cro-toolkit' ); ?>
+				<?php esc_html_e( 'None', 'meyvora-convert' ); ?>
 			</option>
 		</select>
 	</div>
@@ -132,7 +132,7 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 	$position = $styling['position'] ?? 'center';
 	?>
 	<div class="cro-control-group" id="position-control">
-		<label><?php esc_html_e( 'Position', 'cro-toolkit' ); ?></label>
+		<label><?php esc_html_e( 'Position', 'meyvora-convert' ); ?></label>
 		<div class="cro-position-grid">
 			<button type="button" data-position="top-left" class="cro-position-btn<?php echo $position === 'top-left' ? ' active' : ''; ?>">↖</button>
 			<button type="button" data-position="top-center" class="cro-position-btn<?php echo $position === 'top-center' ? ' active' : ''; ?>"><?php echo CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ); ?></button>
@@ -149,10 +149,10 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 
 	<!-- Custom CSS -->
 	<div class="cro-control-group">
-		<label><?php esc_html_e( 'Custom CSS', 'cro-toolkit' ); ?></label>
+		<label><?php esc_html_e( 'Custom CSS', 'meyvora-convert' ); ?></label>
 		<textarea id="design-custom-css"
 				  rows="5"
-				  placeholder="<?php esc_attr_e( '.cro-popup { /* your styles */ }', 'cro-toolkit' ); ?>"
+				  placeholder="<?php esc_attr_e( '.cro-popup { /* your styles */ }', 'meyvora-convert' ); ?>"
 		><?php echo esc_textarea( $styling['custom_css'] ?? '' ); ?></textarea>
 	</div>
 

@@ -1,8 +1,8 @@
 /**
- * CRO Toolkit – WooCommerce Blocks (Cart / Checkout) extension.
+ * Meyvora Convert – WooCommerce Blocks (Cart / Checkout) extension.
  *
  * Loaded when Cart or Checkout block is on the page. Settings are available via
- * getSetting('cro-toolkit_data') (from wc-settings). Use this script to render
+ * getSetting('meyvora-convert_data') (from wc-settings). Use this script to render
  * CRO UI via block slots or to enhance server-injected markup.
  */
 (function () {
@@ -11,10 +11,10 @@
 	function getCROData() {
 		try {
 			if (typeof window.wc !== 'undefined' && window.wc.wcSettings && typeof window.wc.wcSettings.getSetting === 'function') {
-				return window.wc.wcSettings.getSetting('cro-toolkit_data', {});
+				return window.wc.wcSettings.getSetting('meyvora-convert_data', {});
 			}
-			if (typeof window.wcSettings !== 'undefined' && window.wcSettings['cro-toolkit_data']) {
-				return window.wcSettings['cro-toolkit_data'];
+if (typeof window.wcSettings !== 'undefined' && window.wcSettings['meyvora-convert_data']) {
+			return window.wcSettings['meyvora-convert_data'];
 			}
 		} catch (e) {
 			// ignore

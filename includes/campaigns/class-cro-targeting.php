@@ -2,7 +2,7 @@
 /**
  * Campaign targeting – evaluate targeting rules
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -42,6 +42,20 @@ class CRO_Targeting {
 	 * @return bool
 	 */
 	public function evaluate( $campaign, $context ) {
+
+		// Schedule check: respect start/end dates and day/hour restrictions.
+		if ( class_exists( 'CRO_Campaign_Model' ) ) {
+			$model = null;
+			if ( $campaign instanceof CRO_Campaign_Model ) {
+				$model = $campaign;
+			} elseif ( is_array( $campaign ) ) {
+				$model = CRO_Campaign_Model::from_db_row( $campaign );
+			}
+			if ( $model && ! $model->is_within_schedule() ) {
+				return false;
+			}
+		}
+
 		$rules = $this->get_targeting_rules( $campaign );
 
 		// Page targeting.

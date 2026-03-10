@@ -4,7 +4,7 @@
  *
  * Handle all edge cases and unusual situations
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -32,8 +32,8 @@ class CRO_Edge_Cases {
 				?>
 				<div class="notice notice-error">
 					<p>
-						<strong><?php esc_html_e( 'CRO Toolkit', 'cro-toolkit' ); ?>:</strong>
-						<?php esc_html_e( 'WooCommerce is required but not active. Please activate WooCommerce to use CRO Toolkit.', 'cro-toolkit' ); ?>
+						<strong><?php esc_html_e( 'Meyvora Convert', 'meyvora-convert' ); ?>:</strong>
+						<?php esc_html_e( 'WooCommerce is required but not active. Please activate WooCommerce to use Meyvora Convert.', 'meyvora-convert' ); ?>
 					</p>
 				</div>
 				<?php
@@ -75,11 +75,11 @@ class CRO_Edge_Cases {
 						?>
 						<div class="notice notice-error">
 							<p>
-								<strong><?php esc_html_e( 'CRO Toolkit', 'cro-toolkit' ); ?>:</strong>
+								<strong><?php esc_html_e( 'Meyvora Convert', 'meyvora-convert' ); ?>:</strong>
 								<?php
 								printf(
 									/* translators: %s: table name */
-									esc_html__( 'Database table %s is missing and could not be created. Please deactivate and reactivate the plugin.', 'cro-toolkit' ),
+									esc_html__( 'Database table %s is missing and could not be created. Please deactivate and reactivate the plugin.', 'meyvora-convert' ),
 									'<code>' . esc_html( $table_esc ) . '</code>'
 								);
 								?>
@@ -278,7 +278,7 @@ class CRO_Edge_Cases {
 		if ( ! function_exists( 'is_plugin_active_for_network' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
-		return is_plugin_active_for_network( defined( 'CRO_PLUGIN_BASENAME' ) ? CRO_PLUGIN_BASENAME : plugin_basename( dirname( __DIR__ ) . '/cro-toolkit.php' ) );
+		return is_plugin_active_for_network( defined( 'CRO_PLUGIN_BASENAME' ) ? CRO_PLUGIN_BASENAME : plugin_basename( dirname( __DIR__ ) . '/meyvora-convert.php' ) );
 	}
 
 	/**
@@ -289,13 +289,16 @@ class CRO_Edge_Cases {
 
 		// Require nonce for all actions
 		if ( empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'cro_edge_case' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid nonce', 'cro-toolkit' ) ), 403 );
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce', 'meyvora-convert' ) ), 403 );
+		}
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 
 		switch ( $action ) {
 			case 'reset_visitor':
-				if ( ! current_user_can( 'manage_woocommerce' ) ) {
-					wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ), 403 );
+				if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+					wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ), 403 );
 				}
 				if ( class_exists( 'CRO_Visitor_State' ) ) {
 					$visitor = CRO_Visitor_State::get_instance();
@@ -308,7 +311,7 @@ class CRO_Edge_Cases {
 
 			case 'clear_cache':
 				if ( ! current_user_can( 'manage_options' ) ) {
-					wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ), 403 );
+					wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ), 403 );
 				}
 				if ( function_exists( 'wp_cache_flush' ) ) {
 					wp_cache_flush();
@@ -317,7 +320,7 @@ class CRO_Edge_Cases {
 				break;
 
 			default:
-				wp_send_json_error( array( 'message' => __( 'Unknown action', 'cro-toolkit' ) ) );
+				wp_send_json_error( array( 'message' => __( 'Unknown action', 'meyvora-convert' ) ) );
 		}
 	}
 }

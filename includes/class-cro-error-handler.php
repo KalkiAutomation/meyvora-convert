@@ -4,7 +4,7 @@
  *
  * Centralized error handling, logging, and recovery
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -24,7 +24,7 @@ class CRO_Error_Handler {
 	 * Initialize error handler
 	 */
 	public static function init() {
-		self::$log_file  = WP_CONTENT_DIR . '/cro-toolkit-errors.log';
+		self::$log_file  = WP_CONTENT_DIR . '/meyvora-convert-errors.log';
 		self::$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 		// Set custom error handler for CRO operations
@@ -45,7 +45,7 @@ class CRO_Error_Handler {
 	 */
 	public static function handle_error( $severity, $message, $file, $line ) {
 		// Only handle errors from our plugin
-		if ( strpos( $file, 'cro-toolkit' ) === false ) {
+		if ( strpos( $file, 'meyvora-convert' ) === false ) {
 			return false; // Let PHP handle it
 		}
 
@@ -73,7 +73,7 @@ class CRO_Error_Handler {
 		$error = error_get_last();
 
 		if ( $error && in_array( $error['type'], array( E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR ), true ) ) {
-			if ( strpos( $error['file'], 'cro-toolkit' ) !== false ) {
+			if ( strpos( $error['file'], 'meyvora-convert' ) !== false ) {
 				self::log( 'FATAL', $error['message'], array(
 					'file' => $error['file'],
 					'line' => $error['line'],
@@ -122,7 +122,7 @@ class CRO_Error_Handler {
 
 		// Also log to WordPress debug.log if enabled
 		if ( self::$debug_mode ) {
-			error_log( "[CRO Toolkit] [{$level}] {$message}" );
+			error_log( "[Meyvora Convert] [{$level}] {$message}" );
 		}
 	}
 

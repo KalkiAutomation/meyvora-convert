@@ -2,7 +2,7 @@
 /**
  * Stock urgency booster
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -57,12 +57,11 @@ class CRO_Stock_Urgency {
 		}
 
 		$stock_quantity = $product->get_stock_quantity();
-		if ( ! $stock_quantity || $stock_quantity > 10 ) {
-			return;
-		}
-
-		$threshold = apply_filters( 'cro_stock_urgency_threshold', 5 );
-		if ( $stock_quantity > $threshold ) {
+		$threshold = (int) apply_filters(
+			'cro_stock_urgency_threshold',
+			(int) cro_settings()->get( 'boosters', 'stock_urgency_threshold', 10 )
+		);
+		if ( ! $stock_quantity || $stock_quantity > $threshold ) {
 			return;
 		}
 
@@ -70,7 +69,7 @@ class CRO_Stock_Urgency {
 		$tone     = isset( $settings['tone'] ) ? $settings['tone'] : 'neutral';
 		$template = isset( $settings['message_template'] ) && (string) $settings['message_template'] !== ''
 			? (string) $settings['message_template']
-			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'stock_urgency', $tone, 'message' ) : __( '{count} left in stock', 'cro-toolkit' ) );
+			: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'stock_urgency', $tone, 'message' ) : __( '{count} left in stock', 'meyvora-convert' ) );
 		$message = str_replace( '{count}', (string) $stock_quantity, $template );
 		$render_context = array( 'product_id' => $product_id, 'stock_quantity' => $stock_quantity, 'message' => $message );
 		do_action( 'cro_frontend_before_render', 'stock_urgency', $render_context );

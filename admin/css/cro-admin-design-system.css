@@ -3,7 +3,7 @@
  * Tokens (8px grid), layout, components, forms, tables, tabs, buttons, badges, empty states, toast.
  * No duplicate rules in cro-admin-modern / cro-admin-ui / page CSS.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 /* ==========================================================================
@@ -562,6 +562,10 @@ body.admin-bar .cro-admin-layout__nav {
   white-space: nowrap;
 }
 
+.cro-inline-form {
+  display: inline;
+}
+
 .cro-table-action-link,
 .cro-table-actions a:not(.button) {
   display: inline-block;
@@ -868,4 +872,1014 @@ body.admin-bar .cro-ui-toast-container {
 
 .cro-max-w {
   max-width: 640px;
+}
+
+/* ==========================================================================
+   Presets library (admin.php?page=cro-presets)
+   ========================================================================== */
+.cro-admin-presets {
+  max-width: 1200px;
+}
+
+.cro-presets-intro {
+  margin-bottom: var(--cro-space-lg);
+  color: var(--cro-text-muted);
+}
+
+.cro-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--cro-space-lg);
+  margin-top: var(--cro-space-lg);
+}
+
+.cro-admin-presets .cro-preset-card {
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  box-shadow: var(--cro-shadow-sm);
+  overflow: hidden;
+}
+
+.cro-preset-card-inner {
+  padding: var(--cro-space-lg);
+}
+
+.cro-admin-presets .cro-preset-name {
+  margin: 0 0 var(--cro-space-sm);
+  font-size: 1.15em;
+  color: var(--cro-text);
+}
+
+.cro-admin-presets .cro-preset-desc {
+  margin: 0 0 12px;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+  line-height: 1.5;
+}
+
+.cro-preset-meta {
+  margin-bottom: var(--cro-space-md);
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+}
+
+.cro-preset-badge {
+  display: inline-block;
+  margin-left: var(--cro-space-sm);
+  padding: 2px var(--cro-space-sm);
+  background: var(--cro-bg-tabs);
+  border-radius: var(--cro-radius-sm);
+}
+
+.cro-preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--cro-space-sm);
+  align-items: center;
+}
+
+.cro-preset-actions .button {
+  margin: 0;
+}
+
+.cro-preset-preview-content {
+  padding: 0;
+  font-size: var(--cro-text-base);
+}
+
+.cro-preset-preview-content h4 {
+  margin-top: 0;
+}
+
+/* Preset preview modal */
+.cro-preset-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--cro-space-lg);
+}
+
+.cro-preset-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.cro-preset-modal-content {
+  position: relative;
+  background: var(--cro-bg);
+  border-radius: var(--cro-radius-sm);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.cro-preset-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--cro-text-muted);
+  cursor: pointer;
+  border-radius: var(--cro-radius-sm);
+}
+
+.cro-preset-modal-close:hover {
+  background: var(--cro-bg-tabs);
+  color: var(--cro-text);
+}
+
+.cro-preset-modal-title {
+  margin: 0;
+  padding: var(--cro-space-lg) var(--cro-space-lg) var(--cro-space-md);
+  font-size: 1.3em;
+  padding-right: 48px;
+}
+
+.cro-preset-modal-body {
+  padding: 0 var(--cro-space-lg) var(--cro-space-lg);
+  font-size: var(--cro-text-md);
+  line-height: 1.5;
+  color: var(--cro-text-muted);
+}
+
+.cro-preset-modal-body p {
+  margin: 0 0 10px;
+}
+
+.cro-preset-modal-footer {
+  padding: var(--cro-space-md) var(--cro-space-lg);
+  border-top: var(--cro-border);
+}
+
+.cro-preset-modal-footer .button {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Table empty state (campaigns, AB tests, etc.)
+   ========================================================================== */
+.cro-table-empty-state {
+  padding: var(--cro-space-2xl) var(--cro-space-lg);
+  text-align: center;
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-md);
+  margin-bottom: var(--cro-space-lg);
+}
+
+.cro-table-empty-state__icon {
+  display: block;
+  font-size: 32px;
+  color: var(--cro-text-muted);
+  margin-bottom: var(--cro-space-md);
+}
+
+.cro-table-empty-state__title {
+  margin: 0 0 var(--cro-space-sm);
+  font-size: var(--cro-text-md);
+  font-weight: 600;
+  color: var(--cro-text);
+}
+
+.cro-table-empty-state__text {
+  margin: 0;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+}
+
+/* ==========================================================================
+   Settings sections (boosters, checkout, cart, etc.)
+   ========================================================================== */
+.cro-settings-section {
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  padding: var(--cro-space-lg);
+  margin-bottom: var(--cro-space-xl);
+  box-shadow: var(--cro-shadow-sm);
+}
+
+.cro-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cro-space-md);
+  margin-bottom: var(--cro-space-sm);
+  flex-wrap: wrap;
+}
+
+.cro-section-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: var(--cro-space-sm);
+}
+
+.cro-section-header .dashicons {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--cro-text);
+}
+
+.cro-section-description {
+  margin: 0 0 20px;
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-base);
+  line-height: 1.5;
+}
+
+.cro-settings-fields {
+  display: block;
+}
+
+/* ==========================================================================
+   Toggle switch
+   ========================================================================== */
+.cro-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.cro-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cro-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #c3c4c7;
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.cro-toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.cro-toggle input:checked + .cro-toggle-slider {
+  background-color: #333;
+}
+
+.cro-toggle input:checked + .cro-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.cro-toggle input:focus + .cro-toggle-slider {
+  box-shadow: var(--cro-focus-ring);
+}
+
+/* Master toggle: prominent single-toggle card */
+.cro-master-toggle {
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  padding: 20px var(--cro-space-lg);
+  margin-bottom: var(--cro-space-lg);
+  box-shadow: var(--cro-shadow-sm);
+}
+
+/* Large toggle: label + switch side-by-side */
+.cro-toggle-large {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.cro-toggle-large .cro-toggle {
+  flex-shrink: 0;
+}
+
+.cro-toggle-label {
+  font-size: var(--cro-text-md);
+  font-weight: 600;
+  color: var(--cro-text);
+}
+
+/* ==========================================================================
+   Fields grid (2-column form layout)
+   ========================================================================== */
+.cro-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--cro-space-md) var(--cro-space-lg);
+}
+
+.cro-fields-grid .cro-field {
+  margin-bottom: 0;
+}
+
+.cro-fields-grid .cro-field.cro-col-12 {
+  grid-column: 1 / -1;
+}
+
+.cro-fields-grid .cro-field.cro-col-6 {
+  grid-column: span 1;
+}
+
+.cro-fields-grid.cro-fields-grid--1col {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 782px) {
+  .cro-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Help text
+   ========================================================================== */
+.cro-help {
+  display: block;
+  margin-top: var(--cro-space-xs);
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+  line-height: 1.5;
+}
+
+.cro-help:empty {
+  display: none;
+}
+
+/* ==========================================================================
+   Preview box (boosters live preview)
+   ========================================================================== */
+.cro-preview-box {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: var(--cro-border-light);
+}
+
+.cro-preview-box h4 {
+  margin: 0 0 12px;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+}
+
+.cro-sticky-cart-preview,
+.cro-shipping-bar-preview {
+  min-height: 48px;
+  background: var(--cro-bg-subtle);
+  border-radius: var(--cro-radius-sm);
+  padding: 12px;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+}
+
+/* ==========================================================================
+   Impact notice (checkout, cart pages)
+   ========================================================================== */
+.cro-impact-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border);
+  border-left: 4px solid var(--cro-text);
+  border-radius: var(--cro-radius-sm);
+  padding: 14px 18px;
+  margin-bottom: var(--cro-space-lg);
+}
+
+.cro-impact-notice .dashicons,
+.cro-impact-notice .cro-ico {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--cro-text);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.cro-impact-notice p {
+  margin: 0;
+  font-size: var(--cro-text-base);
+  line-height: 1.5;
+  color: var(--cro-text);
+}
+
+/* ==========================================================================
+   Checkbox card (checkout field toggles)
+   ========================================================================== */
+.cro-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border-light);
+  border-radius: var(--cro-radius-sm);
+  cursor: pointer;
+  max-width: 420px;
+}
+
+.cro-checkbox-card:hover {
+  background: var(--cro-bg);
+  border-color: var(--cro-text);
+}
+
+/* ==========================================================================
+   Status badges (campaigns, AB tests)
+   ========================================================================== */
+.cro-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--cro-radius-sm);
+  font-size: var(--cro-text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.cro-status--draft,
+.cro-status-badge.cro-status--draft {
+  background: var(--cro-bg-tabs);
+  color: var(--cro-text-muted);
+}
+
+.cro-status--running,
+.cro-status--active,
+.cro-status-badge.cro-status--running,
+.cro-status-badge.cro-status--active {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.cro-status--paused,
+.cro-status-badge.cro-status--paused {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.cro-status--completed,
+.cro-status-badge.cro-status--completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.cro-status--failed,
+.cro-status-badge.cro-status--failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ==========================================================================
+   Quick start block (onboarding prompt)
+   ========================================================================== */
+.cro-quick-start {
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  padding: var(--cro-space-lg);
+  margin: var(--cro-space-lg) 0;
+}
+
+.cro-quick-start h2 {
+  margin-top: 0;
+}
+
+.cro-quick-start ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+.cro-quick-start li {
+  margin-bottom: 20px;
+}
+
+.cro-quick-start li strong {
+  display: block;
+  margin-bottom: var(--cro-space-xs);
+}
+
+.cro-quick-start li p {
+  margin: 0 0 var(--cro-space-sm);
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+}
+
+.cro-quick-start li a {
+  font-size: var(--cro-text-base);
+}
+
+/* ==========================================================================
+   Page-specific descriptors (boosters, checkout)
+   ========================================================================== */
+.cro-boosters-page .cro-page-description,
+.cro-checkout-page .cro-page-description {
+  color: var(--cro-text-muted);
+  margin-bottom: var(--cro-space-lg);
+}
+
+/* ==========================================================================
+   Utility classes
+   ========================================================================== */
+.cro-mt-1 { margin-top: var(--cro-space-sm); }
+.cro-mt-2 { margin-top: var(--cro-space-md); }
+.cro-mt-3 { margin-top: var(--cro-space-lg); }
+.cro-mb-1 { margin-bottom: var(--cro-space-sm); }
+.cro-mb-2 { margin-bottom: var(--cro-space-md); }
+.cro-section-desc {
+  margin-top: 0;
+  margin-bottom: var(--cro-space-md);
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-base);
+  line-height: 1.5;
+}
+.cro-fw-600 { font-weight: 600; }
+.cro-select-min { min-width: 200px; }
+.cro-select-min--wide { min-width: 260px; }
+
+/* ==========================================================================
+   Onboarding wizard
+   ========================================================================== */
+.cro-onboarding {
+  max-width: 720px;
+  margin: var(--cro-space-lg) 0;
+}
+
+.cro-onboarding-header {
+  margin-bottom: var(--cro-space-lg);
+}
+
+.cro-onboarding-header h1 {
+  margin-bottom: 0.25em;
+}
+
+.cro-onboarding-subtitle {
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-md);
+  margin: 0;
+}
+
+.cro-onboarding-steps {
+  display: flex;
+  list-style: none;
+  margin: 0 0 var(--cro-space-xl);
+  padding: 0;
+  gap: var(--cro-space-sm);
+  border-bottom: var(--cro-border);
+}
+
+.cro-onboarding-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+}
+
+.cro-onboarding-steps li.active {
+  color: var(--cro-text);
+  font-weight: 600;
+}
+
+.cro-onboarding-steps li.done .cro-step-num {
+  background: var(--cro-success);
+  color: #fff;
+}
+
+.cro-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dcdcde;
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-sm);
+  font-weight: 600;
+}
+
+.cro-onboarding-steps li.active .cro-step-num {
+  background: var(--cro-primary);
+  color: #fff;
+}
+
+.cro-onboarding-content {
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  padding: var(--cro-space-lg);
+  box-shadow: var(--cro-shadow-sm);
+}
+
+.cro-onboarding-panel h2 {
+  margin: 0 0 var(--cro-space-sm);
+  font-size: 1.3em;
+}
+
+.cro-onboarding-panel .description {
+  margin-bottom: 20px;
+  color: var(--cro-text-muted);
+}
+
+.cro-onboarding-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--cro-space-lg);
+}
+
+.cro-onboarding-toggles .cro-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.cro-onboarding-toggles .cro-toggle-row input {
+  margin: 0;
+}
+
+.cro-onboarding-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--cro-space-lg);
+}
+
+.cro-onboarding-actions {
+  margin: var(--cro-space-lg) 0 0;
+  padding-top: 20px;
+  border-top: var(--cro-border-light);
+}
+
+.cro-onboarding-actions .button {
+  margin-right: var(--cro-space-sm);
+}
+
+.cro-onboarding-skip {
+  margin-top: var(--cro-space-lg);
+  text-align: center;
+}
+
+.cro-onboarding-skip a {
+  color: var(--cro-text-muted);
+  text-decoration: none;
+}
+
+.cro-onboarding-skip a:hover {
+  color: var(--cro-primary);
+}
+
+/* Onboarding checklist */
+.cro-onboarding-checklist-list {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  box-shadow: var(--cro-shadow-sm);
+}
+
+.cro-onboarding-checklist-list .cro-checklist-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: var(--cro-space-md) 20px;
+  border-bottom: var(--cro-border-light);
+  margin: 0;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-item:last-child {
+  border-bottom: none;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dcdcde;
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-base);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-item.done .cro-checklist-num {
+  background: var(--cro-success);
+  color: #fff;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-label {
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cro-space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-label input[type="checkbox"] {
+  margin: 0;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-desc {
+  width: 100%;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+  margin-left: 40px;
+}
+
+.cro-onboarding-checklist-list .cro-checklist-item .button {
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   Developer page
+   ========================================================================== */
+.cro-developer-section {
+  margin-bottom: var(--cro-space-xl);
+}
+
+.cro-developer-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--cro-space-sm);
+}
+
+.cro-developer-section__header .cro-section-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.cro-developer-code-block {
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border-light);
+  border-radius: var(--cro-radius-sm);
+  padding: 10px 14px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: var(--cro-text-base);
+  overflow-x: auto;
+}
+
+.cro-developer-code-block code {
+  background: none;
+  padding: 0;
+}
+
+.cro-developer-code-block var {
+  color: var(--cro-error);
+  font-style: normal;
+}
+
+.cro-developer-hooks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cro-developer-hook-item {
+  padding-bottom: var(--cro-space-md);
+  border-bottom: var(--cro-border-light);
+}
+
+.cro-developer-hook-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.cro-developer-hook-name {
+  font-size: var(--cro-text-base);
+  background: var(--cro-bg-tabs);
+  padding: 2px 8px;
+  border-radius: var(--cro-radius-sm);
+  font-weight: 500;
+}
+
+.cro-developer-hook-params,
+.cro-developer-hook-return {
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+  margin-left: 6px;
+}
+
+.cro-developer-hook-desc {
+  margin: var(--cro-space-sm) 0 0;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text-muted);
+  line-height: 1.5;
+}
+
+.cro-developer-snippet {
+  margin: 10px 0 0;
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border-light);
+  border-radius: var(--cro-radius-sm);
+  padding: 12px 14px;
+  font-size: var(--cro-text-sm);
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.cro-developer-snippet code {
+  background: none;
+  padding: 0;
+  font-family: Consolas, Monaco, monospace;
+}
+
+.cro-developer-snippets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--cro-space-md);
+}
+
+.cro-developer-snippet-card {
+  background: var(--cro-bg-subtle);
+  border: var(--cro-border-light);
+  border-radius: var(--cro-radius-md);
+  padding: 14px;
+}
+
+.cro-developer-snippet-card h4 {
+  margin: 0 0 10px;
+  font-size: var(--cro-text-base);
+  font-weight: 600;
+  color: var(--cro-text);
+}
+
+.cro-developer-snippet-card .cro-developer-snippet {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Per-category discount rows (cart page)
+   ========================================================================== */
+.cro-per-category-discount-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cro-space-sm);
+}
+
+.cro-per-category-discount-list .cro-add-per-cat {
+  margin-top: var(--cro-space-xs);
+  align-self: flex-start;
+}
+
+.cro-per-cat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cro-space-sm);
+  margin-bottom: 0;
+}
+
+.cro-per-cat-row .cro-per-cat-select,
+.cro-per-cat-row .select2-container {
+  flex: 1;
+  min-width: 140px;
+}
+
+.cro-per-cat-row .cro-input-num {
+  width: 80px;
+  min-width: 80px;
+}
+
+.cro-per-cat-row .cro-remove-per-cat {
+  flex-shrink: 0;
+}
+
+.cro-input-num {
+  width: 80px;
+}
+
+/* ==========================================================================
+   System status & tools helpers
+   ========================================================================== */
+.cro-list-plain {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.cro-list-plain li {
+  margin-bottom: var(--cro-space-sm);
+}
+
+.cro-status-ok {
+  color: var(--cro-success);
+}
+
+.cro-status-warn,
+.cro-status-error {
+  color: var(--cro-error);
+}
+
+.cro-status-warning {
+  color: #b26200;
+}
+
+.cro-max-w-800 {
+  max-width: 800px;
+}
+
+.cro-col-check {
+  width: 220px;
+}
+
+.cro-col-status {
+  width: 120px;
+}
+
+.cro-admin-message {
+  padding: var(--cro-space-lg);
+  background: var(--cro-bg);
+  border: var(--cro-border);
+  box-shadow: var(--cro-shadow);
+}
+
+.cro-admin-message p {
+  margin: 0;
+}
+
+/* A/B test result label */
+.cro-result-insufficient {
+  color: var(--cro-text-muted);
+  font-style: italic;
+}
+
+/* A/B test winner highlight */
+.cro-winner {
+  color: var(--cro-success);
+  font-weight: 600;
+}
+
+/* Destructive action link */
+.cro-action-delete {
+  color: var(--cro-error);
+}
+
+.cro-action-delete:hover {
+  color: var(--cro-error);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Image previews
+   ========================================================================== */
+.cro-image-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==========================================================================
+   Captions / separators
+   ========================================================================== */
+.cro-cap-sep {
+  color: var(--cro-text-muted);
+  font-size: var(--cro-text-base);
+  white-space: nowrap;
 }

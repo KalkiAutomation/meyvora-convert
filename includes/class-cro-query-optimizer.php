@@ -4,7 +4,7 @@
  *
  * Optimizes database queries for better performance
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 defined( 'ABSPATH' ) || exit;

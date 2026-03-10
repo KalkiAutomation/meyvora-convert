@@ -2,8 +2,23 @@
 /**
  * Analytics Dashboard
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
+
+function meyvora_kpi_change( $current, $previous ) {
+	if ( ! $previous ) {
+		return '';
+	}
+	$pct  = round( ( ( $current - $previous ) / $previous ) * 100 );
+	$dir  = $pct >= 0 ? 'up' : 'down';
+	$icon = $pct >= 0 ? '↑' : '↓';
+	return sprintf(
+		'<span class="cro-kpi-change cro-kpi-change--%s">%s %s%%</span>',
+		esc_attr( $dir ),
+		$icon,
+		abs( $pct )
+	);
+}
 
 $analytics = new CRO_Analytics();
 
@@ -16,9 +31,9 @@ if ( $campaign_id === 0 ) {
 
 $analytics_error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
 if ( $analytics_error === 'invalid_nonce' ) {
-	echo '<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p>' . esc_html__( 'Invalid security check. Please try the export again.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p>' . esc_html__( 'Invalid security check. Please try the export again.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $analytics_error === 'unauthorized' ) {
-	echo '<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p>' . esc_html__( 'You do not have permission to export.', 'cro-toolkit' ) . '</p></div>';
+	echo '<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p>' . esc_html__( 'You do not have permission to export.', 'meyvora-convert' ) . '</p></div>';
 }
 
 $summary      = $analytics->get_summary( $date_from, $date_to, $campaign_id );
@@ -67,37 +82,37 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 				<button type="button" class="button <?php echo $date_from === date( 'Y-m-d', strtotime( '-7 days' ) ) ? 'active' : ''; ?>"
 					data-from="<?php echo esc_attr( date( 'Y-m-d', strtotime( '-7 days' ) ) ); ?>"
 					data-to="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>">
-					<?php esc_html_e( 'Last 7 days', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Last 7 days', 'meyvora-convert' ); ?>
 				</button>
 				<button type="button" class="button <?php echo $date_from === date( 'Y-m-d', strtotime( '-30 days' ) ) ? 'active' : ''; ?>"
 					data-from="<?php echo esc_attr( date( 'Y-m-d', strtotime( '-30 days' ) ) ); ?>"
 					data-to="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>">
-					<?php esc_html_e( 'Last 30 days', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Last 30 days', 'meyvora-convert' ); ?>
 				</button>
 				<button type="button" class="button"
 					data-from="<?php echo esc_attr( date( 'Y-m-d', strtotime( '-90 days' ) ) ); ?>"
 					data-to="<?php echo esc_attr( date( 'Y-m-d' ) ); ?>">
-					<?php esc_html_e( 'Last 90 days', 'cro-toolkit' ); ?>
+					<?php esc_html_e( 'Last 90 days', 'meyvora-convert' ); ?>
 				</button>
 			</div>
 
 			<div class="cro-date-custom">
 				<input type="date" name="from" value="<?php echo esc_attr( $date_from ); ?>" />
-				<span><?php esc_html_e( 'to', 'cro-toolkit' ); ?></span>
+				<span><?php esc_html_e( 'to', 'meyvora-convert' ); ?></span>
 				<input type="date" name="to" value="<?php echo esc_attr( $date_to ); ?>" />
-				<select name="campaign_id" id="cro-campaign-filter" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'All campaigns', 'cro-toolkit' ); ?>">
-					<option value=""><?php esc_html_e( 'All campaigns', 'cro-toolkit' ); ?></option>
+				<select name="campaign_id" id="cro-campaign-filter" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'All campaigns', 'meyvora-convert' ); ?>">
+					<option value=""><?php esc_html_e( 'All campaigns', 'meyvora-convert' ); ?></option>
 					<?php foreach ( $campaigns_list as $cid => $cname ) : ?>
 						<option value="<?php echo esc_attr( $cid ); ?>" <?php selected( $campaign_id, $cid ); ?>><?php echo esc_html( $cname ); ?></option>
 					<?php endforeach; ?>
 				</select>
-				<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply', 'cro-toolkit' ); ?></button>
+				<button type="submit" class="button button-primary"><?php esc_html_e( 'Apply', 'meyvora-convert' ); ?></button>
 			</div>
 
 			<div class="cro-export-actions">
-				<a href="<?php echo esc_url( $export_url_events ); ?>" class="button"><?php esc_html_e( 'Export events CSV', 'cro-toolkit' ); ?></a>
-				<a href="<?php echo esc_url( $export_url_daily ); ?>" class="button"><?php esc_html_e( 'Daily summary CSV', 'cro-toolkit' ); ?></a>
-				<span class="cro-muted" style="font-size: 12px;"><?php echo esc_html( sprintf( __( 'Max %d days.', 'cro-toolkit' ), $export_max_days ) ); ?></span>
+				<a href="<?php echo esc_url( $export_url_events ); ?>" class="button"><?php esc_html_e( 'Export events CSV', 'meyvora-convert' ); ?></a>
+				<a href="<?php echo esc_url( $export_url_daily ); ?>" class="button"><?php esc_html_e( 'Daily summary CSV', 'meyvora-convert' ); ?></a>
+				<span class="cro-muted" style="font-size: 12px;"><?php echo esc_html( sprintf( __( 'Max %d days.', 'meyvora-convert' ), $export_max_days ) ); ?></span>
 			</div>
 		</form>
 	</div>
@@ -108,12 +123,8 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['impressions'] ) ); ?></span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?></span>
-				<?php if ( isset( $summary['impressions_change'] ) ) : ?>
-				<span class="cro-kpi-change <?php echo $summary['impressions_change'] >= 0 ? 'positive' : 'negative'; ?>">
-					<?php echo ( $summary['impressions_change'] >= 0 ? '+' : '' ) . (int) $summary['impressions_change']; ?>% <?php esc_html_e( 'vs prev period', 'cro-toolkit' ); ?>
-				</span>
-				<?php endif; ?>
+				<span class="cro-kpi-label"><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></span>
+				<?php echo meyvora_kpi_change( $summary['impressions'], $summary['prev_impressions'] ); ?>
 			</div>
 		</div>
 
@@ -121,7 +132,7 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'mouse-pointer', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['clicks'] ) ); ?></span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'Clicks', 'cro-toolkit' ); ?></span>
+				<span class="cro-kpi-label"><?php esc_html_e( 'Clicks', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 
@@ -129,7 +140,7 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( $summary['ctr'] ); ?>%</span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'CTR', 'cro-toolkit' ); ?></span>
+				<span class="cro-kpi-label"><?php esc_html_e( 'CTR', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 
@@ -137,12 +148,8 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'dollar-sign', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo wp_kses_post( $summary['revenue_formatted'] ); ?></span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'Revenue influenced', 'cro-toolkit' ); ?></span>
-				<?php if ( isset( $summary['revenue_change'] ) ) : ?>
-				<span class="cro-kpi-change <?php echo $summary['revenue_change'] >= 0 ? 'positive' : 'negative'; ?>">
-					<?php echo ( $summary['revenue_change'] >= 0 ? '+' : '' ) . (int) $summary['revenue_change']; ?>% <?php esc_html_e( 'vs prev period', 'cro-toolkit' ); ?>
-				</span>
-				<?php endif; ?>
+				<span class="cro-kpi-label"><?php esc_html_e( 'Revenue influenced', 'meyvora-convert' ); ?></span>
+				<?php echo meyvora_kpi_change( $summary['revenue'], $summary['prev_revenue'] ); ?>
 			</div>
 		</div>
 
@@ -150,7 +157,7 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['sticky_cart_adds'] ) ); ?></span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'Add-to-cart from sticky', 'cro-toolkit' ); ?></span>
+				<span class="cro-kpi-label"><?php esc_html_e( 'Add-to-cart from sticky', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 
@@ -158,7 +165,7 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['shipping_bar_interactions'] ) ); ?></span>
-				<span class="cro-kpi-label"><?php esc_html_e( 'Shipping bar interactions', 'cro-toolkit' ); ?></span>
+				<span class="cro-kpi-label"><?php esc_html_e( 'Shipping bar interactions', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 	</div>
@@ -169,31 +176,30 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 			<div class="cro-stat-icon"><?php echo CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( $summary['conversions'] ) ); ?></span>
-				<span class="cro-stat-label"><?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?></span>
-				<span class="cro-stat-change <?php echo ( isset( $summary['conversions_change'] ) && $summary['conversions_change'] >= 0 ) ? 'positive' : 'negative'; ?>">
-					<?php echo ( isset( $summary['conversions_change'] ) && $summary['conversions_change'] >= 0 ? '+' : '' ) . (int) ( $summary['conversions_change'] ?? 0 ); ?>%
-				</span>
+				<span class="cro-stat-label"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></span>
+				<?php echo meyvora_kpi_change( $summary['conversions'], $summary['prev_conversions'] ); ?>
 			</div>
 		</div>
 		<div class="cro-stat-card">
 			<div class="cro-stat-icon"><?php echo CRO_Icons::svg( 'chart', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( $summary['conversion_rate'] ); ?>%</span>
-				<span class="cro-stat-label"><?php esc_html_e( 'Conversion Rate', 'cro-toolkit' ); ?></span>
+				<span class="cro-stat-label"><?php esc_html_e( 'Conversion Rate', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 		<div class="cro-stat-card">
 			<div class="cro-stat-icon"><?php echo CRO_Icons::svg( 'mail', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( $summary['emails'] ) ); ?></span>
-				<span class="cro-stat-label"><?php esc_html_e( 'Emails Captured', 'cro-toolkit' ); ?></span>
+				<span class="cro-stat-label"><?php esc_html_e( 'Emails Captured', 'meyvora-convert' ); ?></span>
+				<?php echo meyvora_kpi_change( $summary['emails'], $summary['prev_emails'] ); ?>
 			</div>
 		</div>
 		<div class="cro-stat-card">
 			<div class="cro-stat-icon"><?php echo CRO_Icons::svg( 'dollar-sign', array( 'class' => 'cro-ico' ) ); ?></div>
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo wp_kses_post( $summary['rpv_formatted'] ); ?></span>
-				<span class="cro-stat-label"><?php esc_html_e( 'Revenue per Visitor', 'cro-toolkit' ); ?></span>
+				<span class="cro-stat-label"><?php esc_html_e( 'Revenue per Visitor', 'meyvora-convert' ); ?></span>
 			</div>
 		</div>
 	</div>
@@ -202,11 +208,11 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 	<div class="cro-charts-row">
 		<div class="cro-chart-card cro-chart--main">
 			<div class="cro-chart-header">
-				<h3><?php esc_html_e( 'Performance Over Time', 'cro-toolkit' ); ?></h3>
+				<h3><?php esc_html_e( 'Performance Over Time', 'meyvora-convert' ); ?></h3>
 				<div class="cro-chart-toggle">
-					<button type="button" class="active" data-metric="conversions"><?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?></button>
-					<button type="button" data-metric="revenue"><?php esc_html_e( 'Revenue', 'cro-toolkit' ); ?></button>
-					<button type="button" data-metric="impressions"><?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?></button>
+					<button type="button" class="active" data-metric="conversions"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></button>
+					<button type="button" data-metric="revenue"><?php esc_html_e( 'Revenue', 'meyvora-convert' ); ?></button>
+					<button type="button" data-metric="impressions"><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></button>
 				</div>
 			</div>
 			<div class="cro-chart-body">
@@ -215,7 +221,7 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 		</div>
 		<div class="cro-chart-card cro-chart--device">
 			<div class="cro-chart-header">
-				<h3><?php esc_html_e( 'By Device', 'cro-toolkit' ); ?></h3>
+				<h3><?php esc_html_e( 'By Device', 'meyvora-convert' ); ?></h3>
 			</div>
 			<div class="cro-chart-body">
 				<canvas id="cro-device-chart" height="200"></canvas>
@@ -227,23 +233,23 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 	<div class="cro-tables-row">
 		<div class="cro-table-card">
 			<div class="cro-table-header">
-				<h3><?php esc_html_e( 'Campaign Performance', 'cro-toolkit' ); ?></h3>
+				<h3><?php esc_html_e( 'Campaign Performance', 'meyvora-convert' ); ?></h3>
 			</div>
 			<div class="cro-table-wrap">
 			<table class="cro-table widefat">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Campaign', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Impressions', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Conv. Rate', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Revenue', 'cro-toolkit' ); ?></th>
+						<th><?php esc_html_e( 'Campaign', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Conv. Rate', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Revenue', 'meyvora-convert' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php if ( empty( $campaigns ) ) : ?>
 					<tr class="cro-table-empty-row">
-						<td colspan="5" class="cro-no-data"><?php esc_html_e( 'No data yet', 'cro-toolkit' ); ?></td>
+						<td colspan="5" class="cro-no-data"><?php esc_html_e( 'No data yet', 'meyvora-convert' ); ?></td>
 					</tr>
 					<?php else : ?>
 					<?php foreach ( $campaigns as $campaign ) : ?>
@@ -266,21 +272,21 @@ wp_enqueue_script( 'chart-js', 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist
 		</div>
 		<div class="cro-table-card">
 			<div class="cro-table-header">
-				<h3><?php esc_html_e( 'Top Converting Pages', 'cro-toolkit' ); ?></h3>
+				<h3><?php esc_html_e( 'Top Converting Pages', 'meyvora-convert' ); ?></h3>
 			</div>
 			<div class="cro-table-wrap">
 			<table class="cro-table widefat">
 				<thead>
 					<tr>
-						<th><?php esc_html_e( 'Page', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Conversions', 'cro-toolkit' ); ?></th>
-						<th class="cro-table-num"><?php esc_html_e( 'Revenue', 'cro-toolkit' ); ?></th>
+						<th><?php esc_html_e( 'Page', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></th>
+						<th class="cro-table-num"><?php esc_html_e( 'Revenue', 'meyvora-convert' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 					<?php if ( empty( $top_pages ) ) : ?>
 					<tr class="cro-table-empty-row">
-						<td colspan="3" class="cro-no-data"><?php esc_html_e( 'No data yet', 'cro-toolkit' ); ?></td>
+						<td colspan="3" class="cro-no-data"><?php esc_html_e( 'No data yet', 'meyvora-convert' ); ?></td>
 					</tr>
 					<?php else : ?>
 					<?php foreach ( $top_pages as $page ) : ?>
@@ -310,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		data: {
 			labels: dailyData.map(function(d) { return d.label; }),
 			datasets: [{
-				label: '<?php echo esc_js( __( 'Conversions', 'cro-toolkit' ) ); ?>',
+				label: '<?php echo esc_js( __( 'Conversions', 'meyvora-convert' ) ); ?>',
 				data: dailyData.map(function(d) { return d.conversions; }),
 				borderColor: '#333',
 				backgroundColor: 'rgba(0, 0, 0, 0.08)',

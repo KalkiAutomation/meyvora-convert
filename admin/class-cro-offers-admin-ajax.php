@@ -1,9 +1,9 @@
 <?php
 /**
  * Secure admin AJAX handlers for offers (list, create, update, delete, duplicate, toggle).
- * Capability: manage_woocommerce. Nonce required. Option: cro_dynamic_offers (max 5 offers).
+ * Capability: manage_meyvora_convert. Nonce required. Option: cro_dynamic_offers (max 5 offers).
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -39,13 +39,13 @@ class CRO_Offers_Admin_Ajax {
 	 * @return bool True if authorized.
 	 */
 	private function auth() {
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			$this->send_error( __( 'You do not have permission.', 'cro-toolkit' ), 403 );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
 			return false;
 		}
 		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) {
-			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'cro-toolkit' ), 403 );
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return false;
 		}
 		return true;
@@ -352,12 +352,12 @@ class CRO_Offers_Admin_Ajax {
 		}
 		$offers = $this->get_offers_raw();
 		if ( $this->count_used( $offers ) >= self::MAX_OFFERS ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$slot = $this->find_first_empty_slot( $offers );
 		if ( $slot === false ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$input = isset( $_POST['offer'] ) ? wp_unslash( $_POST['offer'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
@@ -365,13 +365,13 @@ class CRO_Offers_Admin_Ajax {
 			$input = json_decode( $input, true );
 		}
 		if ( ! is_array( $input ) ) {
-			$this->send_error( __( 'Invalid offer data.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Invalid offer data.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$flat = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::sanitize_offer( $input ) : $this->flatten_offer( $input );
 		$valid = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::validate_offer( $flat ) : true;
 		if ( is_wp_error( $valid ) ) {
-			$this->send_error( __( 'Validation failed.', 'cro-toolkit' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
+			$this->send_error( __( 'Validation failed.', 'meyvora-convert' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
 			return;
 		}
 		$flat['id']         = $this->generate_id();
@@ -390,13 +390,13 @@ class CRO_Offers_Admin_Ajax {
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
-			$this->send_error( __( 'Offer id is required.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer id is required.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$offers = $this->get_offers_raw();
 		$index  = $this->find_index_by_id( $offers, $id );
 		if ( $index === false ) {
-			$this->send_error( __( 'Offer not found.', 'cro-toolkit' ), 404 );
+			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
 		$input = isset( $_POST['offer'] ) ? wp_unslash( $_POST['offer'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
@@ -404,13 +404,13 @@ class CRO_Offers_Admin_Ajax {
 			$input = json_decode( $input, true );
 		}
 		if ( ! is_array( $input ) ) {
-			$this->send_error( __( 'Invalid offer data.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Invalid offer data.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$flat = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::sanitize_offer( $input ) : $this->flatten_offer( $input, $id, gmdate( 'c' ) );
 		$valid = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::validate_offer( $flat ) : true;
 		if ( is_wp_error( $valid ) ) {
-			$this->send_error( __( 'Validation failed.', 'cro-toolkit' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
+			$this->send_error( __( 'Validation failed.', 'meyvora-convert' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
 			return;
 		}
 		$time            = gmdate( 'c' );
@@ -430,13 +430,13 @@ class CRO_Offers_Admin_Ajax {
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
-			$this->send_error( __( 'Offer id is required.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer id is required.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$offers = $this->get_offers_raw();
 		$index  = $this->find_index_by_id( $offers, $id );
 		if ( $index === false ) {
-			$this->send_error( __( 'Offer not found.', 'cro-toolkit' ), 404 );
+			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
 		$offers[ $index ] = array();
@@ -454,32 +454,32 @@ class CRO_Offers_Admin_Ajax {
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
-			$this->send_error( __( 'Offer id is required.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer id is required.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$offers = $this->get_offers_raw();
 		$index  = $this->find_index_by_id( $offers, $id );
 		if ( $index === false ) {
-			$this->send_error( __( 'Offer not found.', 'cro-toolkit' ), 404 );
+			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
 		if ( $this->count_used( $offers ) >= self::MAX_OFFERS ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$slot = $this->find_first_empty_slot( $offers );
 		if ( $slot === false ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$src  = $offers[ $index ];
 		$copy = $src;
-		$copy['headline'] = ( isset( $copy['headline'] ) ? $copy['headline'] : '' ) . ' (' . __( 'Copy', 'cro-toolkit' ) . ')';
+		$copy['headline'] = ( isset( $copy['headline'] ) ? $copy['headline'] : '' ) . ' (' . __( 'Copy', 'meyvora-convert' ) . ')';
 		if ( class_exists( 'CRO_Offer_Schema' ) ) {
 			$copy = CRO_Offer_Schema::sanitize_offer( $copy );
 			$valid = CRO_Offer_Schema::validate_offer( $copy );
 			if ( is_wp_error( $valid ) ) {
-				$this->send_error( __( 'Validation failed.', 'cro-toolkit' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
+				$this->send_error( __( 'Validation failed.', 'meyvora-convert' ), 400, CRO_Offer_Schema::errors_to_array( $valid ) );
 				return;
 			}
 		}
@@ -500,13 +500,13 @@ class CRO_Offers_Admin_Ajax {
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
-			$this->send_error( __( 'Offer id is required.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Offer id is required.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$offers = $this->get_offers_raw();
 		$index  = $this->find_index_by_id( $offers, $id );
 		if ( $index === false ) {
-			$this->send_error( __( 'Offer not found.', 'cro-toolkit' ), 404 );
+			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
 		$offers[ $index ]['enabled'] = empty( $offers[ $index ]['enabled'] );
@@ -528,7 +528,7 @@ class CRO_Offers_Admin_Ajax {
 			$order = json_decode( $order, true );
 		}
 		if ( ! is_array( $order ) ) {
-			$this->send_error( __( 'Invalid order.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Invalid order.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$order = array_map( 'absint', $order );
@@ -547,7 +547,7 @@ class CRO_Offers_Admin_Ajax {
 		$order_sorted = $order;
 		sort( $order_sorted );
 		if ( $order_sorted !== $used_indices ) {
-			$this->send_error( __( 'Order must contain each offer index exactly once.', 'cro-toolkit' ), 400 );
+			$this->send_error( __( 'Order must contain each offer index exactly once.', 'meyvora-convert' ), 400 );
 			return;
 		}
 		$time = gmdate( 'c' );
@@ -577,7 +577,7 @@ class CRO_Offers_Admin_Ajax {
 			return;
 		}
 		if ( ! class_exists( 'CRO_Offer_Engine' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Offer engine not available.', 'cro-toolkit' ) ), 400 );
+			wp_send_json_error( array( 'message' => __( 'Offer engine not available.', 'meyvora-convert' ) ), 400 );
 			return;
 		}
 		$context = $this->get_test_context_from_request();
@@ -614,7 +614,7 @@ class CRO_Offers_Admin_Ajax {
 			wp_send_json_success( array(
 				'match'       => null,
 				'checks'      => array(),
-				'message'     => __( 'No eligible offer', 'cro-toolkit' ),
+				'message'     => __( 'No eligible offer', 'meyvora-convert' ),
 				'suggestions' => $suggestions,
 			) );
 			return;

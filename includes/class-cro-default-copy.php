@@ -3,7 +3,7 @@
  * Default copy by feature and tone (Neutral / Urgent / Friendly).
  * All strings are benefit-first, concise, non-pushy. Use placeholders: {amount}, {count}, etc.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -51,61 +51,61 @@ class CRO_Default_Copy {
 			case 'shipping_bar':
 				return array(
 					self::TONE_NEUTRAL => array(
-						'progress'  => __( 'Add {amount} more for free shipping', 'cro-toolkit' ),
-						'achieved'  => __( 'You\'ve got free shipping', 'cro-toolkit' ),
+						'progress'  => __( 'Add {amount} more for free shipping', 'meyvora-convert' ),
+						'achieved'  => __( 'You\'ve got free shipping', 'meyvora-convert' ),
 					),
 					self::TONE_URGENT => array(
-						'progress'  => __( 'Only {amount} away from free shipping', 'cro-toolkit' ),
-						'achieved'  => __( 'Free shipping unlocked!', 'cro-toolkit' ),
+						'progress'  => __( 'Only {amount} away from free shipping', 'meyvora-convert' ),
+						'achieved'  => __( 'Free shipping unlocked!', 'meyvora-convert' ),
 					),
 					self::TONE_FRIENDLY => array(
-						'progress'  => __( 'Just {amount} away from free shipping', 'cro-toolkit' ),
-						'achieved'  => __( 'Free shipping on us', 'cro-toolkit' ),
+						'progress'  => __( 'Just {amount} away from free shipping', 'meyvora-convert' ),
+						'achieved'  => __( 'Free shipping on us', 'meyvora-convert' ),
 					),
 				);
 			case 'stock_urgency':
 				return array(
 					self::TONE_NEUTRAL => array(
-						'message' => __( '{count} left in stock', 'cro-toolkit' ),
+						'message' => __( '{count} left in stock', 'meyvora-convert' ),
 					),
 					self::TONE_URGENT => array(
-						'message' => __( 'Only {count} left', 'cro-toolkit' ),
+						'message' => __( 'Only {count} left', 'meyvora-convert' ),
 					),
 					self::TONE_FRIENDLY => array(
-						'message' => __( 'Just {count} left — grab yours', 'cro-toolkit' ),
+						'message' => __( 'Just {count} left — grab yours', 'meyvora-convert' ),
 					),
 				);
 			case 'sticky_cart':
 				return array(
 					self::TONE_NEUTRAL => array(
-						'button_text' => __( 'Add to cart', 'cro-toolkit' ),
+						'button_text' => __( 'Add to cart', 'meyvora-convert' ),
 					),
 					self::TONE_URGENT => array(
-						'button_text' => __( 'Add to cart — limited stock', 'cro-toolkit' ),
+						'button_text' => __( 'Add to cart — limited stock', 'meyvora-convert' ),
 					),
 					self::TONE_FRIENDLY => array(
-						'button_text' => __( 'Add to cart', 'cro-toolkit' ),
+						'button_text' => __( 'Add to cart', 'meyvora-convert' ),
 					),
 				);
 			case 'exit_intent':
 				return array(
 					self::TONE_NEUTRAL => array(
-						'headline'     => __( 'Before you go', 'cro-toolkit' ),
-						'subheadline'  => __( 'Here\'s a small thank-you for visiting', 'cro-toolkit' ),
-						'cta_text'     => __( 'Claim offer', 'cro-toolkit' ),
-						'dismiss_text' => __( 'No thanks', 'cro-toolkit' ),
+						'headline'     => __( 'Before you go', 'meyvora-convert' ),
+						'subheadline'  => __( 'Here\'s a small thank-you for visiting', 'meyvora-convert' ),
+						'cta_text'     => __( 'Claim offer', 'meyvora-convert' ),
+						'dismiss_text' => __( 'No thanks', 'meyvora-convert' ),
 					),
 					self::TONE_URGENT => array(
-						'headline'     => __( 'Wait — one more thing', 'cro-toolkit' ),
-						'subheadline'  => __( 'Save on your order today', 'cro-toolkit' ),
-						'cta_text'     => __( 'Get my discount', 'cro-toolkit' ),
-						'dismiss_text' => __( 'No thanks', 'cro-toolkit' ),
+						'headline'     => __( 'Wait — one more thing', 'meyvora-convert' ),
+						'subheadline'  => __( 'Save on your order today', 'meyvora-convert' ),
+						'cta_text'     => __( 'Get my discount', 'meyvora-convert' ),
+						'dismiss_text' => __( 'No thanks', 'meyvora-convert' ),
 					),
 					self::TONE_FRIENDLY => array(
-						'headline'     => __( 'We\'d love to treat you', 'cro-toolkit' ),
-						'subheadline'  => __( 'Here\'s something special for you', 'cro-toolkit' ),
-						'cta_text'     => __( 'Yes please', 'cro-toolkit' ),
-						'dismiss_text' => __( 'Maybe next time', 'cro-toolkit' ),
+						'headline'     => __( 'We\'d love to treat you', 'meyvora-convert' ),
+						'subheadline'  => __( 'Here\'s something special for you', 'meyvora-convert' ),
+						'cta_text'     => __( 'Yes please', 'meyvora-convert' ),
+						'dismiss_text' => __( 'Maybe next time', 'meyvora-convert' ),
 					),
 				);
 			default:
@@ -120,9 +120,9 @@ class CRO_Default_Copy {
 	 */
 	public static function get_tones() {
 		return array(
-			self::TONE_NEUTRAL  => __( 'Neutral', 'cro-toolkit' ),
-			self::TONE_URGENT   => __( 'Urgent', 'cro-toolkit' ),
-			self::TONE_FRIENDLY => __( 'Friendly', 'cro-toolkit' ),
+			self::TONE_NEUTRAL  => __( 'Neutral', 'meyvora-convert' ),
+			self::TONE_URGENT   => __( 'Urgent', 'meyvora-convert' ),
+			self::TONE_FRIENDLY => __( 'Friendly', 'meyvora-convert' ),
 		);
 	}
 }

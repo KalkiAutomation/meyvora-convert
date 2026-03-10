@@ -7,7 +7,7 @@
 	var Fragment = element.Fragment;
 	var createElement = element.createElement;
 
-	registerBlockType('cro-toolkit/campaign', {
+	registerBlockType('meyvora-convert/campaign', {
 		edit: function (props) {
 			var blockProps = useBlockProps();
 			var campaignId = props.attributes.campaignId;
@@ -47,7 +47,7 @@
 						? createElement(
 								serverSideRender,
 								{
-									block: 'cro-toolkit/campaign',
+									block: 'meyvora-convert/campaign',
 									attributes: { campaignId: campaignId }
 								}
 						  )

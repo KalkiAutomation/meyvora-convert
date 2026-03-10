@@ -1,9 +1,9 @@
 <?php
 /**
- * Shared admin layout renderer for CRO Toolkit pages.
+ * Shared admin layout renderer for Meyvora Convert pages.
  * Provides full-width header, horizontal tab nav, and content container.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 if ( ! defined( 'WPINC' ) ) {
@@ -29,48 +29,48 @@ class CRO_Admin_Layout {
 	 */
 	public static function get_nav_items() {
 		return array(
-			'cro-toolkit'         => array(
-				'label' => __( 'Dashboard', 'cro-toolkit' ),
-				'url'   => admin_url( 'admin.php?page=cro-toolkit' ),
+			'meyvora-convert'         => array(
+				'label' => __( 'Dashboard', 'meyvora-convert' ),
+				'url'   => admin_url( 'admin.php?page=meyvora-convert' ),
 			),
 			'cro-offers'          => array(
-				'label' => __( 'Offers', 'cro-toolkit' ),
+				'label' => __( 'Offers', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-offers' ),
 			),
 			'cro-abandoned-carts' => array(
-				'label' => __( 'Abandoned Carts', 'cro-toolkit' ),
+				'label' => __( 'Abandoned Carts', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-abandoned-carts' ),
 			),
 			'cro-abandoned-cart'  => array(
-				'label' => __( 'Abandoned Cart Emails', 'cro-toolkit' ),
+				'label' => __( 'Abandoned Cart Emails', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-abandoned-cart' ),
 			),
 			'cro-cart'            => array(
-				'label' => __( 'Cart Optimizer', 'cro-toolkit' ),
+				'label' => __( 'Cart Optimizer', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-cart' ),
 			),
 			'cro-checkout'        => array(
-				'label' => __( 'Checkout Optimizer', 'cro-toolkit' ),
+				'label' => __( 'Checkout Optimizer', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-checkout' ),
 			),
 			'cro-boosters'        => array(
-				'label' => __( 'Boosters', 'cro-toolkit' ),
+				'label' => __( 'Boosters', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-boosters' ),
 			),
 			'cro-analytics'       => array(
-				'label' => __( 'Analytics', 'cro-toolkit' ),
+				'label' => __( 'Analytics', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-analytics' ),
 			),
 			'cro-settings'        => array(
-				'label' => __( 'Settings', 'cro-toolkit' ),
+				'label' => __( 'Settings', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-settings' ),
 			),
 			'cro-system-status'   => array(
-				'label' => __( 'System Status', 'cro-toolkit' ),
+				'label' => __( 'System Status', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-system-status' ),
 			),
 			'cro-tools'           => array(
-				'label' => __( 'Tools', 'cro-toolkit' ),
+				'label' => __( 'Tools', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-tools' ),
 			),
 		);
@@ -189,7 +189,7 @@ class CRO_Admin_Layout {
 	 */
 	private static function render_nav( $active_tab ) {
 		$nav_items = self::get_nav_items();
-		echo '<nav class="cro-admin-layout__nav cro-ui-nav" aria-label="' . esc_attr__( 'CRO sections', 'cro-toolkit' ) . '">';
+		echo '<nav class="cro-admin-layout__nav cro-ui-nav" aria-label="' . esc_attr__( 'CRO sections', 'meyvora-convert' ) . '">';
 		echo '<div class="cro-admin-layout__nav-inner">';
 		echo '<ul class="cro-ui-nav__list" role="list">';
 		foreach ( $nav_items as $page_slug => $item ) {

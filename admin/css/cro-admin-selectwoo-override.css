@@ -6,7 +6,7 @@
  * - Ensures dropdown z-index so it is not clipped in drawers/modals.
  * Load after SelectWoo + cro-admin-ui so SelectWoo remains the visual source of truth.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 /* Full width: avoid narrow Select2 when original select has no width or is in a flex/grid cell */

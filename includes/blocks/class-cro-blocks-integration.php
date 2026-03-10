@@ -2,9 +2,9 @@
 /**
  * WooCommerce Blocks Integration (IntegrationInterface).
  * Registers scripts, styles, and script data for Cart and Checkout blocks so CRO
- * extension JS loads reliably and can access settings via getSetting('cro-toolkit_data').
+ * extension JS loads reliably and can access settings via getSetting('meyvora-convert_data').
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -42,12 +42,12 @@ class CRO_Blocks_Integration_WC implements \Automattic\WooCommerce\Blocks\Integr
 	const STYLE_CHECKOUT_HANDLE = 'cro-blocks-checkout';
 
 	/**
-	 * The name of the integration (used for getSetting('cro-toolkit_data') in JS).
+	 * The name of the integration (used for getSetting('meyvora-convert_data') in JS).
 	 *
 	 * @return string
 	 */
 	public function get_name() {
-		return 'cro-toolkit';
+		return 'meyvora-convert';
 	}
 
 	/**
@@ -105,7 +105,7 @@ class CRO_Blocks_Integration_WC implements \Automattic\WooCommerce\Blocks\Integr
 		if ( function_exists( 'wp_set_script_translations' ) ) {
 			wp_set_script_translations(
 				self::SCRIPT_HANDLE,
-				'cro-toolkit',
+				'meyvora-convert',
 				CRO_PLUGIN_DIR . 'languages'
 			);
 		}
@@ -134,7 +134,7 @@ class CRO_Blocks_Integration_WC implements \Automattic\WooCommerce\Blocks\Integr
 	}
 
 	/**
-	 * Data for the block frontend, available in JS via getSetting('cro-toolkit_data').
+	 * Data for the block frontend, available in JS via getSetting('meyvora-convert_data').
 	 * Includes plugin settings and offer/coupon config for cart and checkout.
 	 *
 	 * @return array All values must be serializable.

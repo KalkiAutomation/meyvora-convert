@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# Production release: build blocks, create dist/cro-toolkit.zip (clean, installable), print ZIP contents summary.
+# Production release: build blocks, create dist/meyvora-convert.zip (clean, installable), print ZIP contents summary.
 #
 # ZIP MUST NOT contain: __MACOSX, .DS_Store, ._*, nested .zip, dot-folders (.release etc.), node_modules anywhere.
-# ZIP MUST include: blocks/cart-checkout-extension/build/index.js + index.asset.php, all plugin runtime PHP/CSS/JS.
+# ZIP MUST include: blocks/cart-checkout-extension/build/index.js + index.asset.php, all plugin runtime PHP/CSS/JS, assets/screenshot-*.png.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGIN_NAME="$(basename "$PLUGIN_ROOT")"
-ZIP_NAME="cro-toolkit.zip"
+ZIP_NAME="meyvora-convert.zip"
 DIST_DIR="$PLUGIN_ROOT/dist"
 ZIP_PATH="$DIST_DIR/$ZIP_NAME"
 BLOCKS_DIR="$PLUGIN_ROOT/blocks/cart-checkout-extension"
 
-echo "=== CRO Toolkit Release ==="
+echo "=== Meyvora Convert Release ==="
 echo "Plugin root: $PLUGIN_ROOT"
 echo ""
 
@@ -44,7 +44,7 @@ fi
 echo "Blocks build OK: build/index.js, build/index.asset.php"
 echo ""
 
-# 2) Create dist/cro-toolkit.zip with explicit excludes (no __MACOSX, .DS_Store, ._*, .zip, dot-folders, node_modules)
+# 2) Create dist/meyvora-convert.zip with explicit excludes (no __MACOSX, .DS_Store, ._*, .zip, dot-folders, node_modules)
 echo "--- 2) Creating $ZIP_NAME ---"
 mkdir -p "$DIST_DIR"
 rm -f "$ZIP_PATH"
@@ -78,13 +78,32 @@ COPYFILE_DISABLE=1 zip -r "$ZIP_PATH" "$PLUGIN_NAME" \
   -x "$PLUGIN_NAME/phpunit.xml*" \
   -x "$PLUGIN_NAME/blocks/cart-checkout-extension/package-lock.json" \
   -x "$PLUGIN_NAME/blocks/cart-checkout-extension/webpack.config.js" \
-  -x "$PLUGIN_NAME/blocks/cart-checkout-extension/*.config.js"
+  -x "$PLUGIN_NAME/blocks/cart-checkout-extension/*.config.js" \
+  -x "$PLUGIN_NAME/assets/README.md"
 
 echo "Created: $ZIP_PATH"
 echo ""
 
-# 3) ZIP CONTENTS SUMMARY
-echo "--- 3) ZIP CONTENTS SUMMARY ---"
+# 3) Verify screenshots referenced in readme.txt
+echo "--- 3) Screenshot check ---"
+SCREENSHOTS_MISSING=0
+for i in 1 2 3 4 5 6; do
+  if unzip -l "$ZIP_PATH" | grep -q "assets/screenshot-${i}\.\(png\|jpg\|jpeg\)"; then
+    echo "  [OK] screenshot-${i}"
+  else
+    echo "  [WARN] assets/screenshot-${i}.png missing from zip"
+    SCREENSHOTS_MISSING=$((SCREENSHOTS_MISSING + 1))
+  fi
+done
+if [ "$SCREENSHOTS_MISSING" -gt 0 ]; then
+  echo "  $SCREENSHOTS_MISSING screenshot(s) missing — add them to assets/ before final release."
+else
+  echo "  All 6 screenshots present in zip."
+fi
+echo ""
+
+# 4) ZIP CONTENTS SUMMARY
+echo "--- 4) ZIP CONTENTS SUMMARY ---"
 echo "Path: $ZIP_PATH"
 echo ""
 

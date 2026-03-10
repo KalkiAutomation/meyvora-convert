@@ -4,7 +4,7 @@
  *
  * Handles AJAX requests for product/page search, campaigns list, etc.
  *
- * @package CRO_Toolkit
+ * @package Meyvora_Convert
  */
 
 // If this file is called directly, abort.
@@ -56,8 +56,8 @@ class CRO_Ajax {
 	public function search_products() {
 		check_ajax_referer( 'cro_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ) );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ) );
 		}
 
 		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
@@ -88,8 +88,8 @@ class CRO_Ajax {
 	public function search_pages() {
 		check_ajax_referer( 'cro_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ) );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ) );
 		}
 
 		$search = isset( $_GET['search'] ) ? sanitize_text_field( wp_unslash( $_GET['search'] ) ) : '';
@@ -122,8 +122,8 @@ class CRO_Ajax {
 	public function get_campaigns() {
 		check_ajax_referer( 'cro_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ) );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ) );
 		}
 
 		global $wpdb;
@@ -163,15 +163,15 @@ class CRO_Ajax {
 	public function save_campaign() {
 		check_ajax_referer( 'cro_admin_nonce', 'nonce' );
 
-		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'cro-toolkit' ) ) );
+		if ( ! current_user_can( 'manage_options' ) && ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized', 'meyvora-convert' ) ) );
 		}
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
 		$raw         = isset( $_POST['data'] ) && is_string( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : '';
 		$data        = json_decode( $raw, true );
 		if ( ! is_array( $data ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid campaign data', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Invalid campaign data', 'meyvora-convert' ) ) );
 		}
 
 		$data = $this->sanitize_array_recursive( $data );
@@ -210,20 +210,20 @@ class CRO_Ajax {
 		);
 
 		if ( ! class_exists( 'CRO_Campaign' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Campaign module not available', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Campaign module not available', 'meyvora-convert' ) ) );
 		}
 
 		if ( $campaign_id ) {
 			$ok = CRO_Campaign::update( $campaign_id, $payload );
 			if ( ! $ok ) {
-				wp_send_json_error( array( 'message' => __( 'Update failed', 'cro-toolkit' ) ) );
+				wp_send_json_error( array( 'message' => __( 'Update failed', 'meyvora-convert' ) ) );
 			}
 			wp_send_json_success( array( 'id' => $campaign_id ) );
 		}
 
 		$new_id = CRO_Campaign::create( $payload );
 		if ( $new_id === false ) {
-			wp_send_json_error( array( 'message' => __( 'Create failed', 'cro-toolkit' ) ) );
+			wp_send_json_error( array( 'message' => __( 'Create failed', 'meyvora-convert' ) ) );
 		}
 		wp_send_json_success( array( 'id' => (int) $new_id ) );
 	}
