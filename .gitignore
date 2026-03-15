@@ -1,0 +1,43 @@
+# macOS
+__MACOSX/
+._*
+.DS_Store
+
+# Build output and staging
+dist/
+.release/
+*.zip
+
+# Dependencies (reinstall with npm ci in blocks/cart-checkout-extension)
+node_modules/
+
+# Composer (uncomment if you use Composer)
+# vendor/
+# !vendor/autoload.php
+
+# IDE / editor
+.idea/
+.vscode/
+*.sublime-*
+.cursor/
+
+# Logs and temp
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+
+# PHP / testing
+.phpunit.result.cache
+phpunit.xml
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# OS
+Thumbs.db
+Desktop.ini
