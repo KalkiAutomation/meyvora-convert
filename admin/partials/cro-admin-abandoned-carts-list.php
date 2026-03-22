@@ -16,12 +16,15 @@ if ( ! class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
 }
 
 $status_filter = isset( $_GET['status_filter'] ) ? sanitize_text_field( wp_unslash( $_GET['status_filter'] ) ) : 'all';
+$segment_filter = isset( $_GET['segment'] ) ? sanitize_key( wp_unslash( $_GET['segment'] ) ) : 'all';
+$segment_filter = in_array( $segment_filter, array( 'all', 'high', 'standard' ), true ) ? $segment_filter : 'all';
 $search        = isset( $_GET['search'] ) ? trim( sanitize_text_field( wp_unslash( $_GET['search'] ) ) ) : '';
 $paged         = isset( $_GET['paged'] ) ? max( 1, absint( $_GET['paged'] ) ) : 1;
 $per_page      = 20;
 
 $result = CRO_Abandoned_Cart_Tracker::get_list( array(
 	'status_filter' => $status_filter,
+	'segment'       => $segment_filter,
 	'search'        => $search,
 	'per_page'      => $per_page,
 	'page'          => $paged,
@@ -41,6 +44,9 @@ if ( $search !== '' ) {
 }
 if ( $paged > 1 ) {
 	$action_query['paged'] = $paged;
+}
+if ( $segment_filter !== 'all' ) {
+	$action_query['segment'] = $segment_filter;
 }
 $cancel_url = add_query_arg( $action_query, admin_url( 'admin-post.php?action=cro_abandoned_cart_cancel_reminders' ) );
 $recovered_url = add_query_arg( $action_query, admin_url( 'admin-post.php?action=cro_abandoned_cart_mark_recovered' ) );
@@ -120,15 +126,33 @@ $can_resend = function( $row ) {
 				<div class="cro-card__body">
 			<div class="cro-ac-list-toolbar">
 				<ul class="cro-ac-list-filters" role="tablist">
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'all', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'all' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'All', 'meyvora-convert' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'active', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'active' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Active', 'meyvora-convert' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'emailed', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'emailed' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Emailed', 'meyvora-convert' ); ?></a></li>
-					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'recovered', 'paged' => 1 ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'recovered' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Recovered', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'all', 'paged' => 1, 'segment' => $segment_filter ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'all' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'All', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'active', 'paged' => 1, 'segment' => $segment_filter ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'active' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Active', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'emailed', 'paged' => 1, 'segment' => $segment_filter ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'emailed' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Emailed', 'meyvora-convert' ); ?></a></li>
+					<li><a href="<?php echo esc_url( add_query_arg( array( 'status_filter' => 'recovered', 'paged' => 1, 'segment' => $segment_filter ), $list_url ) ); ?>" class="button <?php echo $status_filter === 'recovered' ? 'button-primary' : ''; ?>"><?php esc_html_e( 'Recovered', 'meyvora-convert' ); ?></a></li>
 				</ul>
+				<form method="get" class="cro-ac-segment-filter" action="<?php echo esc_url( $list_url ); ?>">
+					<input type="hidden" name="page" value="cro-abandoned-carts" />
+					<?php if ( $status_filter !== 'all' ) : ?>
+						<input type="hidden" name="status_filter" value="<?php echo esc_attr( $status_filter ); ?>" />
+					<?php endif; ?>
+					<?php if ( $search !== '' ) : ?>
+						<input type="hidden" name="search" value="<?php echo esc_attr( $search ); ?>" />
+					<?php endif; ?>
+					<label for="cro-ac-segment" class="screen-reader-text"><?php esc_html_e( 'Segment', 'meyvora-convert' ); ?></label>
+					<select name="segment" id="cro-ac-segment" onchange="this.form.submit()">
+						<option value="all" <?php selected( $segment_filter, 'all' ); ?>><?php esc_html_e( 'All segments', 'meyvora-convert' ); ?></option>
+						<option value="high" <?php selected( $segment_filter, 'high' ); ?>><?php esc_html_e( 'High Value', 'meyvora-convert' ); ?></option>
+						<option value="standard" <?php selected( $segment_filter, 'standard' ); ?>><?php esc_html_e( 'Standard', 'meyvora-convert' ); ?></option>
+					</select>
+				</form>
 				<form method="get" class="cro-ac-list-search" action="<?php echo esc_url( $list_url ); ?>">
 					<input type="hidden" name="page" value="cro-abandoned-carts" />
 					<?php if ( $status_filter !== 'all' ) : ?>
 						<input type="hidden" name="status_filter" value="<?php echo esc_attr( $status_filter ); ?>" />
+					<?php endif; ?>
+					<?php if ( $segment_filter !== 'all' ) : ?>
+						<input type="hidden" name="segment" value="<?php echo esc_attr( $segment_filter ); ?>" />
 					<?php endif; ?>
 					<label for="cro-ac-search" class="screen-reader-text"><?php esc_html_e( 'Search by email', 'meyvora-convert' ); ?></label>
 					<input type="search" id="cro-ac-search" name="search" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Search by email…', 'meyvora-convert' ); ?>" />
@@ -138,7 +162,7 @@ $can_resend = function( $row ) {
 
 			<?php if ( empty( $items ) ) : ?>
 					<div class="cro-ui-empty-state">
-						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo wp_kses_post( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ) ); ?></span>
+						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></span>
 
 						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No abandoned carts', 'meyvora-convert' ); ?></h2>
 						<p class="cro-ui-empty-state__desc"><?php esc_html_e( 'No carts match your filters. Carts will appear here when customers leave items without checking out.', 'meyvora-convert' ); ?></p>
@@ -153,6 +177,7 @@ $can_resend = function( $row ) {
 							<tr>
 								<th scope="col"><?php esc_html_e( 'Email / User', 'meyvora-convert' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Cart Total', 'meyvora-convert' ); ?></th>
+								<th scope="col"><?php esc_html_e( 'Segment', 'meyvora-convert' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Items', 'meyvora-convert' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Last Activity', 'meyvora-convert' ); ?></th>
 								<th scope="col"><?php esc_html_e( 'Status', 'meyvora-convert' ); ?></th>
@@ -166,6 +191,7 @@ $can_resend = function( $row ) {
 								$info = $cart_info( $row );
 								$emails_sent = $count_emails_sent( $row );
 								$allow_resend = $can_resend( $row );
+								$seg = class_exists( 'CRO_Abandoned_Cart_Reminder' ) ? CRO_Abandoned_Cart_Reminder::get_segment_for_row( $row ) : 'standard';
 							?>
 								<tr data-id="<?php echo esc_attr( $row->id ); ?>">
 									<td>
@@ -182,6 +208,13 @@ $can_resend = function( $row ) {
 											echo '—';
 										}
 										?>
+									</td>
+									<td>
+										<?php if ( $seg === 'high' ) : ?>
+											<span class="cro-ac-segment cro-ac-segment--high"><?php esc_html_e( 'High Value', 'meyvora-convert' ); ?></span>
+										<?php else : ?>
+											<span class="cro-ac-segment cro-ac-segment--standard"><?php esc_html_e( 'Standard', 'meyvora-convert' ); ?></span>
+										<?php endif; ?>
 									</td>
 									<td><?php echo absint( $info['count'] ); ?></td>
 									<td><?php echo $row->last_activity_at ? esc_html( $row->last_activity_at ) : '—'; ?></td>
@@ -211,6 +244,9 @@ $can_resend = function( $row ) {
 					$paginate_args = array( 'page' => 'cro-abandoned-carts' );
 					if ( $status_filter !== 'all' ) {
 						$paginate_args['status_filter'] = $status_filter;
+					}
+					if ( $segment_filter !== 'all' ) {
+						$paginate_args['segment'] = $segment_filter;
 					}
 					if ( $search !== '' ) {
 						$paginate_args['search'] = $search;
@@ -250,7 +286,7 @@ $can_resend = function( $row ) {
 		<div class="cro-ac-drawer__panel">
 			<header class="cro-ac-drawer__header">
 				<h2 id="cro-ac-drawer-title"><?php esc_html_e( 'Cart details', 'meyvora-convert' ); ?></h2>
-				<button type="button" class="cro-ac-drawer__close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ) ); ?>"><?php echo wp_kses_post( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<button type="button" class="cro-ac-drawer__close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
 
 			</header>
 			<div class="cro-ac-drawer__body">
@@ -264,6 +300,10 @@ $can_resend = function( $row ) {
 .cro-ac-list-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-bottom: 24px; }
 .cro-ac-list-filters { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
 .cro-ac-list-filters li { margin: 0; }
+.cro-ac-segment-filter select { min-width: 140px; }
+.cro-ac-segment { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.02em; }
+.cro-ac-segment--high { background: #fff8e5; color: #996800; border: 1px solid #f0c14b; }
+.cro-ac-segment--standard { background: #f0f0f1; color: #50575e; border: 1px solid #c3c4c7; }
 .cro-ac-list-search { display: flex; gap: 8px; margin-left: auto; }
 .cro-ac-list-search input[type="search"] { min-width: 200px; }
 .cro-ac-list-toolbar + .cro-ui-empty-state { margin-top: 0; }
@@ -285,6 +325,7 @@ $can_resend = function( $row ) {
 .cro-ac-drawer__loading { color: #646970; }
 .cro-ac-drawer__content h3 { margin: 16px 0 8px; font-size: 13px; }
 .cro-ac-drawer__content h3:first-child { margin-top: 0; }
+.cro-ac-drawer-segment { margin: 4px 0 12px; }
 .cro-ac-drawer__content ul { margin: 0 0 12px; padding-left: 20px; }
 .cro-ac-drawer__content .cro-ac-drawer-checkout { display: inline-block; margin-top: 8px; }
 </style>
@@ -316,6 +357,17 @@ $can_resend = function( $row ) {
 		var currency = data.currency || '';
 		var total = data.cart_total != null ? currency + ' ' + Number(data.cart_total).toFixed(2) : '—';
 		var html = '<p><strong>' + (data.email || '—') + '</strong></p>';
+		if (data.segment_label) {
+			var segClass = data.segment === 'high' ? 'cro-ac-segment cro-ac-segment--high' : 'cro-ac-segment cro-ac-segment--standard';
+			html += '<p class="cro-ac-drawer-segment"><strong><?php echo esc_js( __( 'Segment', 'meyvora-convert' ) ); ?>:</strong> <span class="' + segClass + '">' + String(data.segment_label) + '</span></p>';
+		}
+		if (data.schedule && data.schedule.planned_local) {
+			var pl = data.schedule.planned_local;
+			html += '<h3><?php echo esc_js( __( 'Planned send times (from last activity)', 'meyvora-convert' ) ); ?></h3><ul>';
+			html += '<li><?php echo esc_js( __( 'Email 1', 'meyvora-convert' ) ); ?>: ' + (pl[1] || '—') + '</li>';
+			html += '<li><?php echo esc_js( __( 'Email 2', 'meyvora-convert' ) ); ?>: ' + (pl[2] || '—') + '</li>';
+			html += '<li><?php echo esc_js( __( 'Email 3', 'meyvora-convert' ) ); ?>: ' + (pl[3] || '—') + '</li></ul>';
+		}
 		html += '<h3><?php echo esc_js( __( 'Cart items', 'meyvora-convert' ) ); ?></h3>';
 		if (data.cart_items && data.cart_items.length) {
 			html += '<ul>';
@@ -334,6 +386,16 @@ $can_resend = function( $row ) {
 		html += '<li>Email 2: ' + (log.email_2 || '<?php echo esc_js( __( 'Not sent', 'meyvora-convert' ) ); ?>') + '</li>';
 		html += '<li>Email 3: ' + (log.email_3 || '<?php echo esc_js( __( 'Not sent', 'meyvora-convert' ) ); ?>') + '</li></ul>';
 		html += '<h3><?php echo esc_js( __( 'Coupon', 'meyvora-convert' ) ); ?></h3><p>' + (data.discount_coupon || '—') + '</p>';
+		var cid = parseInt(data.id, 10) || 0;
+		if (cid) {
+			html += '<h3><?php echo esc_js( __( 'AI email preview', 'meyvora-convert' ) ); ?></h3>';
+			html += '<p class="description" style="margin-bottom:8px;"><?php echo esc_js( __( 'Uses the same AI content as live sends (cached 24 hours). Regenerate clears cache for that slot.', 'meyvora-convert' ) ); ?></p>';
+			html += '<p style="margin:0 0 8px;">';
+			html += '<button type="button" class="button button-small cro-ai-preview-email" data-cart-id="' + cid + '" data-email="1"><?php echo esc_js( __( '✦ Preview AI Email 1', 'meyvora-convert' ) ); ?></button> ';
+			html += '<button type="button" class="button button-small cro-ai-preview-email" data-cart-id="' + cid + '" data-email="2"><?php echo esc_js( __( '✦ Preview AI Email 2', 'meyvora-convert' ) ); ?></button> ';
+			html += '<button type="button" class="button button-small cro-ai-preview-email" data-cart-id="' + cid + '" data-email="3"><?php echo esc_js( __( '✦ Preview AI Email 3', 'meyvora-convert' ) ); ?></button>';
+			html += '</p>';
+		}
 		drawerContent.innerHTML = html;
 		drawerContent.style.display = 'block';
 		drawerLoading.style.display = 'none';

@@ -32,6 +32,7 @@ class CRO_Offers_Admin_Ajax {
 		add_action( 'wp_ajax_cro_offer_toggle_active', array( $this, 'handle_toggle_active' ) );
 		add_action( 'wp_ajax_cro_offer_reorder', array( $this, 'handle_reorder' ) );
 		add_action( 'wp_ajax_cro_offer_test', array( $this, 'handle_test' ) );
+		add_action( 'wp_ajax_cro_detect_offer_conflicts', array( $this, 'handle_detect_offer_conflicts' ) );
 	}
 
 	/**
@@ -162,6 +163,8 @@ class CRO_Offers_Admin_Ajax {
 				'max_coupons_per_visitor'  => isset( $raw['max_coupons_per_visitor'] ) ? absint( $raw['max_coupons_per_visitor'] ) : 1,
 				'exclude_sale_items'       => ! empty( $raw['exclude_sale_items'] ),
 			),
+			'conflict_offer_ids' => isset( $raw['conflict_offer_ids'] ) && is_array( $raw['conflict_offer_ids'] )
+				? array_values( array_filter( array_map( 'sanitize_text_field', $raw['conflict_offer_ids'] ) ) ) : array(),
 			'updated_at' => isset( $raw['updated_at'] ) ? sanitize_text_field( $raw['updated_at'] ) : '',
 		);
 	}
@@ -219,6 +222,8 @@ class CRO_Offers_Admin_Ajax {
 			'rate_limit_hours'                   => isset( $limits['rate_limit_hours'] ) ? absint( $limits['rate_limit_hours'] ) : 6,
 			'max_coupons_per_visitor'             => isset( $limits['max_coupons_per_visitor'] ) ? absint( $limits['max_coupons_per_visitor'] ) : 1,
 			'exclude_sale_items'                 => ! empty( $limits['exclude_sale_items'] ),
+			'conflict_offer_ids'                 => isset( $n['conflict_offer_ids'] ) && is_array( $n['conflict_offer_ids'] )
+				? array_values( array_filter( array_map( 'sanitize_text_field', $n['conflict_offer_ids'] ) ) ) : array(),
 		);
 	}
 
@@ -369,6 +374,15 @@ class CRO_Offers_Admin_Ajax {
 			$this->send_error( __( 'Invalid offer data.', 'meyvora-convert' ), 400 );
 			return;
 		}
+		$raw_conflict = array();
+		if ( ! empty( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) );
+		} elseif ( ! empty( $_POST['conflict_offer_ids'] ) && is_array( $_POST['conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['conflict_offer_ids'] ) );
+		}
+		if ( ! empty( $raw_conflict ) ) {
+			$input['conflict_offer_ids'] = $raw_conflict;
+		}
 		$flat = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::sanitize_offer( $input ) : $this->flatten_offer( $input );
 		$valid = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::validate_offer( $flat ) : true;
 		if ( is_wp_error( $valid ) ) {
@@ -407,6 +421,15 @@ class CRO_Offers_Admin_Ajax {
 		if ( ! is_array( $input ) ) {
 			$this->send_error( __( 'Invalid offer data.', 'meyvora-convert' ), 400 );
 			return;
+		}
+		$raw_conflict = array();
+		if ( ! empty( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) );
+		} elseif ( ! empty( $_POST['conflict_offer_ids'] ) && is_array( $_POST['conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['conflict_offer_ids'] ) );
+		}
+		if ( ! empty( $raw_conflict ) ) {
+			$input['conflict_offer_ids'] = $raw_conflict;
 		}
 		$flat = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::sanitize_offer( $input ) : $this->flatten_offer( $input, $id, gmdate( 'c' ) );
 		$valid = class_exists( 'CRO_Offer_Schema' ) ? CRO_Offer_Schema::validate_offer( $flat ) : true;
@@ -588,14 +611,11 @@ class CRO_Offers_Admin_Ajax {
 		$matched_payload = null;
 		$matched_preview = null;
 
-		foreach ( $offers as $offer ) {
-			$preview = CRO_Offer_Engine::preview_offer( $offer, $context );
-			if ( ! empty( $preview['passed'] ) ) {
-				$matched_offer   = $offer;
-				$matched_payload = CRO_Offer_Engine::offer_to_payload( $offer );
-				$matched_preview = $preview;
-				break;
-			}
+		$resolved = CRO_Offer_Engine::get_matched_offers_resolved( $context );
+		if ( ! empty( $resolved[0] ) ) {
+			$matched_offer   = $resolved[0];
+			$matched_payload = CRO_Offer_Engine::offer_to_payload( $matched_offer );
+			$matched_preview = CRO_Offer_Engine::preview_offer( $matched_offer, $context );
 		}
 
 		if ( ! $matched_offer ) {
@@ -682,5 +702,99 @@ class CRO_Offers_Admin_Ajax {
 			'lifetime_spend'   => $lifetime,
 			'visitor_id'       => 'test',
 		);
+	}
+
+	/**
+	 * AJAX: Detect circular conflict chains among enabled dynamic offers (option-based).
+	 */
+	public function handle_detect_offer_conflicts() {
+		if ( ! $this->auth() ) {
+			return;
+		}
+		$raw   = $this->get_offers_raw();
+		$edges = array();
+		$names = array();
+		foreach ( $raw as $o ) {
+			if ( ! is_array( $o ) ) {
+				continue;
+			}
+			$headline = isset( $o['headline'] ) ? trim( (string) $o['headline'] ) : '';
+			if ( $headline === '' || empty( $o['enabled'] ) ) {
+				continue;
+			}
+			$id = isset( $o['id'] ) ? sanitize_text_field( (string) $o['id'] ) : '';
+			if ( $id === '' ) {
+				continue;
+			}
+			$names[ $id ] = $headline;
+			if ( ! isset( $edges[ $id ] ) ) {
+				$edges[ $id ] = array();
+			}
+			$conf = isset( $o['conflict_offer_ids'] ) && is_array( $o['conflict_offer_ids'] ) ? $o['conflict_offer_ids'] : array();
+			foreach ( $conf as $t ) {
+				$t = sanitize_text_field( (string) $t );
+				if ( $t !== '' && $t !== $id ) {
+					$edges[ $id ][] = $t;
+				}
+			}
+		}
+		$cycles = array();
+		$sigs   = array();
+		foreach ( array_keys( $edges ) as $start ) {
+			$stack     = array();
+			$stack_set = array();
+			self::walk_offer_conflict_graph( $start, $edges, $stack, $stack_set, $cycles, $sigs );
+		}
+		$messages = array();
+		foreach ( $cycles as $cyc ) {
+			$labels = array();
+			foreach ( $cyc as $nid ) {
+				$labels[] = isset( $names[ $nid ] ) ? $names[ $nid ] : $nid;
+			}
+			if ( empty( $labels ) ) {
+				continue;
+			}
+			$first = $labels[0];
+			$messages[] = sprintf(
+				/* translators: %s is a chain of offer names separated by arrows, closing with the first name to show a cycle. */
+				__( 'Circular conflict chain: %s', 'meyvora-convert' ),
+				implode( ' → ', $labels ) . ' → ' . $first
+			);
+		}
+		wp_send_json_success( array( 'warnings' => $messages ) );
+	}
+
+	/**
+	 * DFS over conflict edges; collect simple cycle node lists (deduped by sorted signature).
+	 *
+	 * @param string               $u          Current node id.
+	 * @param array<string,string[]> $edges    Adjacency (source => targets).
+	 * @param string[]             $stack      Path stack.
+	 * @param array<string,bool>   $stack_set  Set of nodes on stack.
+	 * @param array<int,string[]>  $cycles_out Collected cycles.
+	 * @param array<string,bool>   $sigs       Seen cycle signatures.
+	 */
+	private static function walk_offer_conflict_graph( $u, array $edges, array &$stack, array &$stack_set, array &$cycles_out, array &$sigs ) {
+		if ( isset( $stack_set[ $u ] ) ) {
+			$i = array_search( $u, $stack, true );
+			if ( $i !== false ) {
+				$cyc  = array_slice( $stack, $i );
+				$norm = $cyc;
+				sort( $norm );
+				$sig = implode( "\x1e", $norm );
+				if ( ! isset( $sigs[ $sig ] ) ) {
+					$sigs[ $sig ]     = true;
+					$cycles_out[]     = $cyc;
+				}
+			}
+			return;
+		}
+		$stack[]       = $u;
+		$stack_set[ $u ] = true;
+		foreach ( isset( $edges[ $u ] ) ? $edges[ $u ] : array() as $v ) {
+			self::walk_offer_conflict_graph( $v, $edges, $stack, $stack_set, $cycles_out, $sigs );
+		}
+		array_pop( $stack );
+		unset( $stack_set[ $u ] );
 	}
 }

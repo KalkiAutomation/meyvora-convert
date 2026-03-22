@@ -13,7 +13,9 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * CRO_Targeting class.
  *
- * Evaluates if a campaign should show for the current context.
+ * @deprecated Legacy targeting class — the decision engine uses CRO_Rule_Engine directly.
+ *             This class is kept for backward compatibility with third-party code only.
+ *             Do not add new targeting logic here.
  */
 class CRO_Targeting {
 
@@ -42,6 +44,9 @@ class CRO_Targeting {
 	 * @return bool
 	 */
 	public function evaluate( $campaign, $context ) {
+		if ( function_exists( '_deprecated_function' ) ) {
+			_deprecated_function( __METHOD__, '1.0.0', 'CRO_Rule_Engine' );
+		}
 
 		// Schedule check: respect start/end dates and day/hour restrictions.
 		if ( class_exists( 'CRO_Campaign_Model' ) ) {

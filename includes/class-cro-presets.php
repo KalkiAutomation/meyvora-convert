@@ -243,7 +243,7 @@ class CRO_Presets {
 					'status'           => 'draft',
 					'trigger_settings' => array(
 						'type'              => 'time_trigger',
-						'time_on_page_seconds' => 15,
+						'time_delay_seconds' => 15,
 						'require_interaction' => false,
 					),
 					'content' => array(

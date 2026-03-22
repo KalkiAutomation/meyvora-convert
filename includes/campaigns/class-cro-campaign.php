@@ -16,6 +16,18 @@ if ( ! defined( 'WPINC' ) ) {
 class CRO_Campaign {
 
 	/**
+	 * Clear `cro_has_active_campaigns` and CRO_Cache campaign lists after CRUD changes.
+	 *
+	 * @return void
+	 */
+	private static function bust_campaign_caches() {
+		delete_transient( 'cro_has_active_campaigns' );
+		if ( class_exists( 'CRO_Cache' ) ) {
+			CRO_Cache::invalidate_campaigns();
+		}
+	}
+
+	/**
 	 * Get all campaigns.
 	 *
 	 * @param array $args Query arguments.
@@ -155,12 +167,15 @@ class CRO_Campaign {
 			'styling'         => maybe_serialize( $data['styling'] ?? array() ),
 			'targeting_rules' => maybe_serialize( $data['targeting_rules'] ?? array() ),
 			'display_rules'   => maybe_serialize( $data['display_rules'] ?? array() ),
+			'fallback_id'     => isset( $data['fallback_id'] ) ? absint( $data['fallback_id'] ) : 0,
+			'fallback_delay_seconds' => isset( $data['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) $data['fallback_delay_seconds'] ) ) : 5,
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table insert.
 		$result = $wpdb->insert( $table_name, $insert_data );
 
 		if ( $result ) {
+			self::bust_campaign_caches();
 			return $wpdb->insert_id;
 		}
 
@@ -226,6 +241,14 @@ class CRO_Campaign {
 			$update_data['display_rules'] = maybe_serialize( $data['display_rules'] );
 		}
 
+		if ( array_key_exists( 'fallback_id', $data ) ) {
+			$update_data['fallback_id'] = absint( $data['fallback_id'] );
+		}
+
+		if ( array_key_exists( 'fallback_delay_seconds', $data ) ) {
+			$update_data['fallback_delay_seconds'] = min( 300, max( 0, (int) $data['fallback_delay_seconds'] ) );
+		}
+
 		if ( empty( $update_data ) ) {
 			return false;
 		}
@@ -240,6 +263,10 @@ class CRO_Campaign {
 			$format,
 			array( '%d' )
 		);
+
+		if ( false !== $result ) {
+			self::bust_campaign_caches();
+		}
 
 		return false !== $result;
 	}
@@ -261,6 +288,10 @@ class CRO_Campaign {
 			array( 'id' => $id ),
 			array( '%d' )
 		);
+
+		if ( false !== $result ) {
+			self::bust_campaign_caches();
+		}
 
 		return false !== $result;
 	}
@@ -293,6 +324,9 @@ class CRO_Campaign {
 			'styling'           => maybe_serialize( $campaign['styling'] ?? array() ),
 			'targeting_rules'   => maybe_serialize( $campaign['targeting_rules'] ?? $campaign['targeting'] ?? array() ),
 			'display_rules'     => maybe_serialize( $campaign['display_rules'] ?? array() ),
+			'priority'          => isset( $campaign['priority'] ) ? (int) $campaign['priority'] : 10,
+			'fallback_id'       => isset( $campaign['fallback_id'] ) ? absint( $campaign['fallback_id'] ) : 0,
+			'fallback_delay_seconds' => isset( $campaign['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) $campaign['fallback_delay_seconds'] ) ) : 5,
 			'impressions'       => 0,
 			'conversions'      => 0,
 			'revenue_attributed' => 0,
@@ -304,6 +338,8 @@ class CRO_Campaign {
 		if ( false === $result ) {
 			return new WP_Error( 'db_error', __( 'Failed to duplicate campaign', 'meyvora-convert' ) );
 		}
+
+		self::bust_campaign_caches();
 
 		return $wpdb->insert_id;
 	}

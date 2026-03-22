@@ -3,7 +3,7 @@
  * Abandoned cart reminder emails: scheduling and sending.
  *
  * Uses Action Scheduler if available (WooCommerce), else wp-cron.
- * Schedule: email 1 (default 1h), 2 (24h), 3 (72h) from last_activity_at.
+ * Schedule: from last_activity_at — standard uses settings (default 1h / 24h / 72h); high-value carts use 0.5h / 4h / 24h.
  * Only sends if status=active, email_consent=1, email exists, cart not recovered, and email_N not already sent.
  * Logs sent timestamps (email_1/2/3_sent_at) and last_error in DB.
  *
@@ -110,8 +110,9 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( ! empty( $row->email_1_sent_at ) ) {
 			return;
 		}
-		$delay_hours = isset( $opts['email_1_delay_hours'] ) ? max( 0, (int) $opts['email_1_delay_hours'] ) : 1;
-		$run_at = strtotime( $row->last_activity_at ) + ( $delay_hours * HOUR_IN_SECONDS );
+		$segment     = self::get_segment( self::cart_row_to_array( $row ) );
+		$delay_hours = self::get_delay_hours( 1, $segment );
+		$run_at      = strtotime( $row->last_activity_at ) + (int) round( $delay_hours * HOUR_IN_SECONDS );
 		if ( $run_at <= time() ) {
 			$run_at = time() + 60;
 		}
@@ -172,15 +173,17 @@ class CRO_Abandoned_Cart_Reminder {
 			) );
 			// Schedule next email if N < 3.
 			if ( $email_number < self::MAX_EMAILS ) {
-				$opts = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
-				$next = $email_number + 1;
-				$key  = 'email_' . $next . '_delay_hours';
-				$delay_hours = isset( $opts[ $key ] ) ? max( 0, (int) $opts[ $key ] ) : ( $next === 2 ? 24 : 72 );
-				$run_at = strtotime( $row->last_activity_at ) + ( $delay_hours * HOUR_IN_SECONDS );
+				$next        = $email_number + 1;
+				$segment     = self::get_segment( self::cart_row_to_array( $row ) );
+				$delay_hours = self::get_delay_hours( $next, $segment );
+				$run_at      = strtotime( $row->last_activity_at ) + (int) round( $delay_hours * HOUR_IN_SECONDS );
 				if ( $run_at <= time() ) {
 					$run_at = time() + 60;
 				}
 				self::schedule_reminder( $abandoned_cart_id, $next, $run_at );
+			}
+			if ( function_exists( 'do_action' ) ) {
+				do_action( 'cro_abandoned_cart_email_sent', $abandoned_cart_id, $email_number );
 			}
 		} else {
 			$err = self::get_last_send_error();
@@ -244,6 +247,9 @@ class CRO_Abandoned_Cart_Reminder {
 				"UPDATE {$table} SET reminder_count = reminder_count + 1 WHERE id = %d",
 				$cart_id
 			) );
+			if ( function_exists( 'do_action' ) ) {
+				do_action( 'cro_abandoned_cart_email_sent', $cart_id, $email_number );
+			}
 		}
 		return $sent;
 	}
@@ -259,54 +265,214 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( empty( $opts['enable_abandoned_cart_emails'] ) ) {
 			return;
 		}
-		$d1 = isset( $opts['email_1_delay_hours'] ) ? max( 0, (int) $opts['email_1_delay_hours'] ) : 1;
-		$d2 = isset( $opts['email_2_delay_hours'] ) ? max( 0, (int) $opts['email_2_delay_hours'] ) : 24;
-		$d3 = isset( $opts['email_3_delay_hours'] ) ? max( 0, (int) $opts['email_3_delay_hours'] ) : 72;
 		global $wpdb;
 		$table = CRO_Abandoned_Cart_Tracker::get_table_name();
 		if ( ! CRO_Database::table_exists( $table ) ) {
 			return;
 		}
-		$now = current_time( 'mysql' );
+		$now    = current_time( 'mysql' );
 		$active = CRO_Abandoned_Cart_Tracker::STATUS_ACTIVE;
-		// Carts due for email 1: email_1_sent_at IS NULL, last_activity_at + d1 <= now, active, consent, email not null.
+		$ts_now = time();
+
+		// Broad fetch then per-row segment delays (min high-value delay: 0.5h → 30 min; email 2 min 4h; email 3 min 24h).
 		$due1 = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, last_activity_at FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL %d HOUR) LIMIT 20",
+				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 30 MINUTE) LIMIT 40",
 				$active,
-				$now,
-				$d1
+				$now
 			),
 			OBJECT
 		);
-		foreach ( $due1 as $r ) {
-			do_action( self::HOOK, (int) $r->id, 1 );
+		foreach ( $due1 ? $due1 : array() as $r ) {
+			$seg   = self::get_segment( self::cart_row_to_array( $r ) );
+			$need  = self::get_delay_hours( 1, $seg );
+			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
+			if ( $due_ts <= $ts_now ) {
+				do_action( self::HOOK, (int) $r->id, 1 );
+			}
 		}
-		// Carts due for email 2: email_1_sent_at set, email_2_sent_at NULL, last_activity_at + d2 <= now.
+
 		$due2 = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NOT NULL AND email_2_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL %d HOUR) LIMIT 20",
+				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NOT NULL AND email_2_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 4 HOUR) LIMIT 40",
 				$active,
-				$now,
-				$d2
+				$now
 			),
 			OBJECT
 		);
-		foreach ( $due2 as $r ) {
-			do_action( self::HOOK, (int) $r->id, 2 );
+		foreach ( $due2 ? $due2 : array() as $r ) {
+			$seg    = self::get_segment( self::cart_row_to_array( $r ) );
+			$need   = self::get_delay_hours( 2, $seg );
+			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
+			if ( $due_ts <= $ts_now ) {
+				do_action( self::HOOK, (int) $r->id, 2 );
+			}
 		}
-		// Carts due for email 3.
+
 		$due3 = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_2_sent_at IS NOT NULL AND email_3_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL %d HOUR) LIMIT 20",
+				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_2_sent_at IS NOT NULL AND email_3_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 24 HOUR) LIMIT 40",
 				$active,
-				$now,
-				$d3
+				$now
 			),
 			OBJECT
 		);
-		foreach ( $due3 as $r ) {
-			do_action( self::HOOK, (int) $r->id, 3 );
+		foreach ( $due3 ? $due3 : array() as $r ) {
+			$seg    = self::get_segment( self::cart_row_to_array( $r ) );
+			$need   = self::get_delay_hours( 3, $seg );
+			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
+			if ( $due_ts <= $ts_now ) {
+				do_action( self::HOOK, (int) $r->id, 3 );
+			}
+		}
+	}
+
+	/**
+	 * Normalize a DB row to an array for segment detection.
+	 *
+	 * @param object|array $row Cart row.
+	 * @return array{cart_json: string}
+	 */
+	private static function cart_row_to_array( $row ) {
+		if ( is_object( $row ) ) {
+			return array( 'cart_json' => isset( $row->cart_json ) ? (string) $row->cart_json : '' );
+		}
+		if ( is_array( $row ) ) {
+			return array( 'cart_json' => isset( $row['cart_json'] ) ? (string) $row['cart_json'] : '' );
+		}
+		return array( 'cart_json' => '' );
+	}
+
+	/**
+	 * Segment from cart total vs high-value threshold setting.
+	 *
+	 * @param array $cart_row Must include cart_json.
+	 * @return string 'high'|'standard'
+	 */
+	private static function get_segment( array $cart_row ) {
+		$data = isset( $cart_row['cart_json'] ) ? json_decode( (string) $cart_row['cart_json'], true ) : null;
+		$total = ( is_array( $data ) && isset( $data['totals']['total'] ) ) ? (float) $data['totals']['total'] : 0.0;
+		$threshold = 100.0;
+		if ( function_exists( 'cro_settings' ) ) {
+			$threshold = (float) cro_settings()->get( 'abandoned_cart', 'high_value_threshold', 100 );
+		}
+		$threshold = max( 0.0, $threshold );
+		return $total >= $threshold ? 'high' : 'standard';
+	}
+
+	/**
+	 * Public segment helper for admin, CLI, and reports.
+	 *
+	 * @param object|array $row Abandoned cart row.
+	 * @return string 'high'|'standard'
+	 */
+	public static function get_cart_segment( $row ) {
+		return self::get_segment( self::cart_row_to_array( $row ) );
+	}
+
+	/**
+	 * Segment label for an abandoned cart row (admin lists, exports).
+	 *
+	 * @param object|array $row DB row or array with cart_json.
+	 * @return string 'high'|'standard'
+	 */
+	public static function get_segment_for_row( $row ): string {
+		return self::get_cart_segment( $row );
+	}
+
+	/**
+	 * Delay in hours from last_activity_at until email N should send.
+	 *
+	 * @param int    $email_number 1–3.
+	 * @param string $segment      'high'|'standard'.
+	 * @return float
+	 */
+	private static function get_delay_hours( $email_number, $segment ) {
+		$email_number = (int) $email_number;
+		$segment      = ( $segment === 'high' ) ? 'high' : 'standard';
+		if ( $segment === 'high' ) {
+			$map = array(
+				1 => 0.5,
+				2 => 4.0,
+				3 => 24.0,
+			);
+			return isset( $map[ $email_number ] ) ? (float) $map[ $email_number ] : 1.0;
+		}
+		$opts      = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
+		$key       = 'email_' . $email_number . '_delay_hours';
+		$fallbacks = array( 1 => 1, 2 => 24, 3 => 72 );
+		$def       = isset( $fallbacks[ $email_number ] ) ? (int) $fallbacks[ $email_number ] : 1;
+		$h         = isset( $opts[ $key ] ) ? (int) $opts[ $key ] : $def;
+		return (float) max( 0, $h );
+	}
+
+	/**
+	 * Planned Unix send times (from last_activity_at) for each email slot.
+	 *
+	 * @param object $row DB row with last_activity_at and cart_json.
+	 * @return array{ segment: string, times: array<int,int> }
+	 */
+	public static function get_planned_send_times_unix( $row ) {
+		$seg = self::get_segment( self::cart_row_to_array( $row ) );
+		$base = ( is_object( $row ) && ! empty( $row->last_activity_at ) ) ? strtotime( $row->last_activity_at ) : time();
+		$times = array();
+		for ( $n = 1; $n <= self::MAX_EMAILS; $n++ ) {
+			$h            = self::get_delay_hours( $n, $seg );
+			$times[ $n ] = $base + (int) round( $h * HOUR_IN_SECONDS );
+		}
+		return array(
+			'segment' => $seg,
+			'times'   => $times,
+		);
+	}
+
+	/**
+	 * Human-readable schedule for admin / CLI (delays + planned local times from last_activity_at).
+	 *
+	 * @param object $row DB row.
+	 * @return array{ segment: string, delays_hours: array<int,float>, planned_local: array<int,string>, threshold: float }
+	 */
+	public static function get_schedule_debug( $row ) {
+		$seg = self::get_segment( self::cart_row_to_array( $row ) );
+		$delays = array();
+		for ( $n = 1; $n <= self::MAX_EMAILS; $n++ ) {
+			$delays[ $n ] = self::get_delay_hours( $n, $seg );
+		}
+		$unix_wrap = self::get_planned_send_times_unix( $row );
+		$planned   = array();
+		foreach ( $unix_wrap['times'] as $n => $ts ) {
+			$planned[ $n ] = function_exists( 'wp_date' )
+				? wp_date( 'Y-m-d H:i', $ts )
+				: gmdate( 'Y-m-d H:i', $ts );
+		}
+		$threshold = 100.0;
+		if ( function_exists( 'cro_settings' ) ) {
+			$threshold = max( 0.0, (float) cro_settings()->get( 'abandoned_cart', 'high_value_threshold', 100 ) );
+		}
+		return array(
+			'segment'       => $seg,
+			'delays_hours'  => $delays,
+			'planned_local' => $planned,
+			'threshold'     => $threshold,
+		);
+	}
+
+	/**
+	 * Default subject for high-value segment (before placeholder replacement).
+	 *
+	 * @param int $email_number 1–3.
+	 * @return string
+	 */
+	private static function get_high_value_subject_template( $email_number ) {
+		switch ( (int) $email_number ) {
+			case 1:
+				return __( 'We saved your cart — and we want to make it worth your while', 'meyvora-convert' );
+			case 2:
+				return __( 'Your {cart_total} cart is waiting — here is something special', 'meyvora-convert' );
+			case 3:
+				return __( 'Last chance: your cart expires soon', 'meyvora-convert' );
+			default:
+				return __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
 		}
 	}
 
@@ -456,11 +622,16 @@ class CRO_Abandoned_Cart_Reminder {
 	 * @return bool
 	 */
 	private static function send_email( $row, $email_number, $coupon_code = null ) {
-		$to      = $row->email;
-		$opts    = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
-		$subject = isset( $opts['email_subject_template'] ) && trim( (string) $opts['email_subject_template'] ) !== ''
-			? $opts['email_subject_template']
-			: __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
+		$to   = $row->email;
+		$opts = function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_settings() : array();
+		$segment = self::get_segment( self::cart_row_to_array( $row ) );
+		if ( $segment === 'high' ) {
+			$subject = self::get_high_value_subject_template( $email_number );
+		} elseif ( isset( $opts['email_subject_template'] ) && trim( (string) $opts['email_subject_template'] ) !== '' ) {
+			$subject = $opts['email_subject_template'];
+		} else {
+			$subject = __( 'You left something in your cart – {store_name}', 'meyvora-convert' );
+		}
 		$body_tpl = isset( $opts['email_body_template'] ) && trim( (string) $opts['email_body_template'] ) !== ''
 			? $opts['email_body_template']
 			: ( function_exists( 'cro_settings' ) ? cro_settings()->get_abandoned_cart_email_body_default() : '' );
@@ -473,8 +644,50 @@ class CRO_Abandoned_Cart_Reminder {
 		), home_url( '/' ) );
 
 		$values = self::get_placeholder_values( $row, $coupon_code, true, $unsubscribe_url );
-		$subject = self::replace_placeholders( $subject, $values );
-		$body    = self::replace_placeholders( $body_tpl, $values );
+
+		$use_ai = class_exists( 'CRO_AI_Client' )
+			&& CRO_AI_Client::is_configured()
+			&& class_exists( 'CRO_AI_Email_Writer' )
+			&& function_exists( 'cro_settings' )
+			&& 'yes' === cro_settings()->get( 'ai', 'feature_emails', 'yes' );
+
+		$ai_bundle = null;
+		if ( $use_ai ) {
+			try {
+				$writer = new CRO_AI_Email_Writer();
+				$cached = $writer->get_cached( (int) $row->id, (int) $email_number );
+				if ( is_array( $cached ) ) {
+					$ai_bundle = $cached;
+				} else {
+					$gen = $writer->generate_email( (int) $row->id, (int) $email_number, $coupon_code );
+					if ( ! is_wp_error( $gen ) ) {
+						$ai_bundle = $gen;
+					} else {
+						self::log_ai_email_failure( (int) $row->id, $gen->get_error_message() );
+					}
+				}
+			} catch ( \Throwable $e ) {
+				self::log_ai_email_failure( (int) $row->id, $e->getMessage() );
+			}
+		}
+
+		if ( is_array( $ai_bundle ) && ! empty( $ai_bundle['subject'] ) && ! empty( $ai_bundle['body_html'] ) ) {
+			$subject   = (string) $ai_bundle['subject'];
+			$preheader = isset( $ai_bundle['preheader'] ) ? (string) $ai_bundle['preheader'] : '';
+			$body_core = (string) $ai_bundle['body_html'];
+			$pre_block = '';
+			if ( $preheader !== '' ) {
+				$pre_block = '<div style="display:none!important;visibility:hidden;mso-hide:all;font-size:1px;color:#ffffff;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">' . esc_html( $preheader ) . '</div>';
+			}
+			$cta_block = '<p><a href="' . esc_url( $values['checkout_url'] ) . '">' . esc_html__( 'Complete your order', 'meyvora-convert' ) . '</a></p>';
+			if ( ! empty( $values['discount_text'] ) ) {
+				$cta_block .= $values['discount_text'];
+			}
+			$body = $pre_block . $body_core . $cta_block;
+		} else {
+			$subject = self::replace_placeholders( $subject, $values );
+			$body    = self::replace_placeholders( $body_tpl, $values );
+		}
 
 		$message  = $body;
 		$message .= '<p style="font-size:11px;color:#999999;text-align:center;margin-top:32px;border-top:1px solid #eeeeee;padding-top:16px;">'
@@ -494,6 +707,48 @@ class CRO_Abandoned_Cart_Reminder {
 			self::set_last_send_error( $err );
 		}
 		return $result;
+	}
+
+	/**
+	 * Log AI email generation failure and persist a short note on the cart row (cleared on successful send).
+	 *
+	 * @param int    $cart_id Abandoned cart id.
+	 * @param string $message Error message.
+	 */
+	private static function log_ai_email_failure( $cart_id, $message ) {
+		$cart_id = (int) $cart_id;
+		if ( $cart_id <= 0 ) {
+			return;
+		}
+		if ( class_exists( 'CRO_Error_Handler' ) && is_callable( array( 'CRO_Error_Handler', 'log' ) ) ) {
+			CRO_Error_Handler::log(
+				'AI_EMAIL',
+				'Abandoned cart AI email fallback to static template',
+				array(
+					'cart_id' => $cart_id,
+					'message' => $message,
+				)
+			);
+		}
+		if ( ! class_exists( 'CRO_Abandoned_Cart_Tracker' ) || ! class_exists( 'CRO_Database' ) ) {
+			return;
+		}
+		$table = CRO_Abandoned_Cart_Tracker::get_table_name();
+		if ( ! CRO_Database::table_exists( $table ) ) {
+			return;
+		}
+		global $wpdb;
+		$msg = 'AI email: ' . substr( wp_strip_all_tags( (string) $message ), 0, 450 );
+		$wpdb->update(
+			$table,
+			array(
+				'last_error' => $msg,
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $cart_id ),
+			array( '%s', '%s' ),
+			array( '%d' )
+		);
 	}
 
 	/**

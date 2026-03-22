@@ -145,7 +145,7 @@ class CRO_Checkout_Optimizer {
 		<div class="cro-checkout-trust">
 			<?php if ( ! empty( $this->settings['show_secure_badge'] ) ) : ?>
 			<div class="cro-secure-badge">
-				<span class="cro-secure-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ) ); ?></span>
+				<span class="cro-secure-icon"><?php echo CRO_Icons::svg_kses( 'lock', array( 'class' => 'cro-ico' ) ); ?></span>
 				<span class="cro-secure-text"><?php esc_html_e( 'Secure Checkout', 'meyvora-convert' ); ?></span>
 			</div>
 			<?php endif; ?>
@@ -172,7 +172,7 @@ class CRO_Checkout_Optimizer {
 		do_action( 'cro_frontend_before_render', 'checkout_guarantee', $context );
 		?>
 		<div class="cro-guarantee">
-			<span class="cro-guarantee-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-guarantee-icon"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
 			<span class="cro-guarantee-text"><?php echo esc_html( $guarantee_text ); ?></span>
 		</div>
 		<?php

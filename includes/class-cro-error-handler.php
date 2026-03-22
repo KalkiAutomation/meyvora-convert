@@ -27,6 +27,9 @@ class CRO_Error_Handler {
 		self::$log_file  = WP_CONTENT_DIR . '/meyvora-convert-errors.log';
 		self::$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
+		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_emergency_notice' ) );
+		add_action( 'admin_init', array( __CLASS__, 'maybe_clear_emergency' ) );
+
 		// Set custom error handler for CRO operations
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
 		set_error_handler( array( __CLASS__, 'handle_error' ), E_ALL );
@@ -196,6 +199,51 @@ class CRO_Error_Handler {
 	public static function clear_emergency() {
 		delete_option( 'cro_emergency_disabled' );
 		delete_transient( 'cro_fatal_error' );
+	}
+
+	/**
+	 * Show an admin notice when emergency disable is active (fatal error path).
+	 *
+	 * @return void
+	 */
+	public static function maybe_show_emergency_notice() {
+		if ( ! self::is_emergency_disabled() ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		$clear_url = wp_nonce_url(
+			add_query_arg( 'cro_clear_emergency', '1', admin_url() ),
+			'cro_clear_emergency'
+		);
+		echo '<div class="notice notice-error"><p>';
+		printf(
+			/* translators: %s: clear link HTML */
+			esc_html__( 'Meyvora Convert: A fatal error was detected and campaigns have been disabled automatically. %s', 'meyvora-convert' ),
+			'<a href="' . esc_url( $clear_url ) . '">' . esc_html__( 'Click here to re-enable', 'meyvora-convert' ) . '</a>'
+		);
+		echo '</p></div>';
+	}
+
+	/**
+	 * Clear emergency disable when an administrator follows the re-enable link.
+	 *
+	 * @return void
+	 */
+	public static function maybe_clear_emergency() {
+		if ( ! isset( $_GET['cro_clear_emergency'] ) ) {
+			return;
+		}
+		if ( ! check_admin_referer( 'cro_clear_emergency' ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		self::clear_emergency();
+		wp_safe_redirect( admin_url() );
+		exit;
 	}
 
 	/**

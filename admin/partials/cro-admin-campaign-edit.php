@@ -14,6 +14,15 @@ if ( ! defined( 'WPINC' ) ) {
 $campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : 0;
 $campaign = $campaign_id > 0 ? CRO_Campaign::get( $campaign_id ) : null;
 
+$other_campaigns = array();
+if ( class_exists( 'CRO_Campaign' ) ) {
+	foreach ( CRO_Campaign::get_all( array( 'limit' => 300 ) ) as $cro_row ) {
+		if ( (int) ( $cro_row['id'] ?? 0 ) !== $campaign_id ) {
+			$other_campaigns[] = $cro_row;
+		}
+	}
+}
+
 // Show success notice if campaign was duplicated
 if ( isset( $_GET['duplicated'] ) && $_GET['duplicated'] == '1' ) {
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Campaign duplicated successfully!', 'meyvora-convert' ) . '</p></div>';
@@ -27,9 +36,11 @@ $targeting = wp_parse_args( $targeting, $default_targeting );
 // Handle save
 if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_verify_nonce( wp_unslash( $_POST['cro_nonce'] ), 'cro_save_campaign' ) ) {
 	$data = array(
-		'name'          => sanitize_text_field( wp_unslash( $_POST['campaign_name'] ?? '' ) ),
-		'campaign_type' => sanitize_text_field( wp_unslash( $_POST['campaign_type'] ?? 'exit_intent' ) ),
-		'status'        => sanitize_text_field( wp_unslash( $_POST['campaign_status'] ?? 'draft' ) ),
+		'name'                   => sanitize_text_field( wp_unslash( $_POST['campaign_name'] ?? '' ) ),
+		'campaign_type'          => sanitize_text_field( wp_unslash( $_POST['campaign_type'] ?? 'exit_intent' ) ),
+		'status'                 => sanitize_text_field( wp_unslash( $_POST['campaign_status'] ?? 'draft' ) ),
+		'fallback_id'            => isset( $_POST['fallback_id'] ) ? absint( wp_unslash( $_POST['fallback_id'] ) ) : 0,
+		'fallback_delay_seconds' => isset( $_POST['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) wp_unslash( $_POST['fallback_delay_seconds'] ) ) ) : 5,
 	);
 
 	// Process targeting data.
@@ -126,7 +137,7 @@ if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_
 		<!-- Behavioral Targeting Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'user', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'user', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Behavioral Targeting', 'meyvora-convert' ); ?>
 			</h2>
@@ -248,6 +259,47 @@ if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_
 				</div>
 			</div>
 		</div>
+
+		<?php
+		$fb_id_edit    = $campaign ? (int) ( $campaign['fallback_id'] ?? 0 ) : 0;
+		$fb_delay_edit = $campaign ? (int) ( $campaign['fallback_delay_seconds'] ?? 5 ) : 5;
+		?>
+		<div class="cro-settings-section" id="cro-fallback-campaign-section">
+			<h2><?php esc_html_e( 'Fallback Campaign', 'meyvora-convert' ); ?></h2>
+			<p class="cro-section-description"><?php esc_html_e( 'After a visitor closes this popup, you can show another campaign after a short delay.', 'meyvora-convert' ); ?></p>
+			<div class="cro-fields-grid cro-fields-grid--1col">
+				<div class="cro-field cro-col-12 cro-field-row">
+					<label for="fallback_id" class="cro-field__label"><?php esc_html_e( 'If dismissed, show this campaign:', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<select name="fallback_id" id="fallback_id" class="cro-selectwoo widefat">
+							<option value="0" <?php selected( $fb_id_edit, 0 ); ?>><?php esc_html_e( '— None —', 'meyvora-convert' ); ?></option>
+							<?php foreach ( $other_campaigns as $oc ) : ?>
+								<option value="<?php echo esc_attr( (string) ( $oc['id'] ?? '' ) ); ?>" <?php selected( $fb_id_edit, (int) ( $oc['id'] ?? 0 ) ); ?>>
+									<?php echo esc_html( (string) ( $oc['name'] ?? '' ) ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
+				<div class="cro-field cro-col-12 cro-field-row" id="cro-fallback-delay-row" style="<?php echo $fb_id_edit > 0 ? '' : 'display:none;'; ?>">
+					<label for="fallback_delay_seconds" class="cro-field__label"><?php esc_html_e( 'After delay (seconds):', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<input type="number" id="fallback_delay_seconds" name="fallback_delay_seconds" value="<?php echo esc_attr( (string) $fb_delay_edit ); ?>" min="0" max="300" class="small-text" />
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+		(function () {
+			var sel = document.getElementById('fallback_id');
+			var row = document.getElementById('cro-fallback-delay-row');
+			if (!sel || !row) return;
+			function toggle() {
+				row.style.display = parseInt(sel.value, 10) > 0 ? '' : 'none';
+			}
+			sel.addEventListener('change', toggle);
+		})();
+		</script>
 
 		<?php submit_button( __( 'Save Campaign', 'meyvora-convert' ), 'primary', 'cro_save_campaign' ); ?>
 	</form>

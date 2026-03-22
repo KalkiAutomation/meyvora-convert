@@ -16,11 +16,11 @@ class CRO_Query_Optimizer {
 	 * Get optimized campaigns for decision engine (cache + PHP pre-filter).
 	 *
 	 * @param object $context Context with get( key ).
-	 * @return array Campaign rows (array format).
+	 * @return array|null Campaign rows, or null if optimization cannot run (caller should load campaigns normally).
 	 */
 	public static function get_campaigns_for_decision( $context ) {
 		if ( ! class_exists( 'CRO_Cache' ) ) {
-			return array();
+			return null;
 		}
 
 		$campaigns = CRO_Cache::get_active_campaigns();
@@ -28,57 +28,97 @@ class CRO_Query_Optimizer {
 			return array();
 		}
 
-		$page_type = is_object( $context ) && method_exists( $context, 'get' ) ? $context->get( 'page.type' ) : null;
-		$device    = is_object( $context ) && method_exists( $context, 'get' ) ? $context->get( 'device.type' ) : null;
+		$page_type = is_object( $context ) && method_exists( $context, 'get' )
+			? $context->get( 'page_type' )
+			: null;
+		$device    = is_object( $context ) && method_exists( $context, 'get' )
+			? $context->get( 'device_type' )
+			: null;
+		$page_type = $page_type !== null ? (string) $page_type : '';
+		$device    = $device !== null ? (string) $device : '';
 
-		return array_filter( $campaigns, function ( $campaign ) use ( $page_type, $device ) {
-			if ( ! self::is_within_schedule( $campaign ) ) {
-				return false;
+		$out = array();
+		foreach ( $campaigns as $campaign ) {
+			if ( ! is_array( $campaign ) ) {
+				continue;
 			}
-			return true;
-		} );
+			if ( ! class_exists( 'CRO_Campaign_Model' ) ) {
+				$out[] = $campaign;
+				continue;
+			}
+			$model = CRO_Campaign_Model::from_db_row( $campaign );
+			if ( ! $model->is_active() || ! $model->is_within_schedule() ) {
+				continue;
+			}
+			if ( ! self::page_device_prefilter_matches( $model, $page_type, $device ) ) {
+				continue;
+			}
+			$out[] = $campaign;
+		}
+
+		return $out;
 	}
 
 	/**
-	 * Check if campaign is within its schedule.
+	 * Lightweight page/device pre-filter aligned with CRO_Decision_Engine::targeting_rules_for_engine() (must rules only).
 	 *
-	 * @param array $campaign Campaign row (with schedule JSON).
-	 * @return bool
+	 * @param CRO_Campaign_Model $model     Campaign model.
+	 * @param string             $page_type Current page type from context.
+	 * @param string             $device    Current device type from context.
+	 * @return bool True if this campaign might still pass full rule evaluation.
 	 */
-	private static function is_within_schedule( $campaign ) {
-		$schedule = json_decode( $campaign['schedule'] ?? '{}', true );
-		if ( ! is_array( $schedule ) ) {
-			$schedule = array();
-		}
-
-		if ( empty( $schedule['enabled'] ) ) {
+	private static function page_device_prefilter_matches( $model, $page_type, $device ) {
+		$tr = isset( $model->targeting_rules ) && is_array( $model->targeting_rules ) ? $model->targeting_rules : array();
+		if ( isset( $tr['must'] ) || isset( $tr['should'] ) || isset( $tr['must_not'] ) ) {
 			return true;
 		}
 
-		$now = (int) current_time( 'timestamp' );
-
-		if ( ! empty( $schedule['start_date'] ) ) {
-			$start = strtotime( $schedule['start_date'] );
-			if ( $start !== false && $now < $start ) {
+		$pages = isset( $tr['pages'] ) && is_array( $tr['pages'] ) ? $tr['pages'] : array();
+		$include = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
+		$exclude = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
+		$include = array_map( array( __CLASS__, 'map_page_type' ), $include );
+		$exclude = array_map( array( __CLASS__, 'map_page_type' ), $exclude );
+		$page_mode = isset( $tr['page_mode'] ) ? $tr['page_mode'] : 'all';
+		if ( $page_mode === 'include' && ! empty( $include ) ) {
+			if ( ! in_array( $page_type, $include, true ) ) {
+				return false;
+			}
+		} elseif ( $page_mode === 'exclude' && ! empty( $exclude ) ) {
+			if ( in_array( $page_type, $exclude, true ) ) {
 				return false;
 			}
 		}
 
-		if ( ! empty( $schedule['end_date'] ) ) {
-			$end = strtotime( $schedule['end_date'] . ' 23:59:59' );
-			if ( $end !== false && $now > $end ) {
-				return false;
-			}
+		$device_rules = isset( $tr['device'] ) && is_array( $tr['device'] ) ? $tr['device'] : array();
+		$allowed      = array();
+		if ( ! empty( $device_rules['desktop'] ) ) {
+			$allowed[] = 'desktop';
 		}
-
-		if ( ! empty( $schedule['days_of_week'] ) && is_array( $schedule['days_of_week'] ) ) {
-			$today = (int) gmdate( 'w' );
-			if ( ! in_array( $today, $schedule['days_of_week'], true ) ) {
-				return false;
-			}
+		if ( ! empty( $device_rules['mobile'] ) ) {
+			$allowed[] = 'mobile';
+		}
+		if ( ! empty( $device_rules['tablet'] ) ) {
+			$allowed[] = 'tablet';
+		}
+		if ( ! empty( $allowed ) && ! in_array( $device, $allowed, true ) ) {
+			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * Map admin/UI page slugs to engine page_type values (same as CRO_Decision_Engine).
+	 *
+	 * @param string $page_type Raw page type.
+	 * @return string
+	 */
+	private static function map_page_type( $page_type ) {
+		$map = array(
+			'category' => 'product_category',
+			'blog'     => 'post',
+		);
+		return isset( $map[ $page_type ] ) ? $map[ $page_type ] : $page_type;
 	}
 
 	/**

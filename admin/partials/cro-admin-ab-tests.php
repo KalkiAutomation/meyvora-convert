@@ -89,7 +89,7 @@ if ( $ab_error === 'invalid_nonce' ) {
                     <?php if ( ! $enough_data && ( $test->status === 'running' || $test->status === 'paused' ) ) : ?>
                         <span class="cro-result-insufficient"><?php esc_html_e( 'Not enough data', 'meyvora-convert' ); ?></span>
                     <?php elseif ( $stats && ! empty( $stats['has_winner'] ) && ! empty( $stats['winner']['variation_name'] ) ) : ?>
-                        <span class="cro-winner"><?php echo wp_kses_post( CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ) ); ?> <?php echo esc_html( $stats['winner']['variation_name'] ); ?></span>
+                        <span class="cro-winner"><?php echo CRO_Icons::svg_kses( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php echo esc_html( $stats['winner']['variation_name'] ); ?></span>
 
                     <?php else : ?>
                         <?php echo esc_html( $result_label ); ?>

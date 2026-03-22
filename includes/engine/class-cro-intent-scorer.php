@@ -15,9 +15,12 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * CRO_Intent_Scorer class.
+ * CRO_Intent_Scorer — intent signal scoring for future trigger modes.
  *
- * Scores exit-intent and engagement signals for trigger decisions.
+ * NOTE: As of v1.x, all named trigger types (exit_intent, time, scroll,
+ * inactivity, page_load, click) bypass this scorer entirely via the
+ * trigger_only_types fast path in CRO_Decision_Engine::decide().
+ * This class runs only when trigger_type is empty or unrecognised.
  */
 class CRO_Intent_Scorer {
 

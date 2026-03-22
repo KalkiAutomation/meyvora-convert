@@ -22,6 +22,10 @@ class CRO_Tracker {
 	public function __construct() {
 		add_action( 'wp_ajax_cro_track_event', array( $this, 'track_event' ) );
 		add_action( 'wp_ajax_nopriv_cro_track_event', array( $this, 'track_event' ) );
+		add_action( 'wp_ajax_cro_record_dismiss', array( $this, 'record_dismiss' ) );
+		add_action( 'wp_ajax_nopriv_cro_record_dismiss', array( $this, 'record_dismiss' ) );
+		add_action( 'wp_ajax_cro_decide_fallback', array( $this, 'decide_fallback' ) );
+		add_action( 'wp_ajax_nopriv_cro_decide_fallback', array( $this, 'decide_fallback' ) );
 	}
 
 	/** Allowed source types for events. */
@@ -179,6 +183,22 @@ class CRO_Tracker {
 	private function save_event( $campaign_id, $event_type, $event_data = array(), $source_type = 'campaign', $source_id = 0 ) {
 		global $wpdb;
 
+		$raw_event_type = sanitize_text_field( (string) $event_type );
+
+		if ( class_exists( 'CRO_Analytics_Filter' ) ) {
+			$filter = new CRO_Analytics_Filter();
+			if ( ! $filter->should_track() ) {
+				return false;
+			}
+			if ( 'campaign' === $source_type && $campaign_id > 0 && 'impression' === $raw_event_type ) {
+				$visitor_id = $this->get_session_id();
+				$page_url   = isset( $event_data['page_url'] ) ? sanitize_text_field( wp_unslash( $event_data['page_url'] ) ) : '';
+				if ( $filter->is_duplicate_impression( $campaign_id, $visitor_id, $page_url ) ) {
+					return false;
+				}
+			}
+		}
+
 		$table_name = $wpdb->prefix . 'cro_events';
 
 		// Map event_type to table enum: impression, conversion, dismiss, interaction.
@@ -195,7 +215,7 @@ class CRO_Tracker {
 			'booster_shipping_progress_reached' => 'interaction',
 			'booster_trust_badge_view'        => 'interaction',
 		);
-		$event_type   = sanitize_text_field( (string) $event_type );
+		$event_type   = $raw_event_type;
 		$db_event_type = isset( $map[ $event_type ] ) ? $map[ $event_type ] : 'interaction';
 		$source_type  = in_array( $source_type, self::SOURCE_TYPES, true ) ? $source_type : 'campaign';
 		$source_id    = absint( $source_id );
@@ -343,5 +363,157 @@ class CRO_Tracker {
 			$revenue = isset( $event_data['revenue'] ) ? (float) $event_data['revenue'] : 0.0;
 			$ab_model->record_conversion( $variation_id, $revenue );
 		}
+	}
+
+	/**
+	 * AJAX: record popup dismiss in visitor cookie; return configured fallback campaign + delay.
+	 */
+	public function record_dismiss() {
+		check_ajax_referer( 'cro_public_actions', 'nonce' );
+
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_dismiss_' . $ip, 40, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'meyvora-convert' ) ), 429 );
+		}
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
+		if ( $campaign_id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid campaign.', 'meyvora-convert' ) ) );
+		}
+
+		if ( ! class_exists( 'CRO_Visitor_State' ) || ! class_exists( 'CRO_Campaign' ) || ! class_exists( 'CRO_Campaign_Model' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Service unavailable.', 'meyvora-convert' ) ) );
+		}
+
+		$visitor = CRO_Visitor_State::get_instance();
+		$visitor->record_campaign_dismissed( $campaign_id );
+		$visitor->save();
+
+		if ( class_exists( 'CRO_Webhook' ) ) {
+			$row = CRO_Campaign::get( $campaign_id );
+			CRO_Webhook::dispatch(
+				'meyvora.campaign.dismiss',
+				array(
+					'campaign_id'      => $campaign_id,
+					'campaign_name'    => isset( $row['name'] ) ? $row['name'] : '',
+					'campaign_type'    => isset( $row['campaign_type'] ) ? $row['campaign_type'] : '',
+					'template_type'    => isset( $row['template_type'] ) ? $row['template_type'] : '',
+					'page_url'         => isset( $_SERVER['HTTP_REFERER'] ) ? esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) : '',
+					'page_type'        => '',
+					'device_type'      => '',
+					'session_id'       => '',
+					'user_id'          => get_current_user_id() ? get_current_user_id() : null,
+					'conversion_value' => null,
+					'order_id'         => null,
+				)
+			);
+		}
+
+		$fb_id   = null;
+		$delay   = 0;
+		$row     = CRO_Campaign::get( $campaign_id );
+		if ( is_array( $row ) ) {
+			$model = CRO_Campaign_Model::from_db_row( $row );
+			$fid   = (int) ( $model->fallback_id ?? 0 );
+			if ( $fid > 0 ) {
+				$fb_id = $fid;
+				$delay = $model->get_fallback_delay();
+			}
+		}
+
+		wp_send_json_success(
+			array(
+				'fallback_campaign_id'   => $fb_id,
+				'fallback_delay_seconds' => $delay,
+			)
+		);
+	}
+
+	/**
+	 * AJAX: run decision pipeline for one campaign (dismiss→fallback chain).
+	 */
+	public function decide_fallback() {
+		check_ajax_referer( 'cro_public_actions', 'nonce' );
+
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_fb_decide_' . $ip, 30, 60 ) ) {
+			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'meyvora-convert' ) ), 429 );
+		}
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
+		if ( $campaign_id <= 0 ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid campaign.', 'meyvora-convert' ) ) );
+		}
+
+		if ( ! class_exists( 'CRO_REST_API' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Service unavailable.', 'meyvora-convert' ) ) );
+		}
+
+		CRO_REST_API::ensure_decision_engine_loaded();
+
+		if ( ! function_exists( 'cro_decide' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Decision engine not available.', 'meyvora-convert' ) ) );
+		}
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$raw  = isset( $_POST['decision_context'] ) ? wp_unslash( $_POST['decision_context'] ) : '';
+		$body = array();
+		if ( is_string( $raw ) && $raw !== '' ) {
+			$decoded = json_decode( $raw, true );
+			if ( is_array( $decoded ) ) {
+				$body = $decoded;
+			}
+		}
+
+		$parsed       = CRO_REST_API::parse_decide_request_body( $body );
+		$visitor      = CRO_Visitor_State::get_instance();
+		$decision     = cro_decide()->decide(
+			$parsed['context'],
+			$visitor,
+			$parsed['signals'],
+			$parsed['trigger_type'],
+			array(
+				'single_campaign_id'        => $campaign_id,
+				'ignore_session_popup_cap'  => true,
+				'skip_pageview_shown_check' => true,
+			)
+		);
+
+		$payload = array(
+			'show'         => $decision->show,
+			'campaign_id'  => $decision->campaign_id,
+			'campaign'     => null,
+			'reason'       => $decision->reason,
+			'reason_code'  => $decision->reason_code,
+		);
+
+		if ( $decision->show && $decision->campaign !== null ) {
+			if ( is_object( $decision->campaign ) && method_exists( $decision->campaign, 'to_frontend_array' ) ) {
+				$payload['campaign'] = $decision->campaign->to_frontend_array();
+			} elseif ( is_array( $decision->campaign ) ) {
+				$payload['campaign'] = $decision->campaign;
+			} else {
+				$payload['campaign'] = array( 'id' => $decision->campaign_id );
+			}
+		}
+
+		// Persist shown state to cookie so frequency rules work on subsequent requests.
+		if ( $decision->show && $decision->campaign_id ) {
+			$visitor->record_campaign_shown( (int) $decision->campaign_id );
+			$visitor->save();
+		}
+
+		if ( $decision->show && $decision->ab_test_id !== null && $decision->variation_id !== null ) {
+			$payload['ab_test_id']   = (int) $decision->ab_test_id;
+			$payload['variation_id'] = (int) $decision->variation_id;
+			$payload['is_control']   = (bool) $decision->is_control;
+			$visitor->set_ab_attribution( (int) $decision->ab_test_id, (int) $decision->variation_id );
+		}
+
+		if ( $decision->show && $decision->variation_id !== null ) {
+			CRO_REST_API::record_ab_impression_once( $visitor, (int) $decision->variation_id, $parsed['pageview_id'] );
+		}
+
+		wp_send_json_success( $payload );
 	}
 }

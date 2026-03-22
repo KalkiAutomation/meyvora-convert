@@ -144,7 +144,25 @@
 }
 
 .cro-nav-icon {
-  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  color: inherit;
+}
+
+/* Lucide SVGs inside nav — font-size alone does not scale <svg>; size .cro-ico explicitly */
+.cro-nav-icon .cro-ico,
+.cro-nav-icon svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.cro-nav-item.active .cro-nav-icon .cro-ico,
+.cro-nav-item:hover .cro-nav-icon .cro-ico {
+  color: inherit;
 }
 
 .cro-nav-label {
@@ -1246,6 +1264,17 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   border-color: var(--cro-black);
 }
 
+.cro-preview-device-toggle button .cro-ico {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: -0.2em;
+}
+
+.cro-preview-device-toggle button.active .cro-ico {
+  color: inherit;
+}
+
 /* Preview Container - viewport simulation; no overflow */
 .cro-preview-container {
   flex: 1;
@@ -1646,8 +1675,10 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
     padding: 15px;
   }
 
-  .cro-nav-icon {
-    font-size: 22px;
+  .cro-nav-icon .cro-ico,
+  .cro-nav-icon svg {
+    width: 22px;
+    height: 22px;
   }
 
   .cro-builder-preview {

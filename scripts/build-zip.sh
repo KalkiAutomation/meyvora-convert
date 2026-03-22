@@ -9,7 +9,7 @@
 #   blocks/campaign/*
 #
 # EXCLUDE (dev-only, never copied):
-#   build-zip.sh, scripts/, dist/, .release/, .git*
+#   scripts/build-zip.sh, scripts/release.sh, dist/, .release/, .git*
 #   node_modules (anywhere)
 #   blocks/cart-checkout-extension/src/
 #   blocks/cart-checkout-extension/package.json, package-lock.json
@@ -19,7 +19,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLUGIN_ROOT="$SCRIPT_DIR"
+PLUGIN_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 STAGING_DIR="${PLUGIN_ROOT}/.release/meyvora-convert"
 ZIP_NAME="meyvora-convert.zip"
 DIST_DIR="${PLUGIN_ROOT}/dist"
@@ -134,10 +134,10 @@ else
   echo "  [OK] no nested .zip"
 fi
 # Dev-only files must not appear in production zip
-if echo "$ZIP_LIST" | grep -qE 'build-zip\.sh|webpack\.config\.js|cart-checkout-extension/src/|package\.json|package-lock\.json'; then
+if echo "$ZIP_LIST" | grep -qE 'scripts/build-zip\.sh|webpack\.config\.js|cart-checkout-extension/src/|package\.json|package-lock\.json'; then
   echo "  [FAIL] dev-only file(s) present in zip"
 else
-  echo "  [OK] no dev-only files (build-zip.sh, webpack.config.js, src/, package*.json)"
+  echo "  [OK] no dev-only files (scripts/build-zip.sh, webpack.config.js, src/, package*.json)"
 fi
 echo ""
 echo "Total files and size:"

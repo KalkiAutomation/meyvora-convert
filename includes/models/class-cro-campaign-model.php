@@ -78,6 +78,12 @@ class CRO_Campaign_Model {
 	/** @var string|null */
 	public $updated_at;
 
+	/** @var int Chained campaign to show after visitor dismisses this one (0 = none). */
+	public $fallback_id;
+
+	/** @var int Seconds to wait before showing fallback campaign. */
+	public $fallback_delay_seconds;
+
 	/**
 	 * Default targeting_rules structure.
 	 *
@@ -86,12 +92,12 @@ class CRO_Campaign_Model {
 	private static function default_targeting_rules() {
 		return array(
 			'page_mode' => 'all',
-				'pages'     => array(
-					'type'    => 'specific',
-					'include' => array( 'cart', 'product' ),
-					// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-					'exclude' => array( 'checkout' ),
-				),
+			'pages'     => array(
+				'type'    => 'all',
+				'include' => array(),
+				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
+				'exclude' => array( 'checkout' ),
+			),
 			'behavior'  => array(
 				'min_time_on_page'     => 0,
 				'min_scroll_depth'     => 0,
@@ -139,7 +145,8 @@ class CRO_Campaign_Model {
 			'sensitivity'            => 'medium',
 			'delay_seconds'          => 3,
 			'scroll_depth_percent'   => 50,
-			'time_on_page_seconds'   => 30,
+			'time_delay_seconds'     => 30,
+			'idle_seconds'           => 30,
 			'require_interaction'    => true,
 			'disable_on_fast_scroll' => true,
 		);
@@ -307,6 +314,8 @@ class CRO_Campaign_Model {
 		$m->revenue_attributed = isset( $r['revenue_attributed'] ) ? (float) $r['revenue_attributed'] : 0.0;
 		$m->created_at         = isset( $r['created_at'] ) ? (string) $r['created_at'] : null;
 		$m->updated_at         = isset( $r['updated_at'] ) ? (string) $r['updated_at'] : null;
+		$m->fallback_id        = isset( $r['fallback_id'] ) ? (int) $r['fallback_id'] : 0;
+		$m->fallback_delay_seconds = isset( $r['fallback_delay_seconds'] ) ? (int) $r['fallback_delay_seconds'] : 5;
 
 		return $m;
 	}
@@ -337,6 +346,8 @@ class CRO_Campaign_Model {
 		$m->revenue_attributed = 0.0;
 		$m->created_at         = null;
 		$m->updated_at         = null;
+		$m->fallback_id        = 0;
+		$m->fallback_delay_seconds = 5;
 		return $m;
 	}
 
@@ -395,7 +406,7 @@ class CRO_Campaign_Model {
 			'sensitivity'            => (string) ( $t['sensitivity'] ?? 'medium' ),
 			'delay_seconds'          => (int) ( $t['delay_seconds'] ?? 3 ),
 			'scroll_depth_percent'   => (int) ( $t['scroll_depth_percent'] ?? 50 ),
-			'time_on_page_seconds'   => (int) ( $t['time_on_page_seconds'] ?? 30 ),
+			'time_on_page_seconds'   => (int) ( $t['time_delay_seconds'] ?? $t['time_on_page_seconds'] ?? 30 ),
 			'require_interaction'    => ! empty( $t['require_interaction'] ),
 			'disable_on_fast_scroll' => ! empty( $t['disable_on_fast_scroll'] ),
 		);
@@ -407,7 +418,11 @@ class CRO_Campaign_Model {
 	 * @return string|int Sensitivity label or numeric threshold 0–100.
 	 */
 	public function get_intent_threshold() {
-		$s = (string) ( $this->trigger_rules['sensitivity'] ?? 'medium' );
+		$tr = isset( $this->trigger_rules ) && is_array( $this->trigger_rules ) ? $this->trigger_rules : array();
+		if ( isset( $tr['intent_threshold'] ) && is_numeric( $tr['intent_threshold'] ) ) {
+			return max( 0, min( 100, (int) $tr['intent_threshold'] ) );
+		}
+		$s = (string) ( $tr['sensitivity'] ?? 'medium' );
 		$map = array(
 			'low'    => 30,
 			'medium' => 50,
@@ -423,6 +438,33 @@ class CRO_Campaign_Model {
 	 */
 	public function is_active() {
 		return $this->status === 'active';
+	}
+
+	/**
+	 * Campaign to show when this one is dismissed (if configured).
+	 *
+	 * @return CRO_Campaign_Model|null
+	 */
+	public function get_fallback_campaign() {
+		$fid = (int) ( $this->fallback_id ?? 0 );
+		if ( $fid <= 0 || ! class_exists( 'CRO_Campaign' ) ) {
+			return null;
+		}
+		$row = CRO_Campaign::get( $fid );
+		if ( ! is_array( $row ) || empty( $row['id'] ) ) {
+			return null;
+		}
+		return self::from_db_row( $row );
+	}
+
+	/**
+	 * Delay before showing the fallback campaign (seconds).
+	 *
+	 * @return int Clamped 0–300; default 5.
+	 */
+	public function get_fallback_delay() {
+		$d = isset( $this->fallback_delay_seconds ) ? (int) $this->fallback_delay_seconds : 5;
+		return max( 0, min( 300, $d ) );
 	}
 
 	/**
@@ -492,6 +534,8 @@ class CRO_Campaign_Model {
 			'intent_threshold'   => $this->get_intent_threshold(),
 			'is_active'          => $this->is_active(),
 			'is_within_schedule' => $this->is_within_schedule(),
+			'fallback_id'        => (int) ( $this->fallback_id ?? 0 ),
+			'fallback_delay_seconds' => $this->get_fallback_delay(),
 		);
 	}
 
@@ -524,6 +568,8 @@ class CRO_Campaign_Model {
 			'revenue_attributed' => $this->revenue_attributed,
 			'created_at'        => $this->created_at,
 			'updated_at'        => $this->updated_at,
+			'fallback_id'       => (int) ( $this->fallback_id ?? 0 ),
+			'fallback_delay_seconds' => $this->get_fallback_delay(),
 		);
 	}
 }

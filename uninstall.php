@@ -46,3 +46,6 @@ wp_clear_scheduled_hook( 'cro_cleanup_old_events' );
 wp_clear_scheduled_hook( 'cro_aggregate_daily_stats' );
 wp_clear_scheduled_hook( 'cro_check_ab_winners' );
 wp_clear_scheduled_hook( 'cro_send_abandoned_cart_reminders' );
+
+delete_option( 'cro_dynamic_offers' );
+delete_option( 'cro_remove_data_on_uninstall' );

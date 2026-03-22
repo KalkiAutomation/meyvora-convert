@@ -67,10 +67,10 @@ $verify_installation_fail = isset( $_GET['cro_verify_installation'] ) && $_GET['
 				?>
 					<li>
 						<?php if ( $pass ) : ?>
-							<span class="cro-status-ok" aria-hidden="true"><?php echo wp_kses_post( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) ); ?></span>
+							<span class="cro-status-ok" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
 
 						<?php else : ?>
-							<span class="cro-status-warn" aria-hidden="true"><?php echo wp_kses_post( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ) ); ?></span>
+							<span class="cro-status-warn" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?></span>
 
 						<?php endif; ?>
 						<strong><?php echo esc_html( $label ); ?></strong>: <?php echo esc_html( $message ); ?>

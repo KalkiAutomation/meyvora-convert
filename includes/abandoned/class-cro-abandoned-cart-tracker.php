@@ -77,8 +77,12 @@ class CRO_Abandoned_Cart_Tracker {
 		if ( ! $row ) {
 			return;
 		}
-		self::mark_recovered_by_id( (int) $row->id );
-		self::cancel_scheduled_reminders( (int) $row->id );
+		$cart_row_id = (int) $row->id;
+		self::mark_recovered_by_id( $cart_row_id );
+		self::cancel_scheduled_reminders( $cart_row_id );
+		if ( function_exists( 'do_action' ) ) {
+			do_action( 'cro_abandoned_cart_recovered', $cart_row_id, (int) $order->get_id() );
+		}
 	}
 
 	/**
@@ -300,6 +304,10 @@ class CRO_Abandoned_Cart_Tracker {
 				$data,
 				array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 			);
+			$new_id = (int) $wpdb->insert_id;
+			if ( $new_id > 0 && function_exists( 'do_action' ) ) {
+				do_action( 'cro_abandoned_cart_created', $new_id );
+			}
 		}
 
 		$row_id = $existing ? (int) $existing['id'] : (int) $wpdb->insert_id;
@@ -553,7 +561,7 @@ class CRO_Abandoned_Cart_Tracker {
 	/**
 	 * Get paginated list of abandoned carts for admin.
 	 *
-	 * @param array $args status_filter (all|active|emailed|recovered), search (email like), per_page, page (1-based).
+	 * @param array $args status_filter (all|active|emailed|recovered), segment (all|high|standard), search (email like), per_page, page (1-based).
 	 * @return array{ items: object[], total: int }
 	 */
 	public static function get_list( array $args = array() ) {
@@ -573,13 +581,30 @@ class CRO_Abandoned_Cart_Tracker {
 			: 'all';
 		$search_like = $search !== '' ? '%' . $wpdb->esc_like( $search ) . '%' : '';
 
+		$segment = isset( $args['segment'] ) ? sanitize_key( $args['segment'] ) : 'all';
+		$segment = in_array( $segment, array( 'all', 'high', 'standard' ), true ) ? $segment : 'all';
+		$threshold = 100.0;
+		if ( function_exists( 'cro_settings' ) ) {
+			$threshold = max( 0.0, (float) cro_settings()->get( 'abandoned_cart', 'high_value_threshold', 100 ) );
+		}
+
 		$where_args = array(
 			$status_filter,
 			$status_filter, self::STATUS_ACTIVE,
 			$status_filter, self::STATUS_RECOVERED,
 			$status_filter,
 			$search_like, $search_like,
+			$segment,
+			$segment,
+			$threshold,
+			$segment,
+			$threshold,
 		);
+
+		$segment_sql = " AND ( %s = 'all'
+			OR ( %s = 'high' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) >= %f )
+			OR ( %s = 'standard' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) < %f )
+		)";
 
 		$total = (int) $wpdb->get_var(
 			$wpdb->prepare(
@@ -587,7 +612,8 @@ class CRO_Abandoned_Cart_Tracker {
 					OR ( %s = 'active' AND status = %s )
 					OR ( %s = 'recovered' AND status = %s )
 					OR ( %s = 'emailed' AND ( email_1_sent_at IS NOT NULL OR email_2_sent_at IS NOT NULL OR email_3_sent_at IS NOT NULL ) )
-				) AND ( %s = '' OR email LIKE %s )",
+				) AND ( %s = '' OR email LIKE %s )
+				{$segment_sql}",
 				...$where_args
 			)
 		);
@@ -599,6 +625,7 @@ class CRO_Abandoned_Cart_Tracker {
 					OR ( %s = 'recovered' AND status = %s )
 					OR ( %s = 'emailed' AND ( email_1_sent_at IS NOT NULL OR email_2_sent_at IS NOT NULL OR email_3_sent_at IS NOT NULL ) )
 				) AND ( %s = '' OR email LIKE %s )
+				{$segment_sql}
 				ORDER BY last_activity_at DESC LIMIT %d OFFSET %d",
 				...array_merge( $where_args, array( $per_page, $offset ) )
 			),

@@ -161,13 +161,10 @@ class CRO_Shortcodes {
 			$version
 		);
 
-		wp_enqueue_script(
-			'cro-popup',
-			CRO_PLUGIN_URL . 'public/js/cro-popup.js',
-			array(),
-			$version,
-			true
-		);
+		// Same stack as CRO_Public::enqueue_scripts() for campaigns (signals + controller + /decide), not cro-popup alone.
+		if ( class_exists( 'CRO_Public' ) ) {
+			CRO_Public::enqueue_campaign_scripts_for_shortcode();
+		}
 
 		// Inline CSS so shortcode-rendered popup is visible (no overlay; display inline).
 		$inline = '
@@ -194,11 +191,11 @@ class CRO_Shortcodes {
 	}
 
 	/**
-	 * Check if the current page content contains [cro_campaign].
+	 * Whether this request will render [cro_campaign] (already rendered or present in queried post content).
 	 *
 	 * @return bool
 	 */
-	private static function page_has_shortcode() {
+	public static function current_page_has_campaign_shortcode() {
 		if ( self::$shortcode_used ) {
 			return true;
 		}
@@ -207,5 +204,14 @@ class CRO_Shortcodes {
 			return false;
 		}
 		return has_shortcode( $post->post_content, 'cro_campaign' );
+	}
+
+	/**
+	 * Check if the current page content contains [cro_campaign].
+	 *
+	 * @return bool
+	 */
+	private static function page_has_shortcode() {
+		return self::current_page_has_campaign_shortcode();
 	}
 }

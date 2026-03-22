@@ -1,169 +1,237 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 // phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 /**
- * Frontend Asset Loading
+ * Frontend asset loading (campaign popup styles + unified window.croConfig).
  *
- * Handles conditional loading of scripts and styles
+ * Scripts for campaigns are enqueued by CRO_Public; this class outputs config and popup-related CSS.
  */
 class CRO_Frontend {
-    
-    /**
-     * Initialize
-     */
-    public function __construct() {
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_assets'));
-        add_action('wp_footer', array($this, 'output_config'), 5);
-    }
-    
-    /**
-     * Check if we should load assets. Only on Woo-relevant or campaign-targeted pages; respects cro_should_enqueue_assets.
-     */
-    private function should_load() {
-        if (is_admin()) return false;
-        if (function_exists('is_checkout') && is_checkout()) return false;
-        if (!function_exists('cro_settings')) return false;
 
-        $settings = cro_settings();
-        if (!$settings || !$settings->get('general', 'enabled', true)) return false;
-        if (!$this->has_active_campaigns()) return false;
+	/**
+	 * Cached should_load() result for this request.
+	 *
+	 * @var bool|null
+	 */
+	private static $should_load_cache = null;
 
-        // Conditional asset loading: only on Woo pages or pages where a campaign is active.
-        if (class_exists('CRO_Public') && !CRO_Public::should_enqueue_assets('campaigns')) return false;
+	/**
+	 * Whether footer config was already printed.
+	 *
+	 * @var bool
+	 */
+	private static $config_output = false;
 
-        return true;
-    }
-    
-    /**
-     * Check for active campaigns
-     */
-    private function has_active_campaigns() {
-        global $wpdb;
-        $table = $wpdb->prefix . 'cro_campaigns';
-        
-        // Check if table exists
-        $table_exists = $wpdb->get_var($wpdb->prepare(
-            "SHOW TABLES LIKE %s",
-            $table
-        ));
-        
-        if (!$table_exists) {
-            return false;
-        }
-        
-        $count = $wpdb->get_var(
-            "SELECT COUNT(*) FROM {$table} WHERE status = 'active'"
-        );
-        
-        return $count > 0;
-    }
-    
-    /**
-     * Enqueue assets
-     */
-    public function enqueue_assets() {
-        if (!$this->should_load()) return;
-        
-        // Google Fonts (DM Sans) for popup typography
-	        wp_enqueue_style(
-	            'cro-google-fonts',
-	            'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap',
-	            array(),
-	            CRO_VERSION
-	        );
+	/**
+	 * Constructor.
+	 */
+	public function __construct() {
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_action( 'wp_footer', array( $this, 'output_config' ), 5 );
+	}
 
-        // Styles
-        wp_enqueue_style(
-            'cro-popup',
-            CRO_PLUGIN_URL . 'public/css/cro-popup.css',
-            array(),
-            CRO_VERSION
-        );
-        
-        wp_enqueue_style(
-            'cro-animations',
-            CRO_PLUGIN_URL . 'public/css/cro-animations.css',
-            array('cro-popup'),
-            CRO_VERSION
-        );
-        
-        // Scripts
-        wp_enqueue_script(
-            'cro-signals',
-            CRO_PLUGIN_URL . 'public/js/cro-signals.js',
-            array(),
-            CRO_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'cro-animations',
-            CRO_PLUGIN_URL . 'public/js/cro-animations.js',
-            array(),
-            CRO_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'cro-popup',
-            CRO_PLUGIN_URL . 'public/js/cro-popup.js',
-            array('cro-animations'),
-            CRO_VERSION,
-            true
-        );
-        
-        wp_enqueue_script(
-            'cro-controller',
-            CRO_PLUGIN_URL . 'public/js/cro-controller.js',
-            array('cro-popup', 'cro-signals'),
-            CRO_VERSION,
-            true
-        );
-    }
-    
-    /**
-     * Output configuration in footer
-     */
-    public function output_config() {
-        if (!$this->should_load()) return;
-        
-        // Build context (cached per request for fast rule evaluation)
-        $context = function_exists( 'cro_get_request_context' ) ? cro_get_request_context() : ( class_exists( 'CRO_Context' ) ? new CRO_Context() : null );
-        
-        // Build visitor state
-        $visitor = class_exists('CRO_Visitor_State') ? CRO_Visitor_State::get_instance() : null;
-        
-        $config = array(
-            'restUrl' => rest_url(),
-            'nonce' => wp_create_nonce('wp_rest'),
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'siteUrl' => home_url(),
-            'cartUrl' => function_exists('wc_get_cart_url') ? wc_get_cart_url() : '/cart',
-            'checkoutUrl' => function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : '/checkout',
-            'debug' => current_user_can('manage_meyvora_convert') && cro_settings()->get('general', 'debug_mode', false),
-            'context' => $context && method_exists($context, 'to_frontend_array') ? $context->to_frontend_array() : array(),
-            'visitor' => $visitor && method_exists($visitor, 'to_frontend_array') ? $visitor->to_frontend_array() : array(),
-        );
-        
-        // Template configurations
-        $templates = array();
-        if (class_exists('CRO_Templates') && method_exists('CRO_Templates', 'get_all')) {
-            foreach (CRO_Templates::get_all() as $key => $template) {
-                $templates[$key] = array(
-                    'supports' => isset($template['supports']) ? $template['supports'] : array(),
-                    'type' => isset($template['type']) ? $template['type'] : 'popup',
-                );
-            }
-        }
-        
-        ?>
-        <script>
-            window.croConfig = <?php echo wp_json_encode($config); ?>;
-            window.croTemplates = <?php echo wp_json_encode($templates); ?>;
-        </script>
-        <?php
-    }
+	/**
+	 * Whether there is at least one active campaign (cached per request + transient).
+	 *
+	 * @return bool
+	 */
+	public static function has_active_campaigns() {
+		static $cached_true = null;
+		// Only cache a positive result permanently; false may become true later in the same request (e.g. after table creation).
+		if ( $cached_true === true ) {
+			return true;
+		}
+		if ( ! class_exists( 'CRO_Database' ) ) {
+			return false;
+		}
+		$table = CRO_Database::get_table( 'campaigns' );
+		if ( ! CRO_Database::table_exists( $table ) ) {
+			return false;
+		}
+		$cached = get_transient( 'cro_has_active_campaigns' );
+		if ( false !== $cached ) {
+			$result = ( '1' === (string) $cached );
+			if ( $result ) {
+				$cached_true = true;
+			}
+			return $result;
+		}
+		global $wpdb;
+		$t = esc_sql( $table );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table aggregate.
+		$count  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$t}` WHERE status = 'active' LIMIT 1" );
+		$result = $count > 0;
+		set_transient( 'cro_has_active_campaigns', $result ? '1' : '0', 5 * MINUTE_IN_SECONDS );
+		if ( $result ) {
+			$cached_true = true;
+		}
+		return $result;
+	}
+
+	/**
+	 * Whether campaign controller assets and rich config should load.
+	 *
+	 * @return bool
+	 */
+	private function should_load() {
+		if ( null !== self::$should_load_cache ) {
+			return self::$should_load_cache;
+		}
+		if ( is_admin() ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		if ( ! function_exists( 'cro_settings' ) ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		$settings = cro_settings();
+		if ( ! $settings || ! $settings->get( 'general', 'plugin_enabled', true ) ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		if ( class_exists( 'CRO_Public' ) && CRO_Public::is_campaign_preview_static() ) {
+			if ( ! CRO_Public::should_enqueue_assets( 'campaigns' ) ) {
+				self::$should_load_cache = false;
+				return false;
+			}
+			self::$should_load_cache = true;
+			return true;
+		}
+		// [cro_campaign] embeds need full croConfig + popup CSS even when no row is "active" for global decide().
+		if ( class_exists( 'CRO_Shortcodes' ) && CRO_Shortcodes::current_page_has_campaign_shortcode() ) {
+			if ( class_exists( 'CRO_Public' ) && CRO_Public::should_enqueue_assets( 'campaigns' ) ) {
+				self::$should_load_cache = true;
+				return true;
+			}
+		}
+		if ( ! self::has_active_campaigns() ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		if ( class_exists( 'CRO_Public' ) && ! CRO_Public::should_enqueue_assets( 'campaigns' ) ) {
+			self::$should_load_cache = false;
+			return false;
+		}
+		self::$should_load_cache = true;
+		return true;
+	}
+
+	/**
+	 * Enqueue popup-related styles only (scripts are handled by CRO_Public).
+	 */
+	public function enqueue_assets() {
+		if ( ! $this->should_load() ) {
+			return;
+		}
+		if ( function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'general', 'load_google_fonts', 'yes' ) ) {
+			wp_enqueue_style(
+				'cro-google-fonts',
+				'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap',
+				array(),
+				CRO_VERSION
+			);
+		}
+		wp_enqueue_style(
+			'cro-popup',
+			CRO_PLUGIN_URL . 'public/css/cro-popup.css',
+			array(),
+			CRO_VERSION
+		);
+		wp_enqueue_style(
+			'cro-animations',
+			CRO_PLUGIN_URL . 'public/css/cro-animations.css',
+			array( 'cro-popup' ),
+			CRO_VERSION
+		);
+	}
+
+	/**
+	 * Output window.croConfig (and croTemplates when campaigns load). Single source; avoids duplicate wp_localize_script data.
+	 */
+	public function output_config() {
+		if ( is_admin() ) {
+			return;
+		}
+		if ( self::$config_output ) {
+			return;
+		}
+		if ( ! function_exists( 'cro_settings' ) ) {
+			return;
+		}
+		if ( ! class_exists( 'CRO_Public' ) || ! CRO_Public::should_load_frontend_assets() ) {
+			return;
+		}
+		if ( ! cro_settings()->get( 'general', 'plugin_enabled', true ) ) {
+			return;
+		}
+
+		$settings = cro_settings();
+		$features = array(
+			'exitIntent'  => (bool) $settings->get( 'general', 'campaigns_enabled', true ),
+			'stickyCart'  => $settings->is_feature_enabled( 'sticky_cart' ),
+			'shippingBar' => $settings->is_feature_enabled( 'shipping_bar' ),
+		);
+
+		// Always expose REST base URL + public URLs: cro-controller falls back to origin + /wp-json/ when restUrl
+		// is missing, which breaks subdirectory installs. Scripts may load whenever frontend assets load.
+		$config = array(
+			'features'       => $features,
+			'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+			'errorReporting' => (bool) $settings->get( 'general', 'debug_mode', false ),
+			'logErrorNonce'  => wp_create_nonce( 'cro_log_error' ),
+			'nonce'          => wp_create_nonce( 'wp_rest' ),
+			'restUrl'        => rest_url(),
+			'publicNonce'    => wp_create_nonce( 'cro_public_actions' ),
+			'siteUrl'        => home_url(),
+			'cartUrl'        => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : '/cart',
+			'checkoutUrl'    => function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : '/checkout',
+		);
+
+		$templates = array();
+		$full      = $this->should_load();
+
+		if ( $full ) {
+			$context = function_exists( 'cro_get_request_context' ) ? cro_get_request_context() : ( class_exists( 'CRO_Context' ) ? new CRO_Context() : null );
+			$visitor = class_exists( 'CRO_Visitor_State' ) ? CRO_Visitor_State::get_instance() : null;
+			$config  = array_merge(
+				$config,
+				array(
+					'nonce'         => wp_create_nonce( 'wp_rest' ),
+					'siteUrl'       => home_url(),
+					'siteName'      => get_bloginfo( 'name' ),
+					'currency'      => function_exists( 'get_woocommerce_currency_symbol' )
+						? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
+						: '$',
+					'debug'         => current_user_can( 'manage_meyvora_convert' ) && $settings->get( 'general', 'debug_mode', false ),
+					'context'       => $context && method_exists( $context, 'to_frontend_array' ) ? $context->to_frontend_array() : array(),
+					'visitor'       => $visitor && method_exists( $visitor, 'to_frontend_array' ) ? $visitor->to_frontend_array() : array(),
+				)
+			);
+			if ( class_exists( 'CRO_Templates' ) && method_exists( 'CRO_Templates', 'get_all' ) ) {
+				foreach ( CRO_Templates::get_all() as $key => $template ) {
+					$templates[ $key ] = array(
+						'supports' => isset( $template['supports'] ) ? $template['supports'] : array(),
+						'type'     => isset( $template['type'] ) ? $template['type'] : 'popup',
+					);
+				}
+			}
+		}
+
+		self::$config_output = true;
+		?>
+		<script>
+			window.croConfig = <?php echo wp_json_encode( $config ); ?>;
+			<?php if ( $full ) : ?>
+			window.croTemplates = <?php echo wp_json_encode( $templates ); ?>;
+			<?php endif; ?>
+		</script>
+		<?php
+	}
 }
-
-// Initialize
-new CRO_Frontend();

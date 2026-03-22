@@ -16,6 +16,99 @@ if ( ! defined( 'WPINC' ) ) {
 class CRO_Offer_Model {
 
 	/**
+	 * Decoded row for instance helpers (conflict API).
+	 *
+	 * @var object
+	 */
+	private $row;
+
+	/**
+	 * Use CRO_Offer_Model::from_row( $row ) for conflict helpers.
+	 *
+	 * @param object $row Row from get() / get_all().
+	 */
+	private function __construct( $row ) {
+		$this->row = is_object( $row ) ? $row : (object) array();
+	}
+
+	/**
+	 * Wrap a DB offer row for instance methods (get_conflict_ids, has_conflict_with).
+	 *
+	 * @param object $row Row from CRO_Offer_Model::get() or list entry.
+	 * @return self
+	 */
+	public static function from_row( $row ) {
+		return new self( $row );
+	}
+
+	/**
+	 * Conflict offer IDs stored on this row (decoded from conflict_ids JSON).
+	 *
+	 * @return int[]
+	 */
+	public function get_conflict_ids() {
+		return self::normalize_conflict_ids_on_row( $this->row );
+	}
+
+	/**
+	 * Whether this offer lists another offer ID as a conflict.
+	 *
+	 * @param int $other_id Other offer ID.
+	 * @return bool
+	 */
+	public function has_conflict_with( $other_id ) {
+		$other_id = (int) $other_id;
+		if ( $other_id <= 0 ) {
+			return false;
+		}
+		return in_array( $other_id, $this->get_conflict_ids(), true );
+	}
+
+	/**
+	 * True if either offer lists the other in conflict_ids (bidirectional).
+	 *
+	 * @param int $id_a Offer ID.
+	 * @param int $id_b Offer ID.
+	 * @return bool
+	 */
+	public static function get_conflicting_pair( $id_a, $id_b ) {
+		$id_a = (int) $id_a;
+		$id_b = (int) $id_b;
+		if ( $id_a <= 0 || $id_b <= 0 || $id_a === $id_b ) {
+			return false;
+		}
+		$row_a = self::get( $id_a );
+		$row_b = self::get( $id_b );
+		if ( ! $row_a || ! $row_b ) {
+			return false;
+		}
+		$wa = self::from_row( $row_a );
+		$wb = self::from_row( $row_b );
+		return $wa->has_conflict_with( $id_b ) || $wb->has_conflict_with( $id_a );
+	}
+
+	/**
+	 * Normalize conflict_ids on a row object to a list of positive integers.
+	 *
+	 * @param object $row DB row.
+	 * @return int[]
+	 */
+	public static function normalize_conflict_ids_on_row( $row ) {
+		if ( ! is_object( $row ) || ! isset( $row->conflict_ids ) ) {
+			return array();
+		}
+		$raw = $row->conflict_ids;
+		if ( is_array( $raw ) ) {
+			return array_values( array_filter( array_map( 'absint', $raw ) ) );
+		}
+		if ( is_string( $raw ) && $raw !== '' ) {
+			$decoded = json_decode( $raw, true );
+			return is_array( $decoded ) ? array_values( array_filter( array_map( 'absint', $decoded ) ) ) : array();
+		}
+		return array();
+	}
+
+	/**
 	 * Offers table name (full, with prefix).
 	 *
 	 * @return string
@@ -48,6 +141,16 @@ class CRO_Offer_Model {
 				$decoded = json_decode( $row->$col, true );
 				$row->$col = $decoded !== null ? $decoded : array();
 			}
+		}
+		if ( isset( $row->conflict_ids ) && is_string( $row->conflict_ids ) && $row->conflict_ids !== '' ) {
+			$decoded = json_decode( $row->conflict_ids, true );
+			$row->conflict_ids = is_array( $decoded ) ? array_values( array_filter( array_map( 'absint', $decoded ) ) ) : array();
+		} elseif ( ! isset( $row->conflict_ids ) || $row->conflict_ids === null || $row->conflict_ids === '' ) {
+			$row->conflict_ids = array();
+		} elseif ( isset( $row->conflict_ids ) && ! is_array( $row->conflict_ids ) ) {
+			$row->conflict_ids = array();
+		} elseif ( isset( $row->conflict_ids ) && is_array( $row->conflict_ids ) ) {
+			$row->conflict_ids = array_values( array_filter( array_map( 'absint', $row->conflict_ids ) ) );
 		}
 		return $row;
 	}
@@ -114,6 +217,7 @@ class CRO_Offer_Model {
 			'conditions_json'   => array(),
 			'reward_json'       => array(),
 			'usage_rules_json'  => array(),
+			'conflict_ids'      => array(),
 		);
 		$data = wp_parse_args( $data, $defaults );
 		$data['name']    = sanitize_text_field( $data['name'] );

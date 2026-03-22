@@ -15,7 +15,7 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class CRO_Admin_UI {
 
-	const CONTENT_MAX_WIDTH = '1600px';
+	const CONTENT_MAX_WIDTH = '1920px';
 
 	/**
 	 * Nav items (slug => label, url). Shown on every CRO admin page.
@@ -172,7 +172,13 @@ class CRO_Admin_UI {
 	 */
 	private static function render_header( $title, $subtitle = '', $primary_action = null, $header_meta = array(), $header_pills = array() ) {
 		echo '<header class="cro-admin-layout__header cro-ui-header">';
-		echo '<div class="cro-admin-container cro-admin-layout__header-inner">';
+		echo '<div class="cro-admin-layout__header-inner">';
+
+		echo '<div class="cro-ui-header__brand">';
+		echo '<div class="cro-ui-header__logo" aria-hidden="true">';
+		echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
+		echo '</div>';
+
 		echo '<div class="cro-ui-header__text">';
 		echo '<h1 class="cro-ui-header__title">' . esc_html( $title ) . '</h1>';
 		if ( $subtitle !== '' ) {
@@ -188,6 +194,8 @@ class CRO_Admin_UI {
 			echo '</div>';
 		}
 		echo '</div>';
+		echo '</div>';
+
 		echo '<div class="cro-ui-header__right">';
 		if ( ! empty( $header_pills ) && is_array( $header_pills ) ) {
 			echo '<div class="cro-ui-header__pills">';
@@ -204,21 +212,28 @@ class CRO_Admin_UI {
 		if ( ! empty( $primary_action ) && isset( $primary_action['label'] ) ) {
 			echo '<div class="cro-ui-header__actions">';
 			$attrs = isset( $primary_action['attributes'] ) && is_array( $primary_action['attributes'] ) ? $primary_action['attributes'] : array();
+			$cta_url = '';
 			if ( ! empty( $primary_action['href'] ) ) {
-				echo '<a href="' . esc_url( $primary_action['href'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</a>';
+				$cta_url = $primary_action['href'];
+			} elseif ( ! empty( $primary_action['link'] ) ) {
+				$cta_url = $primary_action['link'];
+			}
+			if ( $cta_url !== '' ) {
+				echo '<a href="' . esc_url( $cta_url ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</a>';
 			} elseif ( ! empty( $primary_action['form_id'] ) ) {
 				echo '<button type="submit" form="' . esc_attr( $primary_action['form_id'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_action['button_id'] ) ) {
 				$attr_str = '';
-				foreach ( $attrs as $k => $v ) {
-					$attr_str .= ' ' . esc_attr( $k ) . '="' . esc_attr( $v ) . '"';
+				foreach ( $attrs as $attr_key => $attr_val ) {
+					$attr_str .= ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
 				}
-				echo '<button type="button" id="' . esc_attr( $primary_action['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . wp_kses_post( $attr_str ) . '>' . esc_html( $primary_action['label'] ) . '</button>';
+				echo '<button type="button" id="' . esc_attr( $primary_action['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . $attr_str . '>' . esc_html( $primary_action['label'] ) . '</button>';
 			}
 			echo '</div>';
 		}
 		echo '</div>';
-		echo '</div></header>';
+		echo '</div>';
+		echo '</header>';
 	}
 
 	/**
@@ -229,7 +244,7 @@ class CRO_Admin_UI {
 	public static function render_tabs( $active_tab ) {
 		$nav_items = apply_filters( 'cro_admin_tabs', self::get_nav_items() );
 		echo '<nav class="cro-admin-layout__nav cro-ui-nav cro-ui-nav--tabs" aria-label="' . esc_attr__( 'CRO sections', 'meyvora-convert' ) . '">';
-		echo '<div class="cro-admin-container cro-admin-layout__nav-inner">';
+		echo '<div class="cro-admin-container cro-admin-layout__nav-inner cro-admin-layout__nav-inner--with-chat-toggle">';
 		echo '<ul class="cro-ui-nav__list" role="list">';
 		foreach ( $nav_items as $page_slug => $item ) {
 			$active = ( $active_tab === $page_slug ) ? ' cro-ui-nav__link--active' : '';
@@ -237,7 +252,9 @@ class CRO_Admin_UI {
 			echo '<a href="' . esc_url( $item['url'] ) . '" class="cro-ui-nav__link' . esc_attr( $active ) . '">' . esc_html( $item['label'] ) . '</a>';
 			echo '</li>';
 		}
-		echo '</ul></div></nav>';
+		echo '</ul>';
+		do_action( 'cro_admin_nav_actions' );
+		echo '</div></nav>';
 	}
 
 	/**

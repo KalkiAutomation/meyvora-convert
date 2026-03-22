@@ -56,6 +56,7 @@ class CRO_Visitor_State {
 	const K_CI  = 'ci'; // Campaign impressions: campaign_id => [ ts, ts, ... ] (rolling window)
 	const K_CL  = 'cl'; // Campaign last click: campaign_id => ts
 	const K_ABA = 'aba'; // A/B attribution: { test_id, variation_id } for last shown variation (order conversion)
+	const K_PVC = 'pvc'; // Page views (incremented once per normal frontend request).
 
 	/**
 	 * Singleton instance.
@@ -86,6 +87,7 @@ class CRO_Visitor_State {
 	public static function get_instance() {
 		if ( null === self::$instance ) {
 			self::$instance = new self();
+			add_action( 'wp', array( self::$instance, 'maybe_bump_page_view' ) );
 		}
 		return self::$instance;
 	}
@@ -96,6 +98,8 @@ class CRO_Visitor_State {
 	private function __construct() {
 		$this->load_state();
 		add_action( 'shutdown', array( $this, 'save' ), 0 );
+		// Flush dirty state after REST responses (shutdown runs too late; headers may already be sent).
+		add_filter( 'rest_post_dispatch', array( $this, 'save_before_rest_response' ), 999, 1 );
 	}
 
 	/**
@@ -103,8 +107,10 @@ class CRO_Visitor_State {
 	 */
 	private function load_state() {
 		if ( isset( $_COOKIE[ self::COOKIE_NAME ] ) ) {
-			$raw = sanitize_text_field( wp_unslash( $_COOKIE[ self::COOKIE_NAME ] ) );
-			$decoded = json_decode( base64_decode( $raw ), true );
+			// Un-escape URL encoding that some environments apply to cookie values; decode before sanitizing.
+			$raw     = wp_unslash( $_COOKIE[ self::COOKIE_NAME ] );
+			$raw     = is_string( $raw ) ? str_replace( ' ', '+', $raw ) : '';
+			$decoded = json_decode( base64_decode( $raw, true ), true );
 			if ( is_array( $decoded ) ) {
 				$this->state = $decoded;
 			}
@@ -183,6 +189,17 @@ class CRO_Visitor_State {
 	}
 
 	/**
+	 * Save visitor state before REST response is dispatched (cookies must be set before the response is sent).
+	 *
+	 * @param WP_HTTP_Response $result REST response.
+	 * @return WP_HTTP_Response
+	 */
+	public function save_before_rest_response( $result ) {
+		$this->save();
+		return $result;
+	}
+
+	/**
 	 * Generate unique visitor ID.
 	 *
 	 * @return string
@@ -255,6 +272,39 @@ class CRO_Visitor_State {
 	 */
 	public function get_session_count() {
 		return (int) ( $this->state[ self::K_SC ] ?? 0 );
+	}
+
+	/**
+	 * Page views recorded for this visitor (used for min_pages_viewed targeting).
+	 *
+	 * @return int
+	 */
+	public function get_pages_viewed() {
+		return (int) ( $this->state[ self::K_PVC ] ?? 0 );
+	}
+
+	/**
+	 * Increment page view count once per normal frontend request (not admin, AJAX, or REST).
+	 *
+	 * @return void
+	 */
+	public function maybe_bump_page_view() {
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return;
+		}
+		if ( wp_doing_ajax() ) {
+			return;
+		}
+		if ( is_admin() ) {
+			return;
+		}
+		static $done = false;
+		if ( $done ) {
+			return;
+		}
+		$done = true;
+		$this->state[ self::K_PVC ] = (int) ( $this->state[ self::K_PVC ] ?? 0 ) + 1;
+		$this->dirty = true;
 	}
 
 	/**
@@ -522,9 +572,44 @@ class CRO_Visitor_State {
 	}
 
 	/**
+	 * Campaign IDs the visitor has dismissed (compact key cd).
+	 *
+	 * @return int[]
+	 */
+	public function get_dismissed_campaigns() {
+		$cd = $this->state[ self::K_CD ] ?? array();
+		if ( ! is_array( $cd ) ) {
+			return array();
+		}
+		return array_map( 'intval', array_keys( $cd ) );
+	}
+
+	/**
+	 * Whether the campaign was dismissed and is still within cooldown.
+	 *
+	 * @param int $campaign_id      Campaign ID.
+	 * @param int $cooldown_seconds 0 = permanent; greater than 0 = re-show after this many seconds.
+	 * @return bool
+	 */
+	public function was_dismissed( $campaign_id, $cooldown_seconds = 0 ) {
+		$id = (int) $campaign_id;
+		$cd = $this->state[ self::K_CD ] ?? array();
+		if ( ! is_array( $cd ) || ! array_key_exists( $id, $cd ) ) {
+			return false;
+		}
+		$cooldown_seconds = (int) $cooldown_seconds;
+		if ( $cooldown_seconds <= 0 ) {
+			return true;
+		}
+		$dismissed_at = (int) $cd[ $id ];
+		return ( time() - $dismissed_at ) < $cooldown_seconds;
+	}
+
+	/**
 	 * Record that a campaign was dismissed.
 	 *
 	 * @param int $campaign_id Campaign ID.
+	 * @return void
 	 */
 	public function record_campaign_dismissed( $campaign_id ) {
 		$id = (int) $campaign_id;
@@ -630,6 +715,7 @@ class CRO_Visitor_State {
 		return array(
 			'visitorId'               => $this->get_visitor_id(),
 			'sessionCount'            => $this->get_session_count(),
+			'pagesViewed'             => $this->get_pages_viewed(),
 			'lastSessionStart'        => $this->get_last_session_start(),
 			'lastActivity'            => $this->get_last_activity(),
 			'campaignsShownThisSession' => array_values( $this->state[ self::K_SS ] ?? array() ),

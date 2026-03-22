@@ -81,8 +81,35 @@ class CRO_Privacy {
             }
         }
 
-        // Export analytics events by user_id
+        // Export AI usage meta (logged-in users).
         $user = get_user_by( 'email', $email_address );
+        if ( $user ) {
+            $ai_actions = array( 'copy_generate', 'insights_analyse', 'offer_suggest', 'ab_hypothesis', 'chat', 'abandoned_email_preview' );
+            $ai_items   = array();
+            foreach ( $ai_actions as $action ) {
+                $usage = get_user_meta( $user->ID, 'cro_ai_usage_' . $action, true );
+                if ( is_array( $usage ) && isset( $usage['count'] ) && (int) $usage['count'] > 0 ) {
+                    $ai_items[] = array(
+                        'name'  => sprintf(
+                            /* translators: %s: internal AI action key (e.g. copy_generate, chat). */
+                            __( 'AI requests (%s)', 'meyvora-convert' ),
+                            $action
+                        ),
+                        'value' => (int) $usage['count'],
+                    );
+                }
+            }
+            if ( $ai_items ) {
+                $export_items[] = array(
+                    'group_id'    => 'cro_ai_usage',
+                    'group_label' => __( 'Meyvora Convert — AI Usage', 'meyvora-convert' ),
+                    'item_id'     => 'cro-ai-' . $user->ID,
+                    'data'        => $ai_items,
+                );
+            }
+        }
+
+        // Export analytics events by user_id
         if ( $user ) {
             $table_events = $wpdb->prefix . 'cro_events';
             if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events ) ) === $table_events ) {
@@ -136,9 +163,15 @@ class CRO_Privacy {
             $items_removed += (int) $deleted;
         }
 
-        // Delete analytics events by user_id
+        // Delete analytics events by user_id; erase AI usage meta.
         $user = get_user_by( 'email', $email_address );
         if ( $user ) {
+            $ai_actions = array( 'copy_generate', 'insights_analyse', 'offer_suggest', 'ab_hypothesis', 'chat', 'abandoned_email_preview' );
+            foreach ( $ai_actions as $action ) {
+                delete_user_meta( $user->ID, 'cro_ai_usage_' . $action );
+                delete_user_meta( $user->ID, 'cro_ai_last_ts_' . $action );
+            }
+
             $table_events = $wpdb->prefix . 'cro_events';
             if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events ) ) === $table_events ) {
                 $deleted = $wpdb->delete( $table_events, array( 'user_id' => $user->ID ), array( '%d' ) );

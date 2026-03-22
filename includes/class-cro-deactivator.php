@@ -29,9 +29,11 @@ class CRO_Deactivator {
 		}
 
 		// Clear scheduled events.
-		wp_clear_scheduled_hook( 'cro_daily_cleanup' );
-		wp_clear_scheduled_hook( 'cro_analytics_aggregate' );
-		wp_clear_scheduled_hook( 'cro_daily_analytics' );
+		wp_clear_scheduled_hook( 'cro_process_background_queue' );
+		wp_clear_scheduled_hook( 'cro_cleanup_old_events' );
+		wp_clear_scheduled_hook( 'cro_aggregate_daily_stats' );
+		wp_clear_scheduled_hook( 'cro_check_ab_winners' );
+		wp_clear_scheduled_hook( 'cro_send_abandoned_cart_reminders' );
 
 		// Clear CRO transients.
 		self::clear_transients();

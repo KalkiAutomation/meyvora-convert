@@ -358,6 +358,7 @@ class CRO_Database {
 			schedule longtext,
 			cooldown int(11) DEFAULT 3600,
 			fallback_id bigint(20) DEFAULT 0,
+			fallback_delay_seconds int(11) DEFAULT 5,
 			impressions bigint(20) unsigned DEFAULT 0,
 			conversions bigint(20) unsigned DEFAULT 0,
 			revenue_attributed decimal(12,2) DEFAULT 0,
@@ -538,6 +539,7 @@ class CRO_Database {
 		self::debug_log_tables( 'After dbDelta (cro_daily_stats): ' . wp_json_encode( $delta_result ) );
 
 		$offers_table = $tables['cro_offers'];
+		// conflict_ids: JSON array of offer IDs (cannot combine with). Existing installs: CRO_Activator::maybe_upgrade_tables adds the column if missing.
 		$sql_offers   = "CREATE TABLE $offers_table (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(255) NOT NULL,
@@ -546,6 +548,7 @@ class CRO_Database {
 			conditions_json longtext,
 			reward_json longtext,
 			usage_rules_json longtext,
+			conflict_ids text DEFAULT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			KEY status (status),

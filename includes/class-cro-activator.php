@@ -14,7 +14,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * Database schema version.
  */
-define( 'CRO_DB_VERSION', '1.6.0' );
+define( 'CRO_DB_VERSION', '1.8.0' );
 
 /**
  * Fired during plugin activation.
@@ -135,6 +135,31 @@ class CRO_Activator {
 			}
 		}
 
+		// One-time (1.8.0): add fallback_delay_seconds to cro_campaigns if missing.
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_campaigns ) ) === $table_campaigns ) {
+			$col = $wpdb->get_row( $wpdb->prepare(
+				"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'fallback_delay_seconds'",
+				DB_NAME,
+				$table_campaigns
+			) );
+			if ( ! $col ) {
+				$wpdb->query( "ALTER TABLE {$table_campaigns} ADD COLUMN fallback_delay_seconds int(11) NOT NULL DEFAULT 5 AFTER fallback_id" );
+			}
+		}
+
+		// One-time (1.7.0): add conflict_ids to cro_offers if missing (JSON array of offer IDs).
+		$table_offers = $wpdb->prefix . 'cro_offers';
+		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_offers ) ) === $table_offers ) {
+			$col = $wpdb->get_row( $wpdb->prepare(
+				"SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'conflict_ids'",
+				DB_NAME,
+				$table_offers
+			) );
+			if ( ! $col ) {
+				$wpdb->query( "ALTER TABLE {$table_offers} ADD COLUMN conflict_ids text DEFAULT NULL AFTER usage_rules_json" );
+			}
+		}
+
 		// Tracking table indexes for attribution/analytics performance (only if not present).
 		self::maybe_add_tracking_indexes();
 
@@ -252,6 +277,7 @@ class CRO_Activator {
 			schedule longtext,
 			cooldown int(11) DEFAULT 3600,
 			fallback_id bigint(20) DEFAULT 0,
+			fallback_delay_seconds int(11) DEFAULT 5,
 			impressions bigint(20) unsigned DEFAULT 0,
 			conversions bigint(20) unsigned DEFAULT 0,
 			revenue_attributed decimal(12,2) DEFAULT 0,
@@ -405,7 +431,7 @@ class CRO_Activator {
 				'trust_badges_enabled'       => false,
 				'cart_optimizer_enabled'     => false,
 				'checkout_optimizer_enabled' => false,
-				'exclude_admins'             => true,
+				'exclude_admins'             => false,
 				'debug_mode'                 => false,
 			),
 			'styles'  => array(
@@ -465,7 +491,8 @@ class CRO_Activator {
 			'sensitivity'             => 'medium',
 			'delay_seconds'           => 3,
 			'scroll_depth_percent'    => 50,
-			'time_on_page_seconds'    => 30,
+			'time_delay_seconds'      => 30,
+			'idle_seconds'            => 30,
 			'require_interaction'     => true,
 			'disable_on_fast_scroll'  => true,
 		);

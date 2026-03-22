@@ -52,6 +52,7 @@ class CRO_Loader {
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-activator.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-deactivator.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-settings.php';
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-attribution.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-system-status.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-default-copy.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-database.php';
@@ -60,7 +61,6 @@ class CRO_Loader {
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-cache.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-lazy-loader.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-query-optimizer.php';
-		require_once CRO_PLUGIN_DIR . 'includes/class-cro-asset-optimizer.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-background-processor.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-resource-manager.php';
 
@@ -79,9 +79,6 @@ class CRO_Loader {
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-shortcodes.php';
 
 		// Decision engine and visitor state are loaded in the main plugin file (meyvora-convert.php).
-
-		// Intent validator (validate trigger signals)
-		require_once CRO_PLUGIN_DIR . 'includes/class-cro-intent-validator.php';
 
 		// Offer guard (coupon and offer protection)
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-offer-guard.php';
@@ -177,6 +174,8 @@ class CRO_Loader {
 
 		// Public
 		require_once CRO_PLUGIN_DIR . 'public/class-cro-public.php';
+
+		new CRO_Frontend();
 
 		// Initialize REST API
 		new CRO_REST_API();

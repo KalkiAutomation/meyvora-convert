@@ -76,21 +76,6 @@ class CRO_Templates {
 				),
 			),
 
-			'centered-image-top'  => array(
-				'name'            => __( 'Image Top', 'meyvora-convert' ),
-				'description'     => __( 'Large image at top with content below', 'meyvora-convert' ),
-				'type'            => 'popup',
-				'category'        => 'modal',
-				'preview_image'   => '',
-				'supports'        => array( 'image', 'headline', 'subheadline', 'body', 'cta', 'email', 'coupon', 'countdown', 'dismiss' ),
-				'default_styling' => array(
-					'position'        => 'center',
-					'size'            => 'medium',
-					'animation'       => 'zoom',
-					'layout'          => 'image-top',
-				),
-			),
-
 			'fullscreen'          => array(
 				'name'            => __( 'Fullscreen', 'meyvora-convert' ),
 				'description'     => __( 'Full-screen takeover for maximum impact', 'meyvora-convert' ),
@@ -119,6 +104,21 @@ class CRO_Templates {
 				),
 			),
 
+			'corner'              => array(
+				'name'            => __( 'Corner Notification', 'meyvora-convert' ),
+				'description'     => __( 'Small popup anchored to a bottom corner', 'meyvora-convert' ),
+				'type'            => 'popup',
+				'category'        => 'slide',
+				'preview_image'   => '',
+				'supports'        => array( 'headline', 'body', 'cta', 'coupon', 'dismiss' ),
+				'default_styling' => array(
+					'position'  => 'bottom-right',
+					'size'      => 'small',
+					'animation' => 'slide-up',
+					'overlay'   => false,
+				),
+			),
+
 			// ==========================================
 			// SLIDE-IN TEMPLATES
 			// ==========================================
@@ -133,36 +133,6 @@ class CRO_Templates {
 				'default_styling' => array(
 					'position'        => 'bottom-center',
 					'size'            => 'auto',
-					'animation'       => 'slide-up',
-					'overlay'         => false,
-				),
-			),
-
-			'slide-bottom-left'   => array(
-				'name'            => __( 'Bottom Left Corner', 'meyvora-convert' ),
-				'description'     => __( 'Small notification in bottom left corner', 'meyvora-convert' ),
-				'type'            => 'slide',
-				'category'        => 'slide',
-				'preview_image'   => '',
-				'supports'        => array( 'headline', 'body', 'cta', 'coupon', 'dismiss' ),
-				'default_styling' => array(
-					'position'        => 'bottom-left',
-					'size'            => 'small',
-					'animation'       => 'slide-up',
-					'overlay'         => false,
-				),
-			),
-
-			'slide-bottom-right'  => array(
-				'name'            => __( 'Bottom Right Corner', 'meyvora-convert' ),
-				'description'     => __( 'Small notification in bottom right corner', 'meyvora-convert' ),
-				'type'            => 'slide',
-				'category'        => 'slide',
-				'preview_image'   => '',
-				'supports'        => array( 'headline', 'body', 'cta', 'coupon', 'dismiss' ),
-				'default_styling' => array(
-					'position'        => 'bottom-right',
-					'size'            => 'small',
 					'animation'       => 'slide-up',
 					'overlay'         => false,
 				),

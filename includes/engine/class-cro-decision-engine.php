@@ -18,7 +18,7 @@ if ( ! defined( 'WPINC' ) ) {
 /**
  * CRO_Decision_Engine class.
  *
- * Singleton. decide() runs: consent → visitor suppression → active campaigns →
+ * Singleton. decide() runs: consent → UX form signals → visitor suppression → active campaigns →
  * targeting → intent score/threshold → priority → frequency → final decision.
  */
 class CRO_Decision_Engine {
@@ -56,10 +56,17 @@ class CRO_Decision_Engine {
 	 * @param CRO_Visitor_State $visitor_state Visitor state (cookie/session).
 	 * @param array            $intent_signals Active intent signals (e.g. exit_mouse, time_on_page).
 	 * @param string           $trigger_type  Optional. Current trigger that fired (exit_intent, time, scroll, inactivity, page_load, click).
+	 * @param array            $options       Optional. single_campaign_id (int): evaluate only this campaign. ignore_session_popup_cap (bool): skip max popups per session. skip_pageview_shown_check (bool): allow second decide in same request (rare).
 	 * @return CRO_Decision
 	 */
-	public function decide( CRO_Context $context, CRO_Visitor_State $visitor_state, array $intent_signals = array(), $trigger_type = '' ) {
+	public function decide( CRO_Context $context, CRO_Visitor_State $visitor_state, array $intent_signals = array(), $trigger_type = '', array $options = array() ) {
 		$decision = new CRO_Decision( false, null, '', 'pending' );
+
+		// Visitor metrics for targeting rules (session count, page views). JS may send visitor.pages_viewed; take max with server count.
+		$context->set( 'request.session_count', $visitor_state->get_session_count() );
+		$pv_server = $visitor_state->get_pages_viewed();
+		$pv_js     = (int) $context->get( 'visitor.pages_viewed', 0 );
+		$context->set( 'visitor.pages_viewed', max( $pv_js, $pv_server ) );
 
 		// Step 1: Consent check
 		if ( ! $this->check_consent() ) {
@@ -70,8 +77,19 @@ class CRO_Decision_Engine {
 		}
 		$decision->log( 'INFO', __( 'Consent OK.', 'meyvora-convert' ), array( 'step' => 1 ) );
 
+		// Step 1b: UX — do not show while user is typing or a form field is focused (signals from cro-signals.js).
+		if ( class_exists( 'CRO_UX_Rules' ) && ! empty( $intent_signals ) ) {
+			$ux = new CRO_UX_Rules();
+			if ( $ux->is_form_interaction_blocked( $intent_signals ) ) {
+				$decision->log( 'SKIP', __( 'UX rule blocked: form interaction.', 'meyvora-convert' ), array( 'step' => '1b' ) );
+				$decision->reason      = __( 'UX protection active.', 'meyvora-convert' );
+				$decision->reason_code = 'ux_block';
+				return $decision;
+			}
+		}
+
 		// Step 2: Visitor suppression (admin, shown this pageview, max per session, post-conversion, checkout)
-		$suppression = $this->check_visitor_suppression( $context, $visitor_state );
+		$suppression = $this->check_visitor_suppression( $context, $visitor_state, $options );
 		if ( $suppression !== null ) {
 			$decision->log( 'SKIP', $suppression, array( 'step' => 2 ) );
 			$decision->reason = $suppression;
@@ -80,8 +98,13 @@ class CRO_Decision_Engine {
 		}
 		$decision->log( 'INFO', __( 'Visitor suppression OK.', 'meyvora-convert' ), array( 'step' => 2 ) );
 
-		// Step 3: Get active campaigns from database
-		$campaigns = $this->get_active_campaigns();
+		// Step 3: Get active campaigns from database (or a single campaign for dismiss→fallback flow)
+		$single_id = isset( $options['single_campaign_id'] ) ? (int) $options['single_campaign_id'] : 0;
+		if ( $single_id > 0 ) {
+			$campaigns = $this->get_single_active_campaign( $single_id );
+		} else {
+			$campaigns = $this->get_active_campaigns( $context );
+		}
 		if ( empty( $campaigns ) ) {
 			$decision->log( 'SKIP', __( 'No active campaigns.', 'meyvora-convert' ), array( 'step' => 3 ) );
 			$decision->reason = __( 'No active campaigns.', 'meyvora-convert' );
@@ -97,21 +120,29 @@ class CRO_Decision_Engine {
 			$rules = $this->targeting_rules_for_engine( $campaign );
 			$result = $rule_engine->evaluate( $rules, $context );
 			$decision->record_campaign_result( $campaign->id, $result['passed'], $result['details'] );
-			if ( $result['passed'] ) {
-				$eligible[] = $campaign;
-				$decision->log( 'RULE', sprintf( /* translators: %d is the campaign ID. */ __( 'Campaign %d passed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id ) );
-			} else {
+			if ( ! $result['passed'] ) {
 				$decision->log( 'RULE', sprintf( /* translators: %d is the campaign ID. */ __( 'Campaign %d failed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id, 'details' => $result['details'] ) );
+				continue;
 			}
+			$freq               = isset( $campaign->frequency_rules ) && is_array( $campaign->frequency_rules ) ? $campaign->frequency_rules : array();
+			$dismissal_cooldown = isset( $freq['dismissal_cooldown_seconds'] ) ? (int) $freq['dismissal_cooldown_seconds'] : 0;
+			if ( $visitor_state->was_dismissed( (int) $campaign->id, $dismissal_cooldown ) ) {
+				$decision->log(
+					'RULE',
+					sprintf(
+						/* translators: 1: campaign ID, 2: cooldown seconds (0 = permanent). */
+						__( 'Campaign %1$d skipped: dismissed (cooldown %2$ds).', 'meyvora-convert' ),
+						$campaign->id,
+						$dismissal_cooldown
+					),
+					array( 'campaign_id' => $campaign->id, 'cooldown' => $dismissal_cooldown )
+				);
+				continue;
+			}
+			$eligible[] = $campaign;
+			$decision->log( 'RULE', sprintf( /* translators: %d is the campaign ID. */ __( 'Campaign %d passed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id ) );
 		}
 
-		if ( empty( $eligible ) ) {
-			$fallback = $this->get_fallback_campaign();
-			if ( $fallback !== null ) {
-				$eligible = array( $fallback );
-				$decision->log( 'INFO', __( 'Using fallback campaign.', 'meyvora-convert' ), array( 'campaign_id' => $fallback->id ) );
-			}
-		}
 		if ( empty( $eligible ) ) {
 			$decision->log( 'SKIP', __( 'No campaigns passed targeting.', 'meyvora-convert' ), array( 'step' => 4 ) );
 			$decision->reason = __( 'No matching campaigns.', 'meyvora-convert' );
@@ -132,8 +163,11 @@ class CRO_Decision_Engine {
 
 		$decision->log( 'INFO', sprintf( /* translators: %d is the number of campaigns that passed targeting. */ __( '%d campaign(s) passed targeting.', 'meyvora-convert' ), count( $eligible ) ), array( 'step' => 4 ) );
 
-		// Step 5: Intent score and threshold (for exit_intent) or treat trigger condition as met (time/scroll/inactivity/page_load)
-		$trigger_only_types = array( 'time', 'scroll', 'inactivity', 'page_load', 'click' );
+		// Step 5: Intent score and threshold (optional / legacy) or treat trigger condition as met.
+		// exit_intent: must skip intent scoring — the controller fires exit_intent on viewport-top mouseout,
+		// while the scorer expects exit_mouse velocity & collector state that often do not match, so scores
+		// stayed below threshold and popups never showed.
+		$trigger_only_types = array( 'exit_intent', 'time', 'scroll', 'inactivity', 'page_load', 'click' );
 		$passed_intent = array();
 		if ( in_array( $trigger_type, $trigger_only_types, true ) ) {
 			// Trigger condition was already validated in filter_eligible_by_trigger; skip intent scoring
@@ -223,6 +257,11 @@ class CRO_Decision_Engine {
 		$decision->show         = true;
 		$decision->campaign     = $campaign_to_show;
 		$decision->campaign_id = $winner->id;
+		$winner_fallback_id = isset( $winner->fallback_id ) ? (int) $winner->fallback_id : 0;
+		if ( $winner_fallback_id > 0 && method_exists( $winner, 'get_fallback_delay' ) ) {
+			$decision->fallback_campaign_id   = $winner_fallback_id;
+			$decision->fallback_delay_seconds = $winner->get_fallback_delay();
+		}
 		$decision->reason      = __( 'Campaign selected.', 'meyvora-convert' );
 		$decision->reason_code = 'show';
 		$decision->set_intent( $winner_entry['score'], $winner_entry['threshold'] );
@@ -259,23 +298,27 @@ class CRO_Decision_Engine {
 	 *
 	 * @param CRO_Context      $context       Context.
 	 * @param CRO_Visitor_State $visitor_state Visitor state.
+	 * @param array             $options       Optional. ignore_session_popup_cap, skip_pageview_shown_check.
 	 * @return string|null Null if OK to show; otherwise suppression reason string.
 	 */
-	public function check_visitor_suppression( CRO_Context $context, CRO_Visitor_State $visitor_state ) {
-		// Admin exclusion
-		if ( function_exists( 'cro_settings' ) && cro_settings()->get( 'general', 'exclude_admins', true ) ) {
+	public function check_visitor_suppression( CRO_Context $context, CRO_Visitor_State $visitor_state, array $options = array() ) {
+		// Admin exclusion (optional; skip when debug mode is on so shop owners can test while logged in).
+		if ( function_exists( 'cro_settings' ) && cro_settings()->get( 'general', 'exclude_admins', false ) ) {
 			if ( $context->get( 'user.is_admin', false ) ) {
-				return __( 'Admins are excluded.', 'meyvora-convert' );
+				$debug_on = cro_settings()->get( 'general', 'debug_mode', false );
+				if ( ! $debug_on && apply_filters( 'cro_exclude_admins_from_campaigns', true, $context ) ) {
+					return __( 'Admins are excluded. Enable debug_mode in settings to test as admin.', 'meyvora-convert' );
+				}
 			}
 		}
 
 		// Already shown this pageview (only one per request)
-		if ( $this->shown_this_pageview ) {
+		if ( empty( $options['skip_pageview_shown_check'] ) && $this->shown_this_pageview ) {
 			return __( 'Already shown this pageview.', 'meyvora-convert' );
 		}
 
 		// Max popups per session
-		if ( function_exists( 'cro_settings' ) ) {
+		if ( empty( $options['ignore_session_popup_cap'] ) && function_exists( 'cro_settings' ) ) {
 			$max = (int) cro_settings()->get( 'general', 'max_popups_per_session', 3 );
 			if ( $max > 0 && $visitor_state->get_session_shown_count() >= $max ) {
 				return __( 'Max popups per session reached.', 'meyvora-convert' );
@@ -302,13 +345,26 @@ class CRO_Decision_Engine {
 	/**
 	 * Get active campaigns from database as CRO_Campaign_Model instances.
 	 *
+	 * When {@see CRO_Query_Optimizer} is available and context is passed, uses cache + PHP pre-filter
+	 * (schedule, page type, device) before building models.
+	 *
+	 * @param CRO_Context|null $context Optional. Request context for query optimizer.
 	 * @return CRO_Campaign_Model[]
 	 */
-	public function get_active_campaigns() {
+	public function get_active_campaigns( $context = null ) {
 		if ( ! class_exists( 'CRO_Campaign' ) ) {
 			return array();
 		}
-		$rows = CRO_Campaign::get_all( array( 'status' => 'active' ) );
+		$rows = null;
+		if ( class_exists( 'CRO_Query_Optimizer' ) && is_object( $context ) && method_exists( $context, 'get' ) ) {
+			$filtered = CRO_Query_Optimizer::get_campaigns_for_decision( $context );
+			if ( $filtered !== null ) {
+				$rows = $filtered;
+			}
+		}
+		if ( $rows === null ) {
+			$rows = CRO_Campaign::get_all( array( 'status' => 'active' ) );
+		}
 		if ( ! is_array( $rows ) ) {
 			return array();
 		}
@@ -323,6 +379,28 @@ class CRO_Decision_Engine {
 			}
 		}
 		return $models;
+	}
+
+	/**
+	 * Load one campaign by ID if active and within schedule (for fallback-only decide).
+	 *
+	 * @param int $id Campaign ID.
+	 * @return CRO_Campaign_Model[]
+	 */
+	private function get_single_active_campaign( $id ) {
+		$id = (int) $id;
+		if ( $id <= 0 || ! class_exists( 'CRO_Campaign' ) || ! class_exists( 'CRO_Campaign_Model' ) ) {
+			return array();
+		}
+		$row = CRO_Campaign::get( $id );
+		if ( ! is_array( $row ) || empty( $row['id'] ) ) {
+			return array();
+		}
+		$model = CRO_Campaign_Model::from_db_row( $row );
+		if ( ! $model->is_active() || ! $model->is_within_schedule() ) {
+			return array();
+		}
+		return array( $model );
 	}
 
 	/**
@@ -469,6 +547,10 @@ class CRO_Decision_Engine {
 			case 'once_per_x_days':
 				$days = (int) ( isset( $rules['frequency_days'] ) ? $rules['frequency_days'] : 7 );
 				return ( $now - $last_shown ) >= ( $days * DAY_IN_SECONDS );
+			case 'once_per_week':
+				return ( $now - $last_shown ) >= ( 7 * DAY_IN_SECONDS );
+			case 'always':
+				return true;
 			default:
 				return true;
 		}
@@ -527,20 +609,18 @@ class CRO_Decision_Engine {
 
 		// Build from pages include/exclude (map category -> product_category for WooCommerce)
 		$pages = isset( $tr['pages'] ) && is_array( $tr['pages'] ) ? $tr['pages'] : array();
-		$include = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array( 'cart', 'product' );
+		$include = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
 		$exclude = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
 		$include = array_map( array( __CLASS__, 'map_page_type' ), $include );
 		$exclude = array_map( array( __CLASS__, 'map_page_type' ), $exclude );
-		$page_mode = isset( $tr['page_mode'] ) ? $tr['page_mode'] : ( ! empty( $include ) ? 'include' : ( ! empty( $exclude ) ? 'exclude' : 'all' ) );
+		// Respect saved page_mode. Do not infer from default pages.include (Bug: 'all' was forced to 'include').
+		$page_mode = isset( $tr['page_mode'] ) ? $tr['page_mode'] : 'all';
 		if ( $page_mode === 'include' && ! empty( $include ) ) {
 			$must[] = array( 'type' => 'page_type_in', 'value' => array_values( array_unique( $include ) ) );
-		}
-		if ( $page_mode === 'exclude' && ! empty( $exclude ) ) {
-			$must[] = array( 'type' => 'page_type_not_in', 'value' => array_values( array_unique( $exclude ) ) );
-		}
-		if ( $page_mode !== 'include' && $page_mode !== 'exclude' && ! empty( $exclude ) ) {
+		} elseif ( $page_mode === 'exclude' && ! empty( $exclude ) ) {
 			$must_not[] = array( 'type' => 'page_type_in', 'value' => array_values( array_unique( $exclude ) ) );
 		}
+		// page_mode 'all' → no page-type must rules (checkout still suppressed elsewhere).
 
 		// Device
 		$device = isset( $tr['device'] ) && is_array( $tr['device'] ) ? $tr['device'] : array();
@@ -583,6 +663,23 @@ class CRO_Decision_Engine {
 			$must[] = array( 'type' => 'cart_total_lte', 'value' => $cart_max );
 		}
 
+		// Cart item count range
+		$cart_min_items = isset( $behavior['cart_min_items'] ) && $behavior['cart_min_items'] !== '' ? (int) $behavior['cart_min_items'] : 0;
+		$cart_max_items = isset( $behavior['cart_max_items'] ) && $behavior['cart_max_items'] !== '' ? (int) $behavior['cart_max_items'] : 0;
+		if ( $cart_min_items > 0 ) {
+			$must[] = array( 'type' => 'cart_item_count_gte', 'value' => $cart_min_items );
+		}
+		if ( $cart_max_items > 0 ) {
+			$must[] = array( 'type' => 'cart_item_count_lte', 'value' => $cart_max_items );
+		}
+		if ( ! empty( $behavior['cart_has_sale_only'] ) ) {
+			$must[] = array( 'type' => 'cart_has_sale_items', 'value' => true );
+		}
+		$min_pages = isset( $behavior['min_pages_viewed'] ) && $behavior['min_pages_viewed'] !== '' ? (int) $behavior['min_pages_viewed'] : 0;
+		if ( $min_pages > 0 ) {
+			$must[] = array( 'type' => 'pages_viewed_gte', 'value' => $min_pages );
+		}
+
 		// Cart product/category include/exclude
 		$cart_include_product = isset( $behavior['cart_contains_product'] ) && is_array( $behavior['cart_contains_product'] ) ? array_map( 'intval', $behavior['cart_contains_product'] ) : ( isset( $behavior['cart_contains'] ) && is_array( $behavior['cart_contains'] ) ? array_map( 'intval', $behavior['cart_contains'] ) : array() );
 		$cart_exclude_product = isset( $behavior['cart_exclude_product'] ) && is_array( $behavior['cart_exclude_product'] ) ? array_map( 'intval', $behavior['cart_exclude_product'] ) : array();
@@ -608,6 +705,15 @@ class CRO_Decision_Engine {
 			$must[] = array( 'type' => 'visitor_new', 'value' => true );
 		} elseif ( $visitor_type === 'returning' ) {
 			$must[] = array( 'type' => 'visitor_returning', 'value' => true );
+		}
+
+		$min_sessions = isset( $visitor['min_sessions'] ) && $visitor['min_sessions'] !== '' ? (int) $visitor['min_sessions'] : 0;
+		$max_sessions = isset( $visitor['max_sessions'] ) && $visitor['max_sessions'] !== '' ? (int) $visitor['max_sessions'] : 0;
+		if ( $min_sessions > 0 ) {
+			$must[] = array( 'type' => 'session_count_gte', 'value' => $min_sessions );
+		}
+		if ( $max_sessions > 0 ) {
+			$must[] = array( 'type' => 'session_count_lte', 'value' => $max_sessions );
 		}
 
 		// UTM conditions
@@ -642,7 +748,7 @@ class CRO_Decision_Engine {
 /**
  * Global accessor for the decision engine.
  *
- * Use: cro_decide()->decide( $context, $visitor_state, $intent_signals )
+ * Use: cro_decide()->decide( $context, $visitor_state, $intent_signals, $trigger_type, $options )
  *
  * @return CRO_Decision_Engine
  */

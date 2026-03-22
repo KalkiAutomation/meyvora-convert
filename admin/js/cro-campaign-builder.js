@@ -33,7 +33,7 @@
         var $form = $wrap.closest("form");
         if ($form.length) $form.append('<input type="hidden" id="campaign-data" name="campaign_data" value=""/>');
         else $wrap.prepend('<input type="hidden" id="campaign-data" name="campaign_data" value=""/>');
-        self.campaignData = { template: "centered", content: {}, styling: {}, trigger_rules: {}, targeting_rules: {}, frequency_rules: {}, schedule: {} };
+        self.campaignData = { template: "centered", content: {}, styling: {}, trigger_rules: {}, targeting_rules: {}, frequency_rules: {}, schedule: {}, fallback_id: 0, fallback_delay_seconds: 5 };
         self.campaignId = parseInt($("#campaign-id").val(), 10) || 0;
         self.initNav();
         self.initTemplateSelection();
@@ -41,7 +41,9 @@
         self.initImageUpload();
         self.initDesignControls();
         self.initTriggerControls();
+        self.populateTriggerFields();
         self.initTargetingControls();
+        self.populateTargetingFields();
         self.initDisplayControls();
         self.initPreview();
         self.initSaveHandlers();
@@ -81,6 +83,12 @@
       if (!self.campaignData.schedule) {
         self.campaignData.schedule = {};
       }
+      if (self.campaignData.fallback_id == null) {
+        self.campaignData.fallback_id = 0;
+      }
+      if (self.campaignData.fallback_delay_seconds == null) {
+        self.campaignData.fallback_delay_seconds = 5;
+      }
 
       self.initNav();
       self.initTemplateSelection();
@@ -88,7 +96,9 @@
       self.initImageUpload();
       self.initDesignControls();
       self.initTriggerControls();
+      self.populateTriggerFields();
       self.initTargetingControls();
+      self.populateTargetingFields();
       self.initDisplayControls();
       self.initPreview();
       self.initSaveHandlers();
@@ -416,6 +426,64 @@
       }
     },
 
+    populateTriggerFields: function () {
+      var tr = this.campaignData.trigger_rules || {};
+      if (tr.type) {
+        $('input[name="trigger-type"][value="' + tr.type + '"]').prop("checked", true);
+      }
+      if (tr.time_delay_seconds !== undefined) {
+        $("#trigger-time-delay").val(tr.time_delay_seconds);
+      }
+      if (tr.time_delay !== undefined && tr.time_delay_seconds === undefined) {
+        $("#trigger-time-delay").val(tr.time_delay);
+      }
+      if (tr.scroll_depth_percent !== undefined) {
+        $("#trigger-scroll-depth").val(tr.scroll_depth_percent);
+        $("#scroll-depth-value").text(tr.scroll_depth_percent);
+      }
+      if (tr.scroll_depth !== undefined && tr.scroll_depth_percent === undefined) {
+        $("#trigger-scroll-depth").val(tr.scroll_depth);
+        $("#scroll-depth-value").text(tr.scroll_depth);
+      }
+      if (tr.idle_seconds !== undefined) {
+        $("#trigger-idle-time").val(tr.idle_seconds);
+      }
+      if (tr.idle_time !== undefined && tr.idle_seconds === undefined) {
+        $("#trigger-idle-time").val(tr.idle_time);
+      }
+      if (tr.sensitivity) {
+        $("#trigger-sensitivity").val(tr.sensitivity);
+      }
+      if (tr.delay_seconds !== undefined) {
+        $("#trigger-delay").val(tr.delay_seconds);
+      }
+      if (tr.click_selector) {
+        $("#trigger-click-selector").val(tr.click_selector);
+      }
+      if (tr.intent_threshold !== undefined) {
+        $("#trigger-intent-threshold").val(tr.intent_threshold);
+        $("#intent-threshold-value").text(tr.intent_threshold);
+      }
+      if (tr.enable_mobile_exit !== undefined) {
+        $("#trigger-mobile-exit").prop("checked", !!tr.enable_mobile_exit);
+      }
+      if (tr.use_custom_intent !== undefined) {
+        $("#show-intent-settings").prop("checked", !!tr.use_custom_intent);
+        $("#intent-settings").toggle(!!tr.use_custom_intent);
+      }
+      if (tr.intent_weights && typeof tr.intent_weights === "object") {
+        Object.keys(tr.intent_weights).forEach(function (key) {
+          var $r = $('.cro-signal-weight input[data-signal="' + key + '"]');
+          if ($r.length) {
+            var v = tr.intent_weights[key];
+            $r.val(v);
+            $r.siblings("span").first().text(String(v));
+          }
+        });
+      }
+      $('input[name="trigger-type"]:checked').trigger("change");
+    },
+
     updateTriggerFromFields: function () {
       var triggerType = $('input[name="trigger-type"]:checked').val();
       this.campaignData.trigger_rules = {
@@ -510,10 +578,18 @@
       });
     },
 
+    populateTargetingFields: function () {
+      var tr = this.campaignData.targeting_rules || {};
+      if (tr.page_mode) {
+        $("#targeting-page-mode").val(tr.page_mode).trigger("change");
+      }
+    },
+
     updateTargetingFromFields: function () {
+      var pageMode = $("#targeting-page-mode").val() || "all";
       var rules = {
         audience_mode: $('input[name="targeting-mode"]:checked').val() || "all",
-        page_mode: $("#targeting-page-mode").val() || "all",
+        page_mode: pageMode,
         pages: { include: [], exclude: ["checkout"] },
         visitor: {
           type: $("#targeting-visitor-type").val() || "all",
@@ -529,7 +605,6 @@
         exclude_purchased: $("#targeting-exclude-purchased").is(":checked"),
       };
 
-      var pageMode = $("#targeting-page-mode").val();
       if (pageMode === "include") {
         $('input[name="pages[]"]:checked').each(function () {
           rules.pages.include.push($(this).val());
@@ -589,6 +664,7 @@
       ).is(":checked");
 
       this.campaignData.targeting_rules = rules;
+      this.campaignData.targeting_rules.page_mode = pageMode;
     },
 
     // === DISPLAY RULES ===
@@ -634,12 +710,35 @@
         $("#priority-value").text($(this).val());
       });
 
+      $("#display-fallback-id").on("change", function () {
+        var v = parseInt($("#display-fallback-id").val(), 10) || 0;
+        $("#cro-fallback-delay-row-builder").toggle(v > 0);
+        self.updateDisplayFromFields();
+        self.markChanged();
+      });
+
+      $("#display-fallback-delay").on("change input", function () {
+        self.updateDisplayFromFields();
+        self.markChanged();
+      });
+
       $(
         "#display-is-fallback, #display-auto-pause, #display-after-conversion, #display-target-conversions, #display-target-impressions, #display-target-revenue, #display-hide-days, #display-followup-campaign"
       ).on("change input", function () {
         self.updateDisplayFromFields();
         self.markChanged();
       });
+
+      var fbInit = parseInt(self.campaignData.fallback_id, 10) || 0;
+      $("#display-fallback-id").val(String(fbInit));
+      $("#display-fallback-delay").val(
+        String(
+          self.campaignData.fallback_delay_seconds != null
+            ? self.campaignData.fallback_delay_seconds
+            : 5
+        )
+      );
+      $("#cro-fallback-delay-row-builder").toggle(fbInit > 0);
     },
 
     updateDisplayFromFields: function () {
@@ -701,6 +800,17 @@
       };
 
       this.campaignData.priority = this.campaignData.frequency_rules.priority;
+
+      this.campaignData.fallback_id =
+        parseInt($("#display-fallback-id").val(), 10) || 0;
+      var fbd = parseInt($("#display-fallback-delay").val(), 10);
+      if (isNaN(fbd)) {
+        fbd = 5;
+      }
+      this.campaignData.fallback_delay_seconds = Math.max(
+        0,
+        Math.min(300, fbd)
+      );
     },
 
     // === PREVIEW ===

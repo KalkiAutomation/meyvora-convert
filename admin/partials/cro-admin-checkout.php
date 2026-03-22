@@ -43,7 +43,7 @@ $checkout = $settings->get_checkout_settings();
 ?>
 
 			<div class="cro-ui-card cro-impact-notice">
-				<?php echo wp_kses_post( CRO_Icons::svg( 'sparkles', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'sparkles', array( 'class' => 'cro-ico' ) ); ?>
 
 				<p>
 					<?php esc_html_e( 'Industry data: Removing unnecessary checkout fields can increase conversions by 20-30%.', 'meyvora-convert' ); ?>
@@ -70,7 +70,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- Field Removal Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'trash', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Remove Optional Fields', 'meyvora-convert' ); ?>
 			</h2>
@@ -127,7 +127,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- UX Improvements Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'settings', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'settings', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'UX Improvements', 'meyvora-convert' ); ?>
 			</h2>
@@ -169,7 +169,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- Trust Elements Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Trust & Security Elements', 'meyvora-convert' ); ?>
 			</h2>

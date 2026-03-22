@@ -12,7 +12,7 @@
 				fetch(window.croConfig.ajaxUrl, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-					body: 'action=cro_log_error&nonce=' + encodeURIComponent(window.croConfig.nonce || '') +
+					body: 'action=cro_log_error&nonce=' + encodeURIComponent((window.croConfig.logErrorNonce || window.croConfig.nonce || '')) +
 						'&data=' + encodeURIComponent(JSON.stringify({
 							message: (error && error.message) ? String(error.message) : String(error),
 							stack: (error && error.stack) ? String(error.stack) : '',

@@ -148,6 +148,57 @@
   margin-top: 8px;
 }
 
+.cro-offers-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.cro-offers-toolbar .cro-offers-check-conflicts {
+  margin-left: auto;
+}
+
+.cro-offers-conflict-notices {
+  margin: 0 0 16px;
+}
+
+.cro-offers-conflict-notices .notice {
+  margin: 8px 0 0;
+}
+
+.cro-offer-card-conflicts-row {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #646970;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cro-offer-card-conflicts-label {
+  font-weight: 600;
+}
+
+.cro-offer-conflict-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0b849;
+  color: #1d2327;
+  line-height: 1.4;
+}
+
+.cro-offer-conflict-badge--none {
+  background: transparent;
+  color: #a7aaad;
+  font-weight: 400;
+  padding: 0;
+}
+
 /* --- Cards grid (8px grid) --- */
 .cro-offers-grid {
   display: grid;

@@ -209,6 +209,8 @@ class CRO_Ajax {
 			'styling'            => $styling,
 			'targeting_rules'    => $targeting_rules,
 			'display_rules'      => $display_rules,
+			'fallback_id'        => isset( $data['fallback_id'] ) ? absint( $data['fallback_id'] ) : 0,
+			'fallback_delay_seconds' => isset( $data['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) $data['fallback_delay_seconds'] ) ) : 5,
 		);
 
 		if ( ! class_exists( 'CRO_Campaign' ) ) {

@@ -159,7 +159,7 @@ $cart_settings = wp_parse_args(
 		<!-- Trust Message Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Trust Message', 'meyvora-convert' ); ?>
 			</h2>
@@ -189,7 +189,7 @@ $cart_settings = wp_parse_args(
 		<!-- Urgency Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Urgency Messaging', 'meyvora-convert' ); ?>
 			</h2>
@@ -237,7 +237,7 @@ $cart_settings = wp_parse_args(
 		<!-- Benefits List Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Benefits List', 'meyvora-convert' ); ?>
 			</h2>
@@ -267,7 +267,7 @@ $cart_settings = wp_parse_args(
 		<!-- Checkout Button Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Checkout Button', 'meyvora-convert' ); ?>
 			</h2>
@@ -299,7 +299,7 @@ $cart_settings = wp_parse_args(
 		<!-- Exit-intent nudge (cart/checkout, once per session, mobile-safe) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'door-open', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'door-open', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Exit-intent nudge', 'meyvora-convert' ); ?>
 			</h2>
@@ -346,7 +346,7 @@ $cart_settings = wp_parse_args(
 		<!-- Banner frequency cap (shipping bar, trust, urgency, offer) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'eye', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Banner frequency cap', 'meyvora-convert' ); ?>
 			</h2>
@@ -393,7 +393,7 @@ $cart_settings = wp_parse_args(
 		<!-- Abandoned cart reminders -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'mail', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'mail', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Abandoned cart reminders', 'meyvora-convert' ); ?>
 			</h2>
@@ -423,18 +423,31 @@ $cart_settings = wp_parse_args(
 					</div>
 				</div>
 				<div class="cro-field cro-col-12">
-					<label class="cro-field__label"><?php esc_html_e( 'Email schedule (hours after last activity)', 'meyvora-convert' ); ?></label>
-					<div class="cro-field__control">
-						<label><?php esc_html_e( 'Email #1', 'meyvora-convert' ); ?></label>
-						<input type="number" name="cro_email_1_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_1_delay_hours'] ); ?>" min="0" max="168" class="small-text" /> <?php esc_html_e( 'hours', 'meyvora-convert' ); ?>
-						<br />
-						<label><?php esc_html_e( 'Email #2', 'meyvora-convert' ); ?></label>
-						<input type="number" name="cro_email_2_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_2_delay_hours'] ); ?>" min="0" max="720" class="small-text" /> <?php esc_html_e( 'hours', 'meyvora-convert' ); ?>
-						<br />
-						<label><?php esc_html_e( 'Email #3', 'meyvora-convert' ); ?></label>
-						<input type="number" name="cro_email_3_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_3_delay_hours'] ); ?>" min="0" max="720" class="small-text" /> <?php esc_html_e( 'hours', 'meyvora-convert' ); ?>
-						<span class="cro-help"><?php esc_html_e( 'Defaults: 1, 24, 72. Only sends if status=active, consent=true, email exists, cart not recovered, and no more than 3 emails sent.', 'meyvora-convert' ); ?></span>
+					<label class="cro-field__label"><?php esc_html_e( 'Email delays', 'meyvora-convert' ); ?></label>
+					<div class="cro-delay-grid">
+						<div class="cro-delay-item">
+							<label class="cro-delay-label" for="cro_cart_email_1_delay_hours"><?php esc_html_e( 'Email 1', 'meyvora-convert' ); ?></label>
+							<div class="cro-delay-input-wrap">
+								<input type="number" id="cro_cart_email_1_delay_hours" name="cro_email_1_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_1_delay_hours'] ); ?>" min="0" max="168" class="cro-delay-hours-input" />
+								<span class="cro-delay-unit"><?php esc_html_e( 'hours', 'meyvora-convert' ); ?></span>
+							</div>
+						</div>
+						<div class="cro-delay-item">
+							<label class="cro-delay-label" for="cro_cart_email_2_delay_hours"><?php esc_html_e( 'Email 2', 'meyvora-convert' ); ?></label>
+							<div class="cro-delay-input-wrap">
+								<input type="number" id="cro_cart_email_2_delay_hours" name="cro_email_2_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_2_delay_hours'] ); ?>" min="0" max="720" class="cro-delay-hours-input" />
+								<span class="cro-delay-unit"><?php esc_html_e( 'hours', 'meyvora-convert' ); ?></span>
+							</div>
+						</div>
+						<div class="cro-delay-item">
+							<label class="cro-delay-label" for="cro_cart_email_3_delay_hours"><?php esc_html_e( 'Email 3', 'meyvora-convert' ); ?></label>
+							<div class="cro-delay-input-wrap">
+								<input type="number" id="cro_cart_email_3_delay_hours" name="cro_email_3_delay_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['email_3_delay_hours'] ); ?>" min="0" max="720" class="cro-delay-hours-input" />
+								<span class="cro-delay-unit"><?php esc_html_e( 'hours', 'meyvora-convert' ); ?></span>
+							</div>
+						</div>
 					</div>
+					<span class="cro-help"><?php esc_html_e( 'Hours after last activity to send each reminder. Defaults: 1, 24, 72. Only sends if status is active, consent is true, email exists, cart not recovered, and no more than 3 emails sent.', 'meyvora-convert' ); ?></span>
 				</div>
 				<div class="cro-field cro-col-12">
 					<label class="cro-field__label"><?php esc_html_e( 'Discount in emails', 'meyvora-convert' ); ?></label>
@@ -449,80 +462,103 @@ $cart_settings = wp_parse_args(
 				</div>
 				<div class="cro-field cro-col-12 cro-discount-rules">
 					<label class="cro-field__label"><?php esc_html_e( 'Discount rules', 'meyvora-convert' ); ?></label>
-					<div class="cro-field__control">
-						<div>
-							<label><?php esc_html_e( 'Type', 'meyvora-convert' ); ?></label>
-							<select name="cro_discount_type" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Percentage', 'meyvora-convert' ); ?>">
-								<option value="percent" <?php selected( $abandoned_cart_settings['discount_type'], 'percent' ); ?>><?php esc_html_e( 'Percentage', 'meyvora-convert' ); ?></option>
-								<option value="fixed_cart" <?php selected( $abandoned_cart_settings['discount_type'], 'fixed_cart' ); ?>><?php esc_html_e( 'Fixed amount', 'meyvora-convert' ); ?></option>
-								<option value="free_shipping" <?php selected( $abandoned_cart_settings['discount_type'], 'free_shipping' ); ?>><?php esc_html_e( 'Free shipping', 'meyvora-convert' ); ?></option>
-							</select>
-							<label><?php esc_html_e( 'Amount', 'meyvora-convert' ); ?></label>
-							<input type="number" name="cro_discount_amount" value="<?php echo esc_attr( $abandoned_cart_settings['discount_amount'] ); ?>" min="0" step="0.01" class="small-text" /> <span class="description"><?php esc_html_e( '(ignored for free shipping)', 'meyvora-convert' ); ?></span>
+					<div class="cro-fields-grid">
+						<div class="cro-field cro-col-6">
+							<label for="cro_cart_discount_type" class="cro-field__label"><?php esc_html_e( 'Type', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_discount_type" name="cro_discount_type" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Percentage', 'meyvora-convert' ); ?>">
+									<option value="percent" <?php selected( $abandoned_cart_settings['discount_type'], 'percent' ); ?>><?php esc_html_e( 'Percentage', 'meyvora-convert' ); ?></option>
+									<option value="fixed_cart" <?php selected( $abandoned_cart_settings['discount_type'], 'fixed_cart' ); ?>><?php esc_html_e( 'Fixed amount', 'meyvora-convert' ); ?></option>
+									<option value="free_shipping" <?php selected( $abandoned_cart_settings['discount_type'], 'free_shipping' ); ?>><?php esc_html_e( 'Free shipping', 'meyvora-convert' ); ?></option>
+								</select>
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Coupon TTL (hours)', 'meyvora-convert' ); ?></label>
-							<input type="number" name="cro_coupon_ttl_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['coupon_ttl_hours'] ); ?>" min="1" max="720" class="small-text" />
-							<label><?php esc_html_e( 'Minimum cart total', 'meyvora-convert' ); ?></label>
-							<input type="text" name="cro_minimum_cart_total" value="<?php echo esc_attr( $abandoned_cart_settings['minimum_cart_total'] ); ?>" class="small-text" placeholder="<?php esc_attr_e( 'Optional', 'meyvora-convert' ); ?>" />
+						<div class="cro-field cro-col-6">
+							<label for="cro_cart_discount_amount" class="cro-field__label"><?php esc_html_e( 'Amount', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control cro-field__control--flex">
+								<input type="number" id="cro_cart_discount_amount" name="cro_discount_amount" value="<?php echo esc_attr( $abandoned_cart_settings['discount_amount'] ); ?>" min="0" step="0.01" class="small-text" />
+								<span class="cro-field__unit"><?php esc_html_e( '(ignored for free shipping)', 'meyvora-convert' ); ?></span>
+							</div>
 						</div>
-						<div>
-							<label>
-								<input type="checkbox" name="cro_exclude_sale_items" value="1" <?php checked( ! empty( $abandoned_cart_settings['exclude_sale_items'] ) ); ?> />
-								<?php esc_html_e( 'Exclude sale items', 'meyvora-convert' ); ?>
-							</label>
+						<div class="cro-field cro-col-6">
+							<label for="cro_cart_coupon_ttl_hours" class="cro-field__label"><?php esc_html_e( 'Coupon TTL (hours)', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<input type="number" id="cro_cart_coupon_ttl_hours" name="cro_coupon_ttl_hours" value="<?php echo esc_attr( (string) $abandoned_cart_settings['coupon_ttl_hours'] ); ?>" min="1" max="720" class="small-text" />
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Include categories (restrict to)', 'meyvora-convert' ); ?></label><br />
-							<select name="cro_include_categories[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-min" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
-								<?php foreach ( $product_categories as $cat ) : ?>
-									<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( in_array( (int) $cat->term_id, (array) $abandoned_cart_settings['include_categories'], true ) ); ?>><?php echo esc_html( $cat->name ); ?></option>
-								<?php endforeach; ?>
-							</select>
-							<span class="description"><?php esc_html_e( 'Leave empty for all. Hold Ctrl/Cmd to select multiple.', 'meyvora-convert' ); ?></span>
+						<div class="cro-field cro-col-6">
+							<label for="cro_cart_minimum_cart_total" class="cro-field__label"><?php esc_html_e( 'Minimum cart total', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<input type="text" id="cro_cart_minimum_cart_total" name="cro_minimum_cart_total" value="<?php echo esc_attr( $abandoned_cart_settings['minimum_cart_total'] ); ?>" class="small-text" placeholder="<?php esc_attr_e( 'Optional', 'meyvora-convert' ); ?>" />
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Exclude categories', 'meyvora-convert' ); ?></label><br />
-							<select name="cro_exclude_categories[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-min" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
-								<?php foreach ( $product_categories as $cat ) : ?>
-									<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( in_array( (int) $cat->term_id, (array) $abandoned_cart_settings['exclude_categories'], true ) ); ?>><?php echo esc_html( $cat->name ); ?></option>
-								<?php endforeach; ?>
-							</select>
+						<div class="cro-field cro-col-12">
+							<div class="cro-field__control">
+								<label>
+									<input type="checkbox" name="cro_exclude_sale_items" value="1" <?php checked( ! empty( $abandoned_cart_settings['exclude_sale_items'] ) ); ?> />
+									<?php esc_html_e( 'Exclude sale items', 'meyvora-convert' ); ?>
+								</label>
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Include products (restrict to)', 'meyvora-convert' ); ?></label><br />
-							<select name="cro_include_products[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products">
-								<?php
-								$include_prod_ids = (array) $abandoned_cart_settings['include_products'];
-								if ( ! empty( $include_prod_ids ) && function_exists( 'wc_get_products' ) ) :
-									$prods = wc_get_products( array( 'include' => $include_prod_ids, 'limit' => -1, 'return' => 'ids' ) );
-									foreach ( array_intersect( $include_prod_ids, $prods ) as $pid ) :
-										$p = wc_get_product( $pid );
-										if ( $p ) :
-								?>
-									<option value="<?php echo esc_attr( (string) $pid ); ?>" selected="selected"><?php echo esc_html( $p->get_name() ); ?></option>
-								<?php endif; endforeach; endif; ?>
-							</select>
-							<span class="description"><?php esc_html_e( 'Leave empty for all. Discount applies only to these products.', 'meyvora-convert' ); ?></span>
+						<div class="cro-field cro-col-12">
+							<label for="cro_cart_include_categories" class="cro-field__label"><?php esc_html_e( 'Include categories (restrict to)', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_include_categories" name="cro_include_categories[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-min" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
+									<?php foreach ( $product_categories as $cat ) : ?>
+										<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( in_array( (int) $cat->term_id, (array) $abandoned_cart_settings['include_categories'], true ) ); ?>><?php echo esc_html( $cat->name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+								<span class="cro-help"><?php esc_html_e( 'Leave empty for all. Hold Ctrl/Cmd to select multiple.', 'meyvora-convert' ); ?></span>
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Exclude products', 'meyvora-convert' ); ?></label><br />
-							<select name="cro_exclude_products[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products">
-								<?php
-								$exclude_prod_ids = (array) $abandoned_cart_settings['exclude_products'];
-								if ( ! empty( $exclude_prod_ids ) && function_exists( 'wc_get_products' ) ) :
-									$prods = wc_get_products( array( 'include' => $exclude_prod_ids, 'limit' => -1, 'return' => 'ids' ) );
-									foreach ( array_intersect( $exclude_prod_ids, $prods ) as $pid ) :
-										$p = wc_get_product( $pid );
-										if ( $p ) :
-								?>
-									<option value="<?php echo esc_attr( (string) $pid ); ?>" selected="selected"><?php echo esc_html( $p->get_name() ); ?></option>
-								<?php endif; endforeach; endif; ?>
-							</select>
+						<div class="cro-field cro-col-12">
+							<label for="cro_cart_exclude_categories" class="cro-field__label"><?php esc_html_e( 'Exclude categories', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_exclude_categories" name="cro_exclude_categories[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-min" data-placeholder="<?php esc_attr_e( 'Select categories…', 'meyvora-convert' ); ?>">
+									<?php foreach ( $product_categories as $cat ) : ?>
+										<option value="<?php echo esc_attr( (string) $cat->term_id ); ?>" <?php selected( in_array( (int) $cat->term_id, (array) $abandoned_cart_settings['exclude_categories'], true ) ); ?>><?php echo esc_html( $cat->name ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Per-category discount (optional)', 'meyvora-convert' ); ?></label><br />
-							<span class="description"><?php esc_html_e( 'Category → amount. Overrides single amount when set. One coupon will use the first matching category amount.', 'meyvora-convert' ); ?></span>
+						<div class="cro-field cro-col-12">
+							<label for="cro_cart_include_products" class="cro-field__label"><?php esc_html_e( 'Include products (restrict to)', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_include_products" name="cro_include_products[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products">
+									<?php
+									$include_prod_ids = (array) $abandoned_cart_settings['include_products'];
+									if ( ! empty( $include_prod_ids ) && function_exists( 'wc_get_products' ) ) :
+										$prods = wc_get_products( array( 'include' => $include_prod_ids, 'limit' => -1, 'return' => 'ids' ) );
+										foreach ( array_intersect( $include_prod_ids, $prods ) as $pid ) :
+											$p = wc_get_product( $pid );
+											if ( $p ) :
+									?>
+										<option value="<?php echo esc_attr( (string) $pid ); ?>" selected="selected"><?php echo esc_html( $p->get_name() ); ?></option>
+									<?php endif; endforeach; endif; ?>
+								</select>
+								<span class="cro-help"><?php esc_html_e( 'Leave empty for all. Discount applies only to these products.', 'meyvora-convert' ); ?></span>
+							</div>
+						</div>
+						<div class="cro-field cro-col-12">
+							<label for="cro_cart_exclude_products" class="cro-field__label"><?php esc_html_e( 'Exclude products', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_exclude_products" name="cro_exclude_products[]" multiple="multiple" class="cro-select-multi cro-selectwoo cro-select-products cro-select-min--wide" data-placeholder="<?php esc_attr_e( 'Search products…', 'meyvora-convert' ); ?>" data-action="cro_search_products">
+									<?php
+									$exclude_prod_ids = (array) $abandoned_cart_settings['exclude_products'];
+									if ( ! empty( $exclude_prod_ids ) && function_exists( 'wc_get_products' ) ) :
+										$prods = wc_get_products( array( 'include' => $exclude_prod_ids, 'limit' => -1, 'return' => 'ids' ) );
+										foreach ( array_intersect( $exclude_prod_ids, $prods ) as $pid ) :
+											$p = wc_get_product( $pid );
+											if ( $p ) :
+									?>
+										<option value="<?php echo esc_attr( (string) $pid ); ?>" selected="selected"><?php echo esc_html( $p->get_name() ); ?></option>
+									<?php endif; endforeach; endif; ?>
+								</select>
+							</div>
+						</div>
+						<div class="cro-field cro-col-12">
+							<span class="cro-field__label"><?php esc_html_e( 'Per-category discount (optional)', 'meyvora-convert' ); ?></span>
+							<p class="cro-help cro-mb-1"><?php esc_html_e( 'Category → amount. Overrides single amount when set. One coupon will use the first matching category amount.', 'meyvora-convert' ); ?></p>
 							<div class="cro-per-category-discount-list cro-mt-1">
 								<?php
 								$pcd = isset( $abandoned_cart_settings['per_category_discount'] ) && is_array( $abandoned_cart_settings['per_category_discount'] ) ? $abandoned_cart_settings['per_category_discount'] : array();
@@ -533,7 +569,7 @@ $cart_settings = wp_parse_args(
 								$pcd_index = 0;
 								foreach ( $pcd as $pcd_cat_id => $pcd_amt ) :
 								?>
-								<div class="cro-per-cat-row cro-mb-1">
+								<div class="cro-per-cat-row cro-field__control cro-field__control--flex cro-mb-1">
 									<select name="cro_per_category_discount_cat[]" class="cro-selectwoo cro-per-cat-select cro-select-min" data-placeholder="<?php esc_attr_e( 'Category…', 'meyvora-convert' ); ?>">
 										<option value=""><?php esc_html_e( '— Select —', 'meyvora-convert' ); ?></option>
 										<?php foreach ( $product_categories as $cat ) : ?>
@@ -549,14 +585,16 @@ $cart_settings = wp_parse_args(
 								<button type="button" class="button cro-add-per-cat"><?php esc_html_e( 'Add category discount', 'meyvora-convert' ); ?></button>
 							</div>
 						</div>
-						<div>
-							<label><?php esc_html_e( 'Generate coupon for email', 'meyvora-convert' ); ?></label>
-							<select name="cro_generate_coupon_for_email" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Email #1 only', 'meyvora-convert' ); ?>">
-								<option value="1" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 1 ); ?>><?php esc_html_e( 'Email #1 only', 'meyvora-convert' ); ?></option>
-								<option value="2" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 2 ); ?>><?php esc_html_e( 'Email #2 only', 'meyvora-convert' ); ?></option>
-								<option value="3" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 3 ); ?>><?php esc_html_e( 'Email #3 only', 'meyvora-convert' ); ?></option>
-							</select>
-							<span class="description"><?php esc_html_e( 'Coupon is created once and reused in later emails.', 'meyvora-convert' ); ?></span>
+						<div class="cro-field cro-col-12">
+							<label for="cro_cart_generate_coupon_for_email" class="cro-field__label"><?php esc_html_e( 'Generate coupon for email', 'meyvora-convert' ); ?></label>
+							<div class="cro-field__control">
+								<select id="cro_cart_generate_coupon_for_email" name="cro_generate_coupon_for_email" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Email #1 only', 'meyvora-convert' ); ?>">
+									<option value="1" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 1 ); ?>><?php esc_html_e( 'Email #1 only', 'meyvora-convert' ); ?></option>
+									<option value="2" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 2 ); ?>><?php esc_html_e( 'Email #2 only', 'meyvora-convert' ); ?></option>
+									<option value="3" <?php selected( (int) ( $abandoned_cart_settings['generate_coupon_for_email'] ?? 1 ), 3 ); ?>><?php esc_html_e( 'Email #3 only', 'meyvora-convert' ); ?></option>
+								</select>
+								<span class="cro-help"><?php esc_html_e( 'Coupon is created once and reused in later emails.', 'meyvora-convert' ); ?></span>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -566,7 +604,7 @@ $cart_settings = wp_parse_args(
 		<!-- Upsells on Cart Page -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'trending-up', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Upsells on Cart Page', 'meyvora-convert' ); ?>
 			</h2>
@@ -602,7 +640,7 @@ $cart_settings = wp_parse_args(
 		<!-- Cross-Sells on Cart Page -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'shuffle', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'shuffle', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Cross-Sells on Cart Page', 'meyvora-convert' ); ?>
 			</h2>
@@ -638,7 +676,7 @@ $cart_settings = wp_parse_args(
 		<!-- Offer Banner Section (classic cart/checkout) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo wp_kses_post( CRO_Icons::svg( 'tag', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'tag', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Offer Banner', 'meyvora-convert' ); ?>
 			</h2>

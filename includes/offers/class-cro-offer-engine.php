@@ -494,8 +494,144 @@ class CRO_Offer_Engine {
 	}
 
 	/**
+	 * Stable key for conflict checks: option offers use opt:{uuid}, DB rows use db:{numeric_id}.
+	 *
+	 * @param object $offer Engine offer object.
+	 * @return string
+	 */
+	public static function get_offer_stable_key( $offer ) {
+		if ( ! is_object( $offer ) ) {
+			return '';
+		}
+		if ( isset( $offer->cro_stable_key ) && is_string( $offer->cro_stable_key ) && $offer->cro_stable_key !== '' ) {
+			return $offer->cro_stable_key;
+		}
+		if ( isset( $offer->id ) ) {
+			return 'db:' . (int) $offer->id;
+		}
+		return '';
+	}
+
+	/**
+	 * Partner stable keys this offer cannot combine with (one direction from stored rules).
+	 *
+	 * @param object $offer Engine offer object.
+	 * @return string[]
+	 */
+	public static function get_offer_conflict_partner_keys( $offer ) {
+		if ( ! is_object( $offer ) ) {
+			return array();
+		}
+		if ( isset( $offer->cro_conflict_partner_keys ) && is_array( $offer->cro_conflict_partner_keys ) ) {
+			return $offer->cro_conflict_partner_keys;
+		}
+		if ( class_exists( 'CRO_Offer_Model' ) ) {
+			$ids = CRO_Offer_Model::normalize_conflict_ids_on_row( $offer );
+			$keys = array();
+			foreach ( $ids as $id ) {
+				$keys[] = 'db:' . (int) $id;
+			}
+			return $keys;
+		}
+		return array();
+	}
+
+	/**
+	 * Whether two offers conflict (either lists the other as a conflict partner).
+	 *
+	 * @param object $a Offer object.
+	 * @param object $b Offer object.
+	 * @return bool
+	 */
+	public static function offers_mutually_conflict( $a, $b ) {
+		$ka = self::get_offer_stable_key( $a );
+		$kb = self::get_offer_stable_key( $b );
+		if ( $ka === '' || $kb === '' || $ka === $kb ) {
+			return false;
+		}
+		$ta = self::get_offer_conflict_partner_keys( $a );
+		$tb = self::get_offer_conflict_partner_keys( $b );
+		return in_array( $kb, $ta, true ) || in_array( $ka, $tb, true );
+	}
+
+	/**
+	 * Log skipped offer due to conflict with a higher-priority match.
+	 *
+	 * @param object $skipped Skipped offer.
+	 * @param object $kept    Already selected offer it conflicts with.
+	 */
+	private static function log_offer_conflict_skip( $skipped, $kept ) {
+		if ( ! class_exists( 'CRO_Error_Handler' ) ) {
+			return;
+		}
+		$name = '';
+		if ( is_object( $skipped ) ) {
+			$name = isset( $skipped->headline ) && (string) $skipped->headline !== ''
+				? (string) $skipped->headline
+				: ( isset( $skipped->name ) ? (string) $skipped->name : '' );
+		}
+		CRO_Error_Handler::log(
+			'OFFER_CONFLICT_SKIP',
+			$name !== '' ? $name : 'offer',
+			array(
+				'skipped_key'   => self::get_offer_stable_key( $skipped ),
+				'conflicts_with_key' => self::get_offer_stable_key( $kept ),
+			)
+		);
+	}
+
+	/**
+	 * Offers that matched conditions, greedily filtered so mutual conflicts never appear together (priority order preserved).
+	 *
+	 * @param array $matched Matched offer objects in evaluation order.
+	 * @return object[]
+	 */
+	public static function apply_conflict_resolution_to_matched( array $matched ) {
+		$selected = array();
+		foreach ( $matched as $offer ) {
+			$skip = false;
+			foreach ( $selected as $sel ) {
+				if ( self::offers_mutually_conflict( $offer, $sel ) ) {
+					$skip = true;
+					self::log_offer_conflict_skip( $offer, $sel );
+					break;
+				}
+			}
+			if ( ! $skip ) {
+				$selected[] = $offer;
+			}
+		}
+		return $selected;
+	}
+
+	/**
+	 * Active offers that match context, after conflict resolution (same order as get_best_offer priority).
+	 *
+	 * @param array $context Context from build_context().
+	 * @return object[]
+	 */
+	public static function get_matched_offers_resolved( array $context ) {
+		$offers  = self::get_active_offers();
+		$matched = array();
+		foreach ( $offers as $offer ) {
+			$conditions = isset( $offer->conditions_json ) && is_array( $offer->conditions_json )
+				? $offer->conditions_json
+				: array();
+			if ( self::evaluate_conditions( $conditions, $context ) ) {
+				$matched[] = $offer;
+			}
+		}
+		return self::apply_conflict_resolution_to_matched( $matched );
+	}
+
+	/**
 	 * Get active offers: from option cro_dynamic_offers (if set) or from DB (CRO_Offer_Model).
 	 * Option-based offers use numeric ids 9000, 9001, ... for coupon generation.
+	 *
+	 * Single source of truth: when the admin Offers drawer saves data, it updates `cro_dynamic_offers`.
+	 * If that option is non-empty, it takes precedence and DB rows are not merged (conflict rules use
+	 * `conflict_offer_ids` on those option entries). DB-backed offers use `conflict_ids` only when
+	 * the option is empty.
 	 *
 	 * @return array List of offer objects (id, name, priority, conditions_json, reward_json, usage_rules_json).
 	 */
@@ -609,6 +745,17 @@ class CRO_Offer_Engine {
 			$obj->conditions_json   = $conditions;
 			$obj->reward_json       = $reward_json;
 			$obj->usage_rules_json  = $usage_rules;
+			$opt_id                 = isset( $cfg['id'] ) ? sanitize_text_field( (string) $cfg['id'] ) : '';
+			$obj->cro_stable_key    = $opt_id !== '' ? 'opt:' . $opt_id : 'opt_slot:' . $i;
+			$conf_ids               = isset( $cfg['conflict_offer_ids'] ) && is_array( $cfg['conflict_offer_ids'] ) ? $cfg['conflict_offer_ids'] : array();
+			$partner_keys           = array();
+			foreach ( $conf_ids as $cid ) {
+				$cid = is_scalar( $cid ) ? sanitize_text_field( (string) $cid ) : '';
+				if ( $cid !== '' && ( $opt_id === '' || $cid !== $opt_id ) ) {
+					$partner_keys[] = is_numeric( $cid ) ? 'db:' . absint( $cid ) : 'opt:' . $cid;
+				}
+			}
+			$obj->cro_conflict_partner_keys = array_values( array_unique( $partner_keys ) );
 			$out[] = $obj;
 		}
 		usort( $out, function ( $a, $b ) {
@@ -707,6 +854,18 @@ class CRO_Offer_Engine {
 		$obj->conditions_json  = $conditions;
 		$obj->reward_json      = $reward_json;
 		$obj->usage_rules_json = $usage_rules;
+		$slot_index            = (int) $id - 9000;
+		$opt_id                = isset( $cfg['id'] ) ? sanitize_text_field( (string) $cfg['id'] ) : '';
+		$obj->cro_stable_key   = $opt_id !== '' ? 'opt:' . $opt_id : 'opt_slot:' . max( 0, $slot_index );
+		$conf_ids              = isset( $cfg['conflict_offer_ids'] ) && is_array( $cfg['conflict_offer_ids'] ) ? $cfg['conflict_offer_ids'] : array();
+		$partner_keys          = array();
+		foreach ( $conf_ids as $cid ) {
+			$cid = is_scalar( $cid ) ? sanitize_text_field( (string) $cid ) : '';
+			if ( $cid !== '' && ( $opt_id === '' || $cid !== $opt_id ) ) {
+				$partner_keys[] = is_numeric( $cid ) ? 'db:' . absint( $cid ) : 'opt:' . $cid;
+			}
+		}
+		$obj->cro_conflict_partner_keys = array_values( array_unique( $partner_keys ) );
 		return $obj;
 	}
 
@@ -734,15 +893,10 @@ class CRO_Offer_Engine {
 		if ( ! is_array( $context ) ) {
 			return null;
 		}
-		$offers = self::get_active_offers();
-		foreach ( $offers as $offer ) {
-			$conditions = isset( $offer->conditions_json ) && is_array( $offer->conditions_json )
-				? $offer->conditions_json
-				: array();
-			if ( self::evaluate_conditions( $conditions, $context ) ) {
-				$payload = self::offer_to_payload( $offer );
-				return apply_filters( 'cro_offer_best_offer', $payload, $context );
-			}
+		$resolved = self::get_matched_offers_resolved( $context );
+		if ( ! empty( $resolved[0] ) ) {
+			$payload = self::offer_to_payload( $resolved[0] );
+			return apply_filters( 'cro_offer_best_offer', $payload, $context );
 		}
 		return apply_filters( 'cro_offer_best_offer', null, $context );
 	}

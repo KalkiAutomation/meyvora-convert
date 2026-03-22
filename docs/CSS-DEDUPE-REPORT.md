@@ -10,21 +10,21 @@
 
 ## 1. Duplicated selectors
 
-| Selector / pattern | Files | Recommendation |
-|-------------------|--------|----------------|
-| `:root` tokens (spacing, radius, shadow, colors, input height) | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Keep in **cro-admin-design-system.css** only |
-| `.cro-admin-layout__header`, `__header-inner` | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only; use `.cro-admin-container` inside inner |
-| `.cro-admin-layout__nav`, `__nav-inner`, `__content-wrap`, `__content` | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only |
-| `.cro-card`, `.cro-card__header`, `.cro-card__body` | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only |
-| `.cro-field`, `.cro-field__label`, `.cro-field__control`, `.cro-help` | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only |
-| `.cro-admin-layout__content input[...]:focus`, `select:focus`, `textarea:focus` | cro-admin-modern.css, cro-admin-brand-identity.css | Design system only; exclude `.select2-search__field` |
-| `.cro-ui-header`, `.cro-ui-header__title`, `__subtitle`, `__actions` | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only |
-| `.cro-ui-nav__list`, `.cro-ui-nav__link`, `.cro-ui-nav__link--active` | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only |
-| `.cro-modern-table`, `.widefat` in content | cro-admin-modern.css, cro-admin-ui.css (cro-table) | Design system: one table style |
-| `.cro-empty-state` / `.cro-empty` | cro-admin-modern.css, cro-admin-ui.css | Design system: `.cro-empty-state` |
-| `.cro-kpi`, `.cro-kpi__item` | cro-admin-ui.css, cro-admin.css (cro-stat-card) | Design system: KPI cards |
-| `max-width: 1200px` on page wrappers | cro-admin.css, cro-offers.css | Remove; use layout container max-width (1600px) from design system |
-| Buttons (`.button-primary`, `.cro-ui-btn-primary`) | cro-admin-modern.css, cro-admin-ui.css | Design system only |
+| Selector / pattern                                                              | Files                                                                | Recommendation                                                     |
+| ------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `:root` tokens (spacing, radius, shadow, colors, input height)                  | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Keep in **cro-admin-design-system.css** only                       |
+| `.cro-admin-layout__header`, `__header-inner`                                   | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only; use `.cro-admin-container` inside inner        |
+| `.cro-admin-layout__nav`, `__nav-inner`, `__content-wrap`, `__content`          | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only                                                 |
+| `.cro-card`, `.cro-card__header`, `.cro-card__body`                             | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only                                                 |
+| `.cro-field`, `.cro-field__label`, `.cro-field__control`, `.cro-help`           | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only                                                 |
+| `.cro-admin-layout__content input[...]:focus`, `select:focus`, `textarea:focus` | cro-admin-modern.css, cro-admin-brand-identity.css                   | Design system only; exclude `.select2-search__field`               |
+| `.cro-ui-header`, `.cro-ui-header__title`, `__subtitle`, `__actions`            | cro-admin-ui.css, cro-admin-modern.css, cro-admin-brand-identity.css | Design system only                                                 |
+| `.cro-ui-nav__list`, `.cro-ui-nav__link`, `.cro-ui-nav__link--active`           | cro-admin-modern.css, cro-admin-ui.css, cro-admin-brand-identity.css | Design system only                                                 |
+| `.cro-modern-table`, `.widefat` in content                                      | cro-admin-modern.css, cro-admin-ui.css (cro-table)                   | Design system: one table style                                     |
+| `.cro-empty-state` / `.cro-empty`                                               | cro-admin-modern.css, cro-admin-ui.css                               | Design system: `.cro-empty-state`                                  |
+| `.cro-kpi`, `.cro-kpi__item`                                                    | cro-admin-ui.css, cro-admin.css (cro-stat-card)                      | Design system: KPI cards                                           |
+| `max-width: 1200px` on page wrappers                                            | cro-admin.css, cro-offers.css                                        | Remove; use layout container max-width (1920px) from design system |
+| Buttons (`.button-primary`, `.cro-ui-btn-primary`)                              | cro-admin-modern.css, cro-admin-ui.css                               | Design system only                                                 |
 
 ---
 
@@ -38,14 +38,14 @@
 
 ## 3. Where rules should live
 
-| Area | File | Contents |
-|------|------|----------|
-| Tokens, layout, components, forms, tables, tabs, buttons, badges, empty states, toast | **cro-admin-design-system.css** | All shared CRO admin UI |
-| Page max-width / legacy wrappers (minimal) | **cro-admin.css** | Only if still needed for non-layout pages; else strip to minimal |
-| SelectWoo height + z-index | **cro-admin-selectwoo-override.css** | No change (only z-index !important) |
-| Offers: drawer, offer list, toast animations | **cro-offers.css** | Offers-only; remove any duplicate layout/card/field rules |
-| Campaign builder: builder wrap, panels | **cro-campaign-builder.css** | Builder-only |
-| Analytics: charts, date range | **cro-analytics.css** | Analytics-only |
+| Area                                                                                  | File                                 | Contents                                                         |
+| ------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------------------------------- |
+| Tokens, layout, components, forms, tables, tabs, buttons, badges, empty states, toast | **cro-admin-design-system.css**      | All shared CRO admin UI                                          |
+| Page max-width / legacy wrappers (minimal)                                            | **cro-admin.css**                    | Only if still needed for non-layout pages; else strip to minimal |
+| SelectWoo height + z-index                                                            | **cro-admin-selectwoo-override.css** | No change (only z-index !important)                              |
+| Offers: drawer, offer list, toast animations                                          | **cro-offers.css**                   | Offers-only; remove any duplicate layout/card/field rules        |
+| Campaign builder: builder wrap, panels                                                | **cro-campaign-builder.css**         | Builder-only                                                     |
+| Analytics: charts, date range                                                         | **cro-analytics.css**                | Analytics-only                                                   |
 
 **cro-admin-modern.css / cro-admin-ui.css / cro-admin-brand-identity.css**: No longer enqueued; design system replaces them. Files can remain in repo for reference or be emptied to avoid accidental re-enqueue.
 

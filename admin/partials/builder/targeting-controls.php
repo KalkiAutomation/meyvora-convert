@@ -13,7 +13,7 @@ $visitor  = isset( $targeting['visitor'] ) && is_array( $targeting['visitor'] ) 
 $device   = isset( $targeting['device'] ) && is_array( $targeting['device'] ) ? $targeting['device'] : array();
 $include_list = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
 $exclude_list = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
-$page_mode    = $targeting['page_mode'] ?? ( ( ! empty( $include_list ) ? 'include' : ( ! empty( $exclude_list ) ? 'exclude' : 'all' ) ) );
+$page_mode    = isset( $targeting['page_mode'] ) ? $targeting['page_mode'] : 'all';
 $audience_mode = $targeting['audience_mode'] ?? 'all';
 $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '';
 ?>
@@ -44,7 +44,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Page Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'file', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'file', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Page Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -92,7 +92,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Visitor Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'user', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'user', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Visitor Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -134,7 +134,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Device Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'smartphone', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Device Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -142,19 +142,19 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 		<div class="cro-device-options">
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="desktop" <?php checked( $device['desktop'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'monitor', array( 'class' => 'cro-ico' ) ) ); ?></span>
+				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'monitor', array( 'class' => 'cro-ico' ) ); ?></span>
 
 				<span><?php esc_html_e( 'Desktop', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="tablet" <?php checked( $device['tablet'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ) ); ?></span>
+				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'tablet', array( 'class' => 'cro-ico' ) ); ?></span>
 
 				<span><?php esc_html_e( 'Tablet', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="mobile" <?php checked( $device['mobile'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ) ); ?></span>
+				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'smartphone', array( 'class' => 'cro-ico' ) ); ?></span>
 
 				<span><?php esc_html_e( 'Mobile', 'meyvora-convert' ); ?></span>
 			</label>
@@ -164,7 +164,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Cart Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Cart Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -271,7 +271,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Behavioral Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Behavioral Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -310,7 +310,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Traffic Source Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'link', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'link', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Traffic Source', 'meyvora-convert' ); ?>
 		</h3>
@@ -340,7 +340,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Advanced: Custom Rules Builder -->
 	<div class="cro-rule-section cro-advanced">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'settings', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'settings', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Advanced Rules', 'meyvora-convert' ); ?>
 		</h3>
@@ -354,7 +354,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 			</div>
 
 			<button type="button" class="button" id="add-rule-group">
-				<?php echo wp_kses_post( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) ); ?>
+				<?php echo CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ); ?>
 
 				<?php esc_html_e( 'Add Rule Group (OR)', 'meyvora-convert' ); ?>
 			</button>
@@ -365,14 +365,14 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 			<div class="cro-rule-group">
 				<div class="cro-rule-group-header">
 					<span class="cro-rule-group-logic"><?php esc_html_e( 'OR', 'meyvora-convert' ); ?></span>
-					<button type="button" class="cro-remove-group" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ) ); ?>"><?php echo wp_kses_post( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+					<button type="button" class="cro-remove-group" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
 
 				</div>
 				<div class="cro-rules-list">
 					<!-- Rules will be added here -->
 				</div>
 				<button type="button" class="button button-small cro-add-rule">
-					<?php echo wp_kses_post( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) ); ?>
+					<?php echo CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ); ?>
 
 					<?php esc_html_e( 'Add Condition (AND)', 'meyvora-convert' ); ?>
 				</button>
@@ -414,7 +414,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 					<option value="not_contains"><?php esc_html_e( 'not contains', 'meyvora-convert' ); ?></option>
 				</select>
 				<input type="text" class="cro-rule-value" placeholder="<?php esc_attr_e( 'Value', 'meyvora-convert' ); ?>" />
-				<button type="button" class="cro-remove-rule" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ) ); ?>"><?php echo wp_kses_post( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<button type="button" class="cro-remove-rule" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
 
 			</div>
 		</template>

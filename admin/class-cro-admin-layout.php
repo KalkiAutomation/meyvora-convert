@@ -20,7 +20,7 @@ class CRO_Admin_Layout {
 	 *
 	 * @var string
 	 */
-	const CONTENT_MAX_WIDTH = '1600px';
+	const CONTENT_MAX_WIDTH = '1920px';
 
 	/**
 	 * Get nav items (page slug => label, url). Same on every page.
@@ -143,13 +143,24 @@ class CRO_Admin_Layout {
 	private static function render_header( $title, $subtitle = '', $primary_cta = null, $header_pills = array() ) {
 		echo '<header class="cro-admin-layout__header cro-ui-header">';
 		echo '<div class="cro-admin-layout__header-inner">';
+
+		// Left: brand mark + title.
+		echo '<div class="cro-ui-header__brand">';
+		echo '<div class="cro-ui-header__logo" aria-hidden="true">';
+		echo '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
+		echo '</div>';
+
 		echo '<div class="cro-ui-header__text">';
 		echo '<h1 class="cro-ui-header__title">' . esc_html( $title ) . '</h1>';
 		if ( $subtitle !== '' ) {
 			echo '<p class="cro-ui-header__subtitle">' . esc_html( $subtitle ) . '</p>';
 		}
 		echo '</div>';
+		echo '</div>';
+
+		// Right: pills + action buttons.
 		echo '<div class="cro-ui-header__right">';
+
 		if ( ! empty( $header_pills ) && is_array( $header_pills ) ) {
 			echo '<div class="cro-ui-header__pills">';
 			foreach ( $header_pills as $pill ) {
@@ -162,24 +173,33 @@ class CRO_Admin_Layout {
 			}
 			echo '</div>';
 		}
+
 		if ( ! empty( $primary_cta ) && isset( $primary_cta['label'] ) ) {
 			echo '<div class="cro-ui-header__actions">';
 			$attrs = isset( $primary_cta['attributes'] ) && is_array( $primary_cta['attributes'] ) ? $primary_cta['attributes'] : array();
+			$cta_url = '';
 			if ( ! empty( $primary_cta['link'] ) ) {
-				echo '<a href="' . esc_url( $primary_cta['link'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</a>';
+				$cta_url = $primary_cta['link'];
+			} elseif ( ! empty( $primary_cta['href'] ) ) {
+				$cta_url = $primary_cta['href'];
+			}
+			if ( $cta_url !== '' ) {
+				echo '<a href="' . esc_url( $cta_url ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</a>';
 			} elseif ( ! empty( $primary_cta['form_id'] ) ) {
 				echo '<button type="submit" form="' . esc_attr( $primary_cta['form_id'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_cta['button_id'] ) ) {
 				$attr_str = '';
-				foreach ( $attrs as $k => $v ) {
-					$attr_str .= ' ' . esc_attr( $k ) . '="' . esc_attr( $v ) . '"';
+				foreach ( $attrs as $attr_key => $attr_val ) {
+					$attr_str .= ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
 				}
-				echo '<button type="button" id="' . esc_attr( $primary_cta['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . wp_kses_post( $attr_str ) . '>' . esc_html( $primary_cta['label'] ) . '</button>';
+				echo '<button type="button" id="' . esc_attr( $primary_cta['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . $attr_str . '>' . esc_html( $primary_cta['label'] ) . '</button>';
 			}
 			echo '</div>';
 		}
+
 		echo '</div>';
-		echo '</div></header>';
+		echo '</div>';
+		echo '</header>';
 	}
 
 	/**

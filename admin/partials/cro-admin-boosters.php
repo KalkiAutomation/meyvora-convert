@@ -71,7 +71,22 @@ $shipping_bar    = $settings->get_shipping_bar_settings();
 $stock_urgency   = $settings->get_stock_urgency_settings();
 $default_copy_tones = class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get_tones() : array( 'neutral' => __( 'Neutral', 'meyvora-convert' ), 'urgent' => __( 'Urgent', 'meyvora-convert' ), 'friendly' => __( 'Friendly', 'meyvora-convert' ) );
 
-// Get WooCommerce free shipping threshold.
+// Sticky cart admin preview: default button labels per tone (for live JS when field is empty).
+$sticky_cart_btn_defaults = array();
+if ( class_exists( 'CRO_Default_Copy' ) ) {
+	foreach ( array_keys( $default_copy_tones ) as $tone_key ) {
+		$sticky_cart_btn_defaults[ $tone_key ] = CRO_Default_Copy::get( 'sticky_cart', $tone_key, 'button_text' );
+	}
+}
+$sc_tone_cur      = isset( $sticky_cart['tone'] ) ? $sticky_cart['tone'] : 'neutral';
+$sc_preview_btn   = ! empty( $sticky_cart['button_text'] )
+	? (string) $sticky_cart['button_text']
+	: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'sticky_cart', $sc_tone_cur, 'button_text' ) : __( 'Add to cart', 'meyvora-convert' ) );
+$sc_preview_title = __( 'Sample product name', 'meyvora-convert' );
+$sc_preview_price = function_exists( 'wc_price' ) ? wc_price( 29.99 ) : esc_html( number_format( 29.99, 2 ) );
+$sc_preview_img   = function_exists( 'wc_placeholder_img' ) ? wc_placeholder_img( 'thumbnail' ) : '';
+
+// Get WooCommerce free shipping threshold (used in UI + shipping bar preview).
 $woo_threshold = 0;
 if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones' ) ) {
 	$zones = WC_Shipping_Zones::get_zones();
@@ -88,6 +103,21 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 		}
 	}
 }
+
+// Shipping bar admin preview: demo cart at 50% of threshold (matches JS live preview).
+$sb_preview_use_woo = ! empty( $shipping_bar['use_woo_threshold'] );
+$sb_preview_th      = ( $sb_preview_use_woo && $woo_threshold > 0 ) ? (float) $woo_threshold : floatval( $shipping_bar['threshold'] ?? 0 );
+if ( $sb_preview_th <= 0 ) {
+	$sb_preview_th = 50.0;
+}
+$sb_preview_cart         = $sb_preview_th * 0.5;
+$sb_preview_remaining    = max( 0, $sb_preview_th - $sb_preview_cart );
+$sb_preview_progress_pct = $sb_preview_th > 0 ? min( 100, ( $sb_preview_cart / $sb_preview_th ) * 100 ) : 0;
+$sb_prev_tone            = isset( $shipping_bar['tone'] ) ? $shipping_bar['tone'] : 'neutral';
+$sb_progress_tpl         = ( isset( $shipping_bar['message_progress'] ) && (string) $shipping_bar['message_progress'] !== '' )
+	? (string) $shipping_bar['message_progress']
+	: ( class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get( 'shipping_bar', $sb_prev_tone, 'progress' ) : __( 'Add {amount} more for free shipping', 'meyvora-convert' ) );
+$sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' ) ? wc_price( $sb_preview_remaining ) : esc_html( number_format( (float) $sb_preview_remaining, 2 ) ), $sb_progress_tpl );
 ?>
 
 	<form method="post" id="cro-boosters-form">
@@ -97,7 +127,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo wp_kses_post( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ) ); ?>
+					<?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?>
 
 					<?php esc_html_e( 'Sticky Add-to-Cart Bar', 'meyvora-convert' ); ?>
 				</h2>
@@ -196,8 +226,61 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 
 			<div class="cro-preview-box">
 				<h4><?php esc_html_e( 'Preview', 'meyvora-convert' ); ?></h4>
-				<div class="cro-sticky-cart-preview" aria-hidden="true">
-					<!-- JavaScript can render live preview here -->
+				<div
+					class="cro-sticky-cart-preview"
+					id="cro-sticky-cart-preview-wrap"
+					aria-hidden="true"
+					data-default-buttons="<?php echo esc_attr( wp_json_encode( $sticky_cart_btn_defaults ) ); ?>"
+					data-sample-title="<?php echo esc_attr( $sc_preview_title ); ?>"
+				>
+					<div
+						id="cro-sticky-cart-preview-bar"
+						class="cro-sticky-cart cro-sticky-cart--admin-preview cro-sticky-cart-visible"
+					>
+						<div
+							class="cro-sticky-cart-inner"
+							id="cro-sticky-cart-preview-inner"
+							style="background-color: <?php echo esc_attr( $sticky_cart['bg_color'] ); ?>;"
+						>
+							<div
+								class="cro-sticky-cart-image"
+								id="cro-sticky-cart-preview-image-wrap"
+								style="<?php echo ! empty( $sticky_cart['show_product_image'] ) ? '' : 'display:none;'; ?>"
+							>
+								<?php
+								if ( $sc_preview_img ) {
+									echo wp_kses_post( $sc_preview_img );
+								} else {
+									echo '<span class="cro-sticky-cart-preview-img-fallback" aria-hidden="true"></span>';
+								}
+								?>
+							</div>
+							<div class="cro-sticky-cart-info">
+								<span
+									class="cro-sticky-cart-title"
+									id="cro-sticky-cart-preview-title"
+									style="<?php echo empty( $sticky_cart['show_product_title'] ) ? 'display:none;' : ''; ?>"
+								><?php echo esc_html( $sc_preview_title ); ?></span>
+								<span
+									class="cro-sticky-cart-price"
+									id="cro-sticky-cart-preview-price"
+									style="<?php echo empty( $sticky_cart['show_price'] ) ? 'display:none;' : ''; ?>"
+								><?php echo wp_kses_post( $sc_preview_price ); ?></span>
+							</div>
+							<div class="cro-sticky-cart-action">
+								<button
+									type="button"
+									class="cro-sticky-cart-button"
+									id="cro-sticky-cart-preview-btn"
+									disabled
+									style="background-color: <?php echo esc_attr( $sticky_cart['button_bg_color'] ); ?>; color: <?php echo esc_attr( isset( $sticky_cart['button_text_color'] ) ? $sticky_cart['button_text_color'] : '#ffffff' ); ?>;"
+								><?php echo esc_html( $sc_preview_btn ); ?></button>
+							</div>
+						</div>
+					</div>
+					<p class="cro-sticky-cart-preview-hint description">
+						<?php esc_html_e( 'Approximate look on product pages. Edit fields above to update.', 'meyvora-convert' ); ?>
+					</p>
 				</div>
 			</div>
 		</div>
@@ -206,7 +289,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo wp_kses_post( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ) ); ?>
+					<?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?>
 
 					<?php esc_html_e( 'Free Shipping Progress Bar', 'meyvora-convert' ); ?>
 				</h2>
@@ -227,7 +310,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 						<span class="cro-field__label"><?php esc_html_e( 'Threshold', 'meyvora-convert' ); ?></span>
 						<div class="cro-field__control">
 							<label>
-								<input type="checkbox" name="shipping_bar_use_woo" value="1"
+								<input type="checkbox" id="shipping_bar_use_woo" name="shipping_bar_use_woo" value="1"
 									<?php checked( ! empty( $shipping_bar['use_woo_threshold'] ) ); ?> />
 								<?php
 								printf(
@@ -241,7 +324,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 							<label>
 								<?php esc_html_e( 'Or set custom threshold:', 'meyvora-convert' ); ?>
 								<?php echo esc_html( get_woocommerce_currency_symbol() ); ?>
-								<input type="number" name="shipping_bar_threshold"
+								<input type="number" id="shipping_bar_threshold" name="shipping_bar_threshold"
 									value="<?php echo esc_attr( $shipping_bar['threshold'] ); ?>"
 									min="0" step="0.01" class="small-text" />
 							</label>
@@ -317,14 +400,14 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 						<div class="cro-field__control">
 							<label>
 								<?php esc_html_e( 'Background:', 'meyvora-convert' ); ?>
-								<input type="text" name="shipping_bar_bg_color"
+								<input type="text" id="shipping_bar_bg_color" name="shipping_bar_bg_color"
 									value="<?php echo esc_attr( $shipping_bar['bg_color'] ); ?>"
 									class="cro-color-picker" />
 							</label>
 							<br><br>
 							<label>
 								<?php esc_html_e( 'Progress bar:', 'meyvora-convert' ); ?>
-								<input type="text" name="shipping_bar_bar_color"
+								<input type="text" id="shipping_bar_bar_color" name="shipping_bar_bar_color"
 									value="<?php echo esc_attr( $shipping_bar['bar_color'] ); ?>"
 									class="cro-color-picker" />
 							</label>
@@ -335,8 +418,32 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 
 			<div class="cro-preview-box">
 				<h4><?php esc_html_e( 'Preview', 'meyvora-convert' ); ?></h4>
-				<div class="cro-shipping-bar-preview" aria-hidden="true">
-					<!-- JavaScript can render live preview here -->
+				<div
+					class="cro-shipping-bar-preview"
+					id="cro-shipping-bar-preview-wrap"
+					aria-hidden="true"
+					data-woo-threshold="<?php echo esc_attr( (string) $woo_threshold ); ?>"
+				>
+					<div
+						class="cro-shipping-bar cro-shipping-bar--admin-preview"
+						id="cro-shipping-bar-preview"
+						style="background-color: <?php echo esc_attr( $shipping_bar['bg_color'] ); ?>;"
+					>
+						<div class="cro-shipping-bar-inner">
+							<span class="cro-shipping-bar-icon"><?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?></span>
+							<span class="cro-shipping-bar-message" id="cro-shipping-bar-preview-message"><?php echo wp_kses_post( $sb_preview_message ); ?></span>
+						</div>
+						<div class="cro-shipping-bar-progress" id="cro-shipping-bar-preview-progress-wrap">
+							<div
+								class="cro-shipping-bar-fill"
+								id="cro-shipping-bar-preview-fill"
+								style="width: <?php echo esc_attr( (string) round( $sb_preview_progress_pct, 2 ) ); ?>%; background-color: <?php echo esc_attr( $shipping_bar['bar_color'] ); ?>;"
+							></div>
+						</div>
+					</div>
+					<p class="cro-shipping-bar-preview-hint description">
+						<?php esc_html_e( 'Sample: cart at 50% of your threshold. Edit fields above to update.', 'meyvora-convert' ); ?>
+					</p>
 				</div>
 			</div>
 		</div>
@@ -345,7 +452,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo wp_kses_post( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ) ); ?>
+					<?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?>
 
 					<?php esc_html_e( 'Low Stock Urgency', 'meyvora-convert' ); ?>
 				</h2>
@@ -394,7 +501,7 @@ if ( function_exists( 'WC_Shipping_Zones' ) && class_exists( 'WC_Shipping_Zones'
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo wp_kses_post( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ) ); ?>
+					<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
 
 					<?php esc_html_e( 'Trust Badges', 'meyvora-convert' ); ?>
 				</h2>

@@ -45,14 +45,23 @@ class CRO_Public {
 	/**
 	 * Whether any active campaign could show on the current page (Woo pages, front page, or filter).
 	 *
+	 * Campaign scripts must load on any public template where targeting might match (posts, pages,
+	 * archives, search). Previously only Woo + front page loaded assets, so campaigns targeting
+	 * “all pages” or blog content never received cro-controller or /decide calls.
+	 *
 	 * @return bool
 	 */
 	public static function has_campaign_for_current_page() {
 		if ( self::is_woo_relevant_page() ) {
 			return true;
 		}
-		if ( is_front_page() && function_exists( 'cro_settings' ) && cro_settings()->is_feature_enabled( 'campaigns' ) ) {
+		if ( is_front_page() && function_exists( 'cro_settings' ) && (bool) cro_settings()->get( 'general', 'campaigns_enabled', true ) ) {
 			return true;
+		}
+		if ( ! is_admin() && ! is_feed() ) {
+			if ( is_singular() || is_home() || is_archive() || is_search() ) {
+				return true;
+			}
 		}
 		return apply_filters( 'cro_campaign_targets_current_page', false );
 	}
@@ -114,11 +123,19 @@ class CRO_Public {
 	 * @return bool
 	 */
 	public function should_load_assets() {
+		return self::should_load_frontend_assets();
+	}
+
+	/**
+	 * Static gate for scripts, styles, and unified croConfig output (matches should_load_assets).
+	 *
+	 * @return bool
+	 */
+	public static function should_load_frontend_assets() {
 		if ( ! self::should_enqueue_assets( 'global' ) ) {
 			return false;
 		}
 
-		// Don't load if plugin disabled.
 		if ( ! function_exists( 'cro_settings' ) ) {
 			return false;
 		}
@@ -126,7 +143,6 @@ class CRO_Public {
 			return false;
 		}
 
-		// Check if any feature is enabled.
 		$features = array( 'campaigns', 'sticky_cart', 'shipping_bar', 'cart_optimizer', 'checkout_optimizer', 'trust_badges', 'stock_urgency' );
 		foreach ( $features as $feature ) {
 			if ( cro_settings()->is_feature_enabled( $feature ) ) {
@@ -190,21 +206,7 @@ class CRO_Public {
 			return;
 		}
 
-		// Add Google Fonts (DM Sans) for popup typography.
-		wp_enqueue_style(
-			'cro-google-fonts',
-			'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap',
-			array(),
-			CRO_VERSION
-		);
-
-		wp_enqueue_style(
-			'cro-popup',
-			CRO_PLUGIN_URL . 'public/css/cro-popup.css',
-			array(),
-			CRO_VERSION,
-			'all'
-		);
+		// Popup typography + cro-popup.css are enqueued by CRO_Frontend when campaigns load (avoids duplicate handles).
 
 		wp_enqueue_style(
 			'cro-boosters',
@@ -319,6 +321,95 @@ class CRO_Public {
 	}
 
 	/**
+	 * Map of script handle => [ relative path from plugin root, dependencies ].
+	 *
+	 * @return array
+	 */
+	public static function get_frontend_script_specs() {
+		return array(
+			'cro-public'       => array( 'public/js/cro-public.js', array() ),
+			'cro-core'         => array( 'public/js/cro-core.js', array( 'cro-public' ) ),
+			'cro-exit-intent'  => array( 'public/js/cro-exit-intent.js', array( 'jquery', 'cro-public' ) ),
+			'cro-ux-detector'  => array( 'public/js/cro-ux-detector.js', array() ),
+			'cro-signals'      => array( 'public/js/cro-signals.js', array() ),
+			'cro-animations'   => array( 'public/js/cro-animations.js', array() ),
+			'cro-popup'        => array( 'public/js/cro-popup.js', array( 'jquery', 'cro-public', 'cro-ux-detector', 'cro-animations' ) ),
+			'cro-controller'   => array( 'public/js/cro-controller.js', array( 'cro-popup', 'cro-signals' ) ),
+			'cro-sticky-cart'  => array( 'public/js/cro-sticky-cart.js', array( 'jquery', 'cro-public' ) ),
+			'cro-shipping-bar' => array( 'public/js/cro-shipping-bar.js', array( 'jquery', 'cro-public' ) ),
+		);
+	}
+
+	/**
+	 * Enqueue the full campaign stack (through cro-controller.js) for [cro_campaign] and similar embeds.
+	 *
+	 * Does not require CRO_Frontend::has_active_campaigns() — shortcode embeds a specific campaign and still need
+	 * signals, popup, REST /decide, and tracking. Main front page flow keeps the DB gate in enqueue_scripts().
+	 *
+	 * @return void
+	 */
+	public static function enqueue_campaign_scripts_for_shortcode() {
+		if ( is_admin() || ! function_exists( 'cro_settings' ) ) {
+			return;
+		}
+		if ( ! self::should_enqueue_assets( 'global' ) ) {
+			return;
+		}
+		if ( ! cro_settings()->get( 'general', 'plugin_enabled', true ) ) {
+			return;
+		}
+		if ( ! (bool) cro_settings()->get( 'general', 'campaigns_enabled', true ) ) {
+			return;
+		}
+		if ( function_exists( 'is_checkout' ) && is_checkout() ) {
+			return;
+		}
+
+		$handles = array(
+			'cro-public',
+			'cro-core',
+			'cro-exit-intent',
+			'cro-ux-detector',
+			'cro-signals',
+			'cro-animations',
+			'cro-popup',
+			'cro-controller',
+		);
+		$specs = self::get_frontend_script_specs();
+		foreach ( $handles as $handle ) {
+			if ( ! isset( $specs[ $handle ] ) ) {
+				continue;
+			}
+			list( $path, $deps ) = $specs[ $handle ];
+			wp_enqueue_script(
+				$handle,
+				CRO_PLUGIN_URL . $path,
+				$deps,
+				CRO_VERSION,
+				true
+			);
+		}
+
+		wp_localize_script(
+			'cro-popup',
+			'croPopup',
+			array(
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'cro-track-event' ),
+			)
+		);
+
+		wp_localize_script(
+			'cro-public',
+			'croPublic',
+			array(
+				'debugMode' => cro_settings()->get( 'general', 'debug_mode', false ),
+				'isAdmin'   => current_user_can( 'manage_options' ),
+			)
+		);
+	}
+
+	/**
 	 * Register the JavaScript for the public-facing side of the site.
 	 * Only enqueues scripts needed for enabled features and current page (Woo / campaign-relevant only).
 	 */
@@ -338,15 +429,23 @@ class CRO_Public {
 		// Deferred bootstrap (runs after DOM / requestIdleCallback).
 		$scripts_needed[] = 'cro-core';
 
-		// Exit intent + popup: only on Woo/campaign-relevant pages (not checkout) or preview.
-		if ( $this->is_campaign_preview_request() ) {
+		// Exit intent + popup + controller: only when campaigns can run (active in DB or preview) on relevant pages.
+		$campaign_scripts =
+			$this->is_campaign_preview_request()
+			|| (
+				(bool) cro_settings()->get( 'general', 'campaigns_enabled', true )
+				&& ( ! function_exists( 'is_checkout' ) || ! is_checkout() )
+				&& self::has_campaign_for_current_page()
+				&& class_exists( 'CRO_Frontend' )
+				&& CRO_Frontend::has_active_campaigns()
+			);
+		if ( $campaign_scripts ) {
 			$scripts_needed[] = 'cro-exit-intent';
 			$scripts_needed[] = 'cro-ux-detector';
+			$scripts_needed[] = 'cro-signals';
+			$scripts_needed[] = 'cro-animations';
 			$scripts_needed[] = 'cro-popup';
-		} elseif ( cro_settings()->is_feature_enabled( 'campaigns' ) && ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) && self::has_campaign_for_current_page() ) {
-			$scripts_needed[] = 'cro-exit-intent';
-			$scripts_needed[] = 'cro-ux-detector';
-			$scripts_needed[] = 'cro-popup';
+			$scripts_needed[] = 'cro-controller';
 		}
 
 		// Sticky cart (product pages only; respect conditional loading filter).
@@ -365,16 +464,7 @@ class CRO_Public {
 			}
 		}
 
-		// Build dependencies: cro-public first, cro-core after public, then feature scripts.
-		$script_srcs = array(
-			'cro-public'       => array( 'public/js/cro-public.js', array() ),
-			'cro-core'        => array( 'public/js/cro-core.js', array( 'cro-public' ) ),
-			'cro-exit-intent' => array( 'public/js/cro-exit-intent.js', array( 'jquery', 'cro-public' ) ),
-			'cro-ux-detector' => array( 'public/js/cro-ux-detector.js', array() ),
-			'cro-popup'       => array( 'public/js/cro-popup.js', array( 'jquery', 'cro-public', 'cro-ux-detector' ) ),
-			'cro-sticky-cart' => array( 'public/js/cro-sticky-cart.js', array( 'jquery', 'cro-public' ) ),
-			'cro-shipping-bar'=> array( 'public/js/cro-shipping-bar.js', array( 'jquery', 'cro-public' ) ),
-		);
+		$script_srcs = self::get_frontend_script_specs();
 
 		foreach ( $scripts_needed as $handle ) {
 			if ( ! isset( $script_srcs[ $handle ] ) ) {
@@ -402,28 +492,13 @@ class CRO_Public {
 			);
 		}
 
-		// Localize croPublic and croConfig for core/public.
-		$features = array(
-			'exitIntent' => cro_settings()->is_feature_enabled( 'campaigns' ),
-			'stickyCart' => cro_settings()->is_feature_enabled( 'sticky_cart' ),
-			'shippingBar'=> cro_settings()->is_feature_enabled( 'shipping_bar' ),
-		);
+		// croConfig is printed once in CRO_Frontend::output_config() (wp_footer) to avoid overwriting REST nonce vs error-log nonce.
 		wp_localize_script(
 			'cro-public',
 			'croPublic',
 			array(
 				'debugMode' => cro_settings()->get( 'general', 'debug_mode', false ),
 				'isAdmin'   => current_user_can( 'manage_options' ),
-			)
-		);
-		wp_localize_script(
-			'cro-public',
-			'croConfig',
-			array(
-				'features'        => $features,
-				'ajaxUrl'         => admin_url( 'admin-ajax.php' ),
-				'errorReporting'  => (bool) cro_settings()->get( 'general', 'debug_mode', false ),
-				'nonce'           => wp_create_nonce( 'cro_log_error' ),
 			)
 		);
 	}

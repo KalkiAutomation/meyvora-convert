@@ -5,7 +5,7 @@
  * Description: Complete conversion rate optimization for WooCommerce — exit intent popups, abandoned cart recovery, sticky cart, shipping bar, trust badges, dynamic offers, A/B testing, and analytics. Built for Meyvora stores and beyond.
  * Version: 1.0.0
  * Author: Kalki Automations
- * Author URI: kalkiautomations.com
+ * Author URI: https://kalkiautomations.com
  * License: GPL v2 or later
  * Text Domain: meyvora-convert
  * Domain Path: /languages
@@ -22,13 +22,18 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 /**
- * Currently plugin version.
+ * Currently plugin version (from plugin header for cache-busting on release).
  */
-define( 'CRO_VERSION', '1.0.0' );
+if ( ! function_exists( 'get_plugin_data' ) ) {
+	require_once ABSPATH . 'wp-admin/includes/plugin.php';
+}
+$_cro_data = get_plugin_data( __FILE__, false, false );
+define( 'CRO_VERSION', ! empty( $_cro_data['Version'] ) ? $_cro_data['Version'] : '1.0.0' );
+unset( $_cro_data );
 define( 'CRO_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'CRO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'CRO_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
-define( 'MEYVORA_CONVERT_VERSION', '1.0.0' );
+define( 'MEYVORA_CONVERT_VERSION', CRO_VERSION );
 
 // Error handler (load early so plugin errors are caught)
 require_once CRO_PLUGIN_DIR . 'includes/class-cro-error-handler.php';
@@ -49,6 +54,15 @@ require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-decision-engine.php';
 require_once CRO_PLUGIN_DIR . 'includes/ab-testing/class-cro-ab-test.php';
 require_once CRO_PLUGIN_DIR . 'includes/ab-testing/class-cro-ab-statistics.php';
 
+// AI Infrastructure (loaded on all requests so AJAX handlers register correctly)
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-client.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-rate-limiter.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-copy-generator.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-email-writer.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-insights.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-offer-suggester.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-ab-hypothesis.php';
+require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-chat.php';
 
 add_action( 'plugins_loaded', function() {
 	CRO_Visitor_State::get_instance();

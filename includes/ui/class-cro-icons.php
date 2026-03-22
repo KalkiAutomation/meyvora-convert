@@ -80,7 +80,73 @@ class CRO_Icons {
 		'copy'         => '<path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 2H9a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"/>',
 		'pencil'       => '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
 		'external-link' => '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="m21 3-9 9"/>',
+		'shuffle'    => '<path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.973a4 4 0 0 0 3.3-1.7l5.454-8.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.972a4 4 0 0 1 3.6 2.2"/><path d="M22 18h-6.041a4 4 0 0 1-3.3-1.8l-.359-.45"/>',
 	);
+
+	/**
+	 * Cached KSES allowlist: post tags plus Lucide SVG elements (svg, path, circle, etc.).
+	 * Use with svg_kses() / svg_kses_html() — wp_kses_post() strips inline SVG by default.
+	 *
+	 * @var array<string, array<string, bool>>|null
+	 */
+	private static $svg_kses_allowed = null;
+
+	/**
+	 * KSES allowlist for Lucide inline SVG output.
+	 *
+	 * @return array<string, array<string, bool>>
+	 */
+	public static function get_svg_kses_allowed() {
+		if ( self::$svg_kses_allowed !== null ) {
+			return self::$svg_kses_allowed;
+		}
+		$svg_tags = array(
+			'svg'      => array(
+				'xmlns'           => true,
+				'viewbox'         => true,
+				'viewBox'         => true,
+				'fill'            => true,
+				'stroke'          => true,
+				'stroke-width'    => true,
+				'stroke-linecap'  => true,
+				'stroke-linejoin' => true,
+				'aria-hidden'     => true,
+				'role'            => true,
+				'width'           => true,
+				'height'          => true,
+				'class'           => true,
+				'style'           => true,
+			),
+			'path'     => array( 'd' => true ),
+			'circle'   => array( 'cx' => true, 'cy' => true, 'r' => true ),
+			'rect'     => array( 'width' => true, 'height' => true, 'x' => true, 'y' => true, 'rx' => true, 'ry' => true ),
+			'line'     => array( 'x1' => true, 'x2' => true, 'y1' => true, 'y2' => true ),
+			'polyline' => array( 'points' => true ),
+		);
+		self::$svg_kses_allowed = array_merge( wp_kses_allowed_html( 'post' ), $svg_tags );
+		return self::$svg_kses_allowed;
+	}
+
+	/**
+	 * Return icon SVG run through wp_kses with SVG allowed (unlike wp_kses_post).
+	 *
+	 * @param string               $name  Icon name.
+	 * @param array<string, mixed> $attrs Optional svg attributes.
+	 * @return string
+	 */
+	public static function svg_kses( $name, $attrs = array() ) {
+		return wp_kses( self::svg( $name, $attrs ), self::get_svg_kses_allowed() );
+	}
+
+	/**
+	 * Sanitize an already-built Lucide SVG string (e.g. from svg() with dynamic class).
+	 *
+	 * @param string $html SVG fragment.
+	 * @return string
+	 */
+	public static function svg_kses_html( $html ) {
+		return is_string( $html ) ? wp_kses( $html, self::get_svg_kses_allowed() ) : '';
+	}
 
 	/**
 	 * Return safe inline SVG markup for an icon.

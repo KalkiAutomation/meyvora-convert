@@ -69,6 +69,12 @@ class CRO_Decision {
 	/** @var bool|null Whether the shown variation is control (when in A/B test). */
 	public $is_control;
 
+	/** @var int|null Per-campaign fallback to show after dismiss (parent campaign id’s fallback_id). */
+	public $fallback_campaign_id;
+
+	/** @var int|null Delay in seconds before showing fallback_campaign_id. */
+	public $fallback_delay_seconds;
+
 	/**
 	 * Constructor.
 	 *
@@ -94,6 +100,8 @@ class CRO_Decision {
 		$this->ab_test_id         = null;
 		$this->variation_id       = null;
 		$this->is_control         = null;
+		$this->fallback_campaign_id   = null;
+		$this->fallback_delay_seconds = null;
 	}
 
 	/**

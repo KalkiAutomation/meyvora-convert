@@ -8,6 +8,30 @@
 
 defined( 'ABSPATH' ) || exit;
 
+$ai_prefill_campaign_id = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
+$ai_prefill             = null;
+if ( isset( $_GET['ai_variant'] ) ) {
+	$raw_b64 = isset( $_GET['ai_variant'] ) ? wp_unslash( $_GET['ai_variant'] ) : '';
+	if ( is_string( $raw_b64 ) && $raw_b64 !== '' ) {
+		$decoded = base64_decode( $raw_b64, true );
+		if ( false !== $decoded && is_string( $decoded ) ) {
+			$json_str = $decoded;
+			$var      = json_decode( $json_str, true );
+			if ( ! is_array( $var ) ) {
+				$var = json_decode( rawurldecode( $json_str ), true );
+			}
+			if ( is_array( $var ) && ! empty( $var['name'] ) ) {
+				$ai_prefill = array(
+					'variation_name' => sanitize_text_field( (string) $var['name'] ),
+					'headline'       => isset( $var['new_headline'] ) ? sanitize_text_field( (string) $var['new_headline'] ) : '',
+					'body'           => isset( $var['new_body'] ) ? sanitize_textarea_field( (string) $var['new_body'] ) : '',
+					'cta'            => isset( $var['new_cta'] ) ? sanitize_text_field( (string) $var['new_cta'] ) : '',
+				);
+			}
+		}
+	}
+}
+
 // Check for form submission
 if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'] ) ) {
 	check_admin_referer( 'cro_create_ab_test' );
@@ -19,9 +43,9 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'
 	$ab_model = new CRO_AB_Test();
 
 	$data = array(
-		'name'               => sanitize_text_field( $_POST['test_name'] ?? '' ),
+		'name'               => sanitize_text_field( wp_unslash( $_POST['test_name'] ?? '' ) ),
 		'campaign_id'        => absint( $_POST['campaign_id'] ?? 0 ),
-		'metric'             => sanitize_text_field( $_POST['metric'] ?? 'conversion_rate' ),
+		'metric'             => sanitize_text_field( wp_unslash( $_POST['metric'] ?? 'conversion_rate' ) ),
 		'min_sample_size'    => absint( $_POST['min_sample_size'] ?? 200 ),
 		'confidence_level'   => absint( $_POST['confidence_level'] ?? 95 ),
 		'auto_apply_winner'  => isset( $_POST['auto_apply_winner'] ),
@@ -29,6 +53,20 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'
 	$test_id = $ab_model->create( $data );
 
 	if ( ! is_wp_error( $test_id ) ) {
+		$campaign_id_post    = absint( $_POST['campaign_id'] ?? 0 );
+		$ai_variation_name   = isset( $_POST['ai_variation_name'] ) ? sanitize_text_field( wp_unslash( $_POST['ai_variation_name'] ) ) : '';
+		if ( $ai_variation_name !== '' && $campaign_id_post > 0 && class_exists( 'CRO_AI_AB_Hypothesis' ) ) {
+			$payload = array(
+				'name'         => $ai_variation_name,
+				'new_headline' => isset( $_POST['ai_variation_headline'] ) ? sanitize_text_field( wp_unslash( $_POST['ai_variation_headline'] ) ) : '',
+				'new_body'     => isset( $_POST['ai_variation_body'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ai_variation_body'] ) ) : '',
+				'new_cta'      => isset( $_POST['ai_variation_cta'] ) ? sanitize_text_field( wp_unslash( $_POST['ai_variation_cta'] ) ) : '',
+			);
+			$json_enc = wp_json_encode( $payload );
+			if ( is_string( $json_enc ) ) {
+				CRO_AI_AB_Hypothesis::maybe_add_challenger_variation( (int) $test_id, $campaign_id_post, base64_encode( $json_enc ) );
+			}
+		}
 		do_action( 'cro_abtest_created', (int) $test_id, $data );
 		wp_safe_redirect( admin_url( 'admin.php?page=cro-ab-test-view&id=' . $test_id . '&message=created' ) );
 		exit;
@@ -39,7 +77,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'
 global $wpdb;
 $campaigns_table = $wpdb->prefix . 'cro_campaigns';
 $campaigns       = $wpdb->get_results( "SELECT id, name, status FROM {$campaigns_table} ORDER BY name ASC" );
+$test_name_value = '';
+if ( is_array( $ai_prefill ) && ! empty( $ai_prefill['variation_name'] ) ) {
+	$test_name_value = 'AI: ' . $ai_prefill['variation_name'];
+}
 ?>
+
+	<?php if ( is_array( $ai_prefill ) ) : ?>
+	<div class="notice notice-info is-dismissible">
+		<p><?php esc_html_e( 'Pre-filled by AI suggestion · Review all fields before saving', 'meyvora-convert' ); ?></p>
+	</div>
+	<?php endif; ?>
 
 	<form method="post" class="cro-form">
 		<?php wp_nonce_field( 'cro_create_ab_test' ); ?>
@@ -56,6 +104,7 @@ $campaigns       = $wpdb->get_results( "SELECT id, name, status FROM {$campaigns
 							   name="test_name"
 							   class="regular-text"
 							   required
+							   value="<?php echo esc_attr( $test_name_value ); ?>"
 							   placeholder="<?php esc_attr_e( 'e.g., Homepage Popup - Headline Test', 'meyvora-convert' ); ?>" />
 					</div>
 					<span class="cro-help"><?php esc_html_e( 'A descriptive name for this test', 'meyvora-convert' ); ?></span>
@@ -66,7 +115,8 @@ $campaigns       = $wpdb->get_results( "SELECT id, name, status FROM {$campaigns
 						<select id="campaign_id" name="campaign_id" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Select a campaign...', 'meyvora-convert' ); ?>" required>
 							<option value=""><?php esc_html_e( 'Select a campaign...', 'meyvora-convert' ); ?></option>
 							<?php foreach ( $campaigns as $campaign ) : ?>
-							<option value="<?php echo esc_attr( $campaign->id ); ?>">
+							<option value="<?php echo esc_attr( (string) $campaign->id ); ?>"
+								<?php selected( (int) $campaign->id, $ai_prefill_campaign_id ); ?>>
 								<?php echo esc_html( $campaign->name ); ?>
 								(<?php echo esc_html( $campaign->status ); ?>)
 							</option>
@@ -77,6 +127,39 @@ $campaigns       = $wpdb->get_results( "SELECT id, name, status FROM {$campaigns
 				</div>
 			</div>
 		</div>
+
+		<?php if ( is_array( $ai_prefill ) ) : ?>
+		<div class="cro-form-card cro-ai-challenger-card">
+			<h2><?php esc_html_e( 'Challenger variation', 'meyvora-convert' ); ?></h2>
+			<p class="description"><?php esc_html_e( 'This variation is created when you save the test. Edit copy below if needed.', 'meyvora-convert' ); ?></p>
+			<div class="cro-fields-grid cro-fields-grid--1col">
+				<div class="cro-field cro-col-12">
+					<label for="ai_variation_name" class="cro-field__label"><?php esc_html_e( 'Variation name', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<input type="text" id="ai_variation_name" name="ai_variation_name" class="regular-text" value="<?php echo esc_attr( $ai_prefill['variation_name'] ); ?>" />
+					</div>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label for="ai_variation_headline" class="cro-field__label"><?php esc_html_e( 'Headline', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<input type="text" id="ai_variation_headline" name="ai_variation_headline" class="large-text" value="<?php echo esc_attr( $ai_prefill['headline'] ); ?>" />
+					</div>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label for="ai_variation_body" class="cro-field__label"><?php esc_html_e( 'Body', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<textarea id="ai_variation_body" name="ai_variation_body" class="large-text" rows="4"><?php echo esc_textarea( $ai_prefill['body'] ); ?></textarea>
+					</div>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label for="ai_variation_cta" class="cro-field__label"><?php esc_html_e( 'CTA', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<input type="text" id="ai_variation_cta" name="ai_variation_cta" class="regular-text" value="<?php echo esc_attr( $ai_prefill['cta'] ); ?>" />
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php endif; ?>
 
 		<div class="cro-form-card">
 			<h2><?php esc_html_e( 'Test Settings', 'meyvora-convert' ); ?></h2>

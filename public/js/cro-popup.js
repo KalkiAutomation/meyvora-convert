@@ -541,22 +541,17 @@ class CROPopup {
 
   processPlaceholders(text) {
     if (!text) return "";
+    var config = window.croConfig || {};
+    var ctx = config.context || {};
+    var cart = ctx.cart || {};
+    var currency = config.currency || "$";
+    var total = cart.total
+      ? currency + parseFloat(cart.total).toFixed(2)
+      : "";
     return (text + "")
-      .replace(
-        /{store_name}/g,
-        window.croConfig && window.croConfig.siteName
-          ? window.croConfig.siteName
-          : ""
-      )
-      .replace(
-        /{cart_total}/g,
-        window.croConfig &&
-          window.croConfig.context &&
-          window.croConfig.context.cart &&
-          window.croConfig.context.cart.total
-          ? window.croConfig.context.cart.total
-          : ""
-      );
+      .replace(/{store_name}/g, config.siteName || "")
+      .replace(/{cart_total}/g, total)
+      .replace(/{site_url}/g, config.siteUrl || "");
   }
 
   getButtonStyles(styling) {

@@ -11,10 +11,9 @@
 		var config = window.croConfig || {};
 		var features = config.features || {};
 
-		// Initialize only what's needed and what's available.
-		if (features.exitIntent && typeof window.CROExitIntent !== 'undefined') {
-			window.croExitIntent = new window.CROExitIntent();
-		}
+		// CROController handles all campaign triggers (exit intent, time, scroll, inactivity).
+		// It self-initializes on DOMContentLoaded via its own listener in cro-controller.js.
+		// No action needed here — this block is intentionally left clean.
 
 		if (features.stickyCart && typeof window.CROStickyCart !== 'undefined') {
 			window.croStickyCart = new window.CROStickyCart();
@@ -24,7 +23,6 @@
 			window.croShippingBar = new window.CROShippingBar();
 		}
 
-		// Allow other scripts to run deferred init.
 		try {
 			window.dispatchEvent(new CustomEvent('cro:init', { detail: { features: features } }));
 		} catch (e) {

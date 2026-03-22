@@ -5,7 +5,7 @@ Use this list to verify the plugin after changes or before release.
 ## Layout & design
 
 - [ ] **Admin layout consistent** – Every CRO admin page (Dashboard, Offers, Campaigns, Analytics, Insights, Settings, etc.) shows the same header + horizontal tabs + content area.
-- [ ] **Header/nav/content aligned** – Header inner, nav inner, and content use `.cro-admin-container`; same max-width (1600px) and horizontal padding (24px) on all pages.
+- [ ] **Header/nav/content aligned** – Header inner, nav inner, and content use `.cro-admin-container`; same max-width (1920px) and horizontal padding (24px) on all pages.
 - [ ] **Full width** – No cramped content; layout uses full available width up to the container max.
 - [ ] **8px grid** – Spacing (margins, padding) follows 8px multiples where applicable.
 

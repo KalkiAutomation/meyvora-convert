@@ -20,14 +20,45 @@ $display_time_start = ( $h_start >= 24 ) ? '23:59' : sprintf( '%02d:00', $h_star
 $display_time_end   = ( $h_end >= 24 ) ? '23:59' : sprintf( '%02d:00', $h_end );
 $cooldown_hours = (int) ( ( $freq['dismissal_cooldown_seconds'] ?? 3600 ) / 3600 );
 $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '';
+$fb_id_builder    = ( is_object( $campaign_data ) && isset( $campaign_data->fallback_id ) ) ? (int) $campaign_data->fallback_id : 0;
+$fb_delay_builder = ( is_object( $campaign_data ) && isset( $campaign_data->fallback_delay_seconds ) ) ? (int) $campaign_data->fallback_delay_seconds : 5;
+$builder_cid      = ( is_object( $campaign_data ) && isset( $campaign_data->id ) ) ? (int) $campaign_data->id : 0;
+$other_for_fallback = array();
+if ( class_exists( 'CRO_Campaign' ) ) {
+	foreach ( CRO_Campaign::get_all( array( 'limit' => 400 ) ) as $ob_row ) {
+		if ( (int) ( $ob_row['id'] ?? 0 ) !== $builder_cid ) {
+			$other_for_fallback[] = $ob_row;
+		}
+	}
+}
 ?>
 
 <div class="cro-display-controls">
 
+	<div class="cro-rule-section">
+		<h3>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'sparkles', array( 'class' => 'cro-ico' ) ); ?></span>
+			<?php esc_html_e( 'AI copy', 'meyvora-convert' ); ?>
+		</h3>
+		<p class="cro-hint"><?php esc_html_e( 'Generated text fills Headline, Body, and CTA on the Content tab.', 'meyvora-convert' ); ?></p>
+		<div class="cro-ai-copy-bar" style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+			<input type="text" id="cro-ai-goal" placeholder="<?php esc_attr_e( 'e.g. recover abandoning visitors with 10% off', 'meyvora-convert' ); ?>"
+				class="widefat" style="flex:1;min-width:200px" autocomplete="off" />
+			<button type="button" id="cro-ai-generate-btn" class="button button-secondary">
+				<?php esc_html_e( '✦ Generate with AI', 'meyvora-convert' ); ?>
+			</button>
+			<span class="cro-ai-spinner spinner" style="display:none;float:none;margin:0"></span>
+		</div>
+		<p class="cro-ai-error description" style="color:#cc1818;display:none"></p>
+		<p class="cro-ai-regen" style="display:none;margin-top:8px">
+			<a href="#" id="cro-ai-regen-link"><?php esc_html_e( 'Regenerate copy', 'meyvora-convert' ); ?></a>
+		</p>
+	</div>
+
 	<!-- Frequency -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'refresh', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'refresh', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Frequency', 'meyvora-convert' ); ?>
 		</h3>
@@ -124,7 +155,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Priority -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'trending-up', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Priority', 'meyvora-convert' ); ?>
 		</h3>
@@ -151,7 +182,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Schedule -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'calendar', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'calendar', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Schedule', 'meyvora-convert' ); ?>
 		</h3>
@@ -223,7 +254,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Conversion Goal -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'Conversion Goal', 'meyvora-convert' ); ?>
 		</h3>
@@ -260,7 +291,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- After Conversion -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) ); ?></span>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
 
 			<?php esc_html_e( 'After Conversion', 'meyvora-convert' ); ?>
 		</h3>
@@ -286,6 +317,30 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 				<option value=""><?php esc_html_e( 'Select campaign...', 'meyvora-convert' ); ?></option>
 				<!-- Populated via AJAX -->
 			</select>
+		</div>
+	</div>
+
+	<!-- Dismiss fallback chain -->
+	<div class="cro-rule-section">
+		<h3>
+			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'refresh', array( 'class' => 'cro-ico' ) ); ?></span>
+			<?php esc_html_e( 'Fallback after dismiss', 'meyvora-convert' ); ?>
+		</h3>
+		<p class="cro-hint"><?php esc_html_e( 'When a visitor closes this popup, optionally show another campaign after a delay.', 'meyvora-convert' ); ?></p>
+		<div class="cro-control-group">
+			<label for="display-fallback-id"><?php esc_html_e( 'If dismissed, show:', 'meyvora-convert' ); ?></label>
+			<select id="display-fallback-id" class="cro-selectwoo" data-placeholder="<?php esc_attr_e( '— None —', 'meyvora-convert' ); ?>">
+				<option value="0" <?php selected( $fb_id_builder, 0 ); ?>><?php esc_html_e( '— None —', 'meyvora-convert' ); ?></option>
+				<?php foreach ( $other_for_fallback as $of ) : ?>
+					<option value="<?php echo esc_attr( (string) ( $of['id'] ?? '' ) ); ?>" <?php selected( $fb_id_builder, (int) ( $of['id'] ?? 0 ) ); ?>>
+						<?php echo esc_html( (string) ( $of['name'] ?? '' ) ); ?>
+					</option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+		<div class="cro-control-group" id="cro-fallback-delay-row-builder" style="<?php echo $fb_id_builder > 0 ? '' : 'display:none;'; ?>">
+			<label for="display-fallback-delay"><?php esc_html_e( 'Delay (seconds):', 'meyvora-convert' ); ?></label>
+			<input type="number" id="display-fallback-delay" min="0" max="300" value="<?php echo esc_attr( (string) $fb_delay_builder ); ?>" />
 		</div>
 	</div>
 

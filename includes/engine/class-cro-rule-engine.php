@@ -263,6 +263,32 @@ class CRO_Rule_Engine {
 				$interacted = call_user_func( $get, 'behavior.has_interacted', false );
 				return array( 'passed' => (bool) $interacted === (bool) $value );
 
+			case 'cart_item_count_gte':
+				$count = (int) call_user_func( $get, 'cart.item_count', 0 );
+				return array( 'passed' => $count >= (int) $value );
+
+			case 'cart_item_count_lte':
+				$count = (int) call_user_func( $get, 'cart.item_count', 0 );
+				return array( 'passed' => $count <= (int) $value );
+
+			case 'cart_has_sale_items':
+				$sale = (int) call_user_func( $get, 'cart.sale_item_count', 0 );
+				return array( 'passed' => $sale > 0 );
+
+			case 'pages_viewed_gte':
+				$pv = (int) call_user_func( $get, 'visitor.pages_viewed', 0 );
+				$threshold = is_numeric( $value ) ? (int) $value : 0;
+				return array( 'passed' => $pv >= $threshold );
+
+			case 'session_count_gte':
+				$sessions = (int) call_user_func( $get, 'request.session_count', 0 );
+				return array( 'passed' => $sessions >= (int) $value );
+
+			case 'session_count_lte':
+				$sessions = (int) call_user_func( $get, 'request.session_count', 0 );
+				$max = (int) $value;
+				return array( 'passed' => $max > 0 && $sessions <= $max );
+
 			default:
 				return array( 'passed' => false, 'message' => 'unknown_type_' . $type );
 		}

@@ -299,7 +299,7 @@ class CRO_Shipping_Bar {
 		?>
 		<div class="cro-shipping-bar" style="background-color: <?php echo esc_attr( $bg_color ); ?>;">
 			<div class="cro-shipping-bar-inner">
-				<span class="cro-shipping-bar-icon"><?php echo wp_kses_post( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ) ); ?></span>
+				<span class="cro-shipping-bar-icon"><?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?></span>
 				<span class="cro-shipping-bar-message"><?php echo wp_kses_post( $message ); ?></span>
 			</div>
 			<?php if ( ! $achieved ) : ?>

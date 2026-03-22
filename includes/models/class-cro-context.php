@@ -208,9 +208,10 @@ class CRO_Context {
 		}
 		$visitor_type = $this->detect_visitor_type();
 		return array(
-			'referrer'     => $referrer,
-			'utm'          => $utm,
-			'visitor_type' => $visitor_type,
+			'referrer'       => $referrer,
+			'utm'            => $utm,
+			'visitor_type'   => $visitor_type,
+			'session_count'  => 0,
 		);
 	}
 
@@ -246,15 +247,16 @@ class CRO_Context {
 	}
 
 	/**
-	 * Placeholder for behavioral data (updated from JS: time_on_page, scroll_depth, has_interacted).
+	 * Placeholder for behavioral data (updated from JS / REST trigger_data).
 	 *
 	 * @return array
 	 */
 	private function build_behavior_placeholder() {
 		return array(
-			'time_on_page'   => (int) ( $GLOBALS['cro_time_on_page'] ?? 0 ),
-			'scroll_depth'   => (int) ( $GLOBALS['cro_scroll_depth'] ?? 0 ),
-			'has_interacted' => ! empty( $GLOBALS['cro_has_interacted'] ),
+			'time_on_page'   => 0,
+			'scroll_depth'   => 0,
+			'has_interacted' => false,
+			'idle_seconds'   => 0,
 		);
 	}
 
@@ -425,9 +427,10 @@ class CRO_Context {
 				'role'      => (string) ( $user['role'] ?? '' ),
 			),
 			'request'     => array(
-				'referrer'     => (string) ( $request['referrer'] ?? '' ),
-				'utm'          => isset( $request['utm'] ) && is_array( $request['utm'] ) ? $request['utm'] : array(),
-				'visitor_type' => (string) ( $request['visitor_type'] ?? 'new' ),
+				'referrer'       => (string) ( $request['referrer'] ?? '' ),
+				'utm'            => isset( $request['utm'] ) && is_array( $request['utm'] ) ? $request['utm'] : array(),
+				'visitor_type'   => (string) ( $request['visitor_type'] ?? 'new' ),
+				'session_count'  => (int) ( $request['session_count'] ?? 0 ),
 			),
 			'time'        => array(
 				'hour'      => (int) ( $time['hour'] ?? 0 ),

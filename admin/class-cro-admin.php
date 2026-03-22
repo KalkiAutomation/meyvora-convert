@@ -60,6 +60,36 @@ class CRO_Admin {
 		add_action( 'admin_post_cro_abandoned_cart_resend', array( $this, 'handle_abandoned_cart_resend' ) );
 		add_action( 'wp_ajax_cro_abandoned_cart_drawer', array( $this, 'ajax_abandoned_cart_drawer' ) );
 		add_action( 'wp_ajax_cro_search_products', array( $this, 'ajax_search_products' ) );
+		add_action( 'wp_ajax_cro_ai_test_connection', array( $this, 'ajax_ai_test_connection' ) );
+		add_action( 'wp_ajax_cro_set_attribution_model', array( $this, 'ajax_set_attribution_model' ) );
+		add_action( 'wp_ajax_cro_get_attributed_revenue', array( $this, 'ajax_get_attributed_revenue' ) );
+		add_action( 'wp_ajax_cro_get_campaign_revenue_chart', array( $this, 'ajax_get_campaign_revenue_chart' ) );
+		if ( class_exists( 'CRO_AI_Copy_Generator' ) ) {
+			$cro_ai_copy_gen = new CRO_AI_Copy_Generator();
+			$cro_ai_copy_gen->register_ajax();
+		}
+		if ( class_exists( 'CRO_AI_Email_Writer' ) ) {
+			$cro_ai_email_writer = new CRO_AI_Email_Writer();
+			$cro_ai_email_writer->register_ajax();
+		}
+		if ( class_exists( 'CRO_AI_Insights' ) ) {
+			$cro_ai_insights = new CRO_AI_Insights();
+			$cro_ai_insights->register_ajax();
+		}
+		if ( class_exists( 'CRO_AI_Offer_Suggester' ) ) {
+			$cro_ai_offer_suggester = new CRO_AI_Offer_Suggester();
+			$cro_ai_offer_suggester->register_ajax();
+		}
+		if ( class_exists( 'CRO_AI_AB_Hypothesis' ) ) {
+			$cro_ai_ab_hypothesis = new CRO_AI_AB_Hypothesis();
+			$cro_ai_ab_hypothesis->register_ajax();
+		}
+		if ( class_exists( 'CRO_AI_Chat' ) ) {
+			$cro_ai_chat = new CRO_AI_Chat();
+			$cro_ai_chat->register_ajax();
+		}
+		add_action( 'cro_admin_nav_actions', array( $this, 'render_ai_chat_nav_toggle' ) );
+		add_action( 'cro_admin_after_page', array( $this, 'render_ai_chat_shell' ) );
 		add_action( 'admin_footer', array( $this, 'render_admin_debug_panel' ), 999 );
 	}
 
@@ -274,6 +304,36 @@ class CRO_Admin {
 			'cro-developer',
 			array( $this, 'render_developer' )
 		);
+	}
+
+	/**
+	 * Nav bar control to open the AI chat panel.
+	 */
+	public function render_ai_chat_nav_toggle(): void {
+		if ( ! ( class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
+			&& function_exists( 'cro_settings' )
+			&& 'yes' === cro_settings()->get( 'ai', 'feature_chat', 'yes' ) ) ) {
+			return;
+		}
+		$path = CRO_PLUGIN_DIR . 'admin/partials/cro-admin-nav-tabs.php';
+		if ( is_readable( $path ) ) {
+			include $path;
+		}
+	}
+
+	/**
+	 * Fixed-position AI chat launcher and panel markup.
+	 */
+	public function render_ai_chat_shell(): void {
+		if ( ! ( class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
+			&& function_exists( 'cro_settings' )
+			&& 'yes' === cro_settings()->get( 'ai', 'feature_chat', 'yes' ) ) ) {
+			return;
+		}
+		$path = CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ai-chat.php';
+		if ( is_readable( $path ) ) {
+			include $path;
+		}
 	}
 
 	/**
@@ -536,11 +596,18 @@ class CRO_Admin {
 			CRO_VERSION
 		);
 
-		// Design system is source of truth; legacy css (cro-admin, cro-admin-ui, cro-admin-modern, cro-admin-brand-identity) not enqueued.
+		// Design system is source of truth (includes AI chat .cro-aichat-* styles). Enqueued for all Meyvora Convert admin screens that pass the guard above ($is_cro_hook || $is_cro_page), not only the campaign builder.
 		wp_enqueue_style(
 			'cro-admin-design-system',
 			CRO_PLUGIN_URL . 'admin/css/cro-admin-design-system.css',
 			array(),
+			CRO_VERSION
+		);
+
+		wp_enqueue_style(
+			'cro-admin-ui',
+			CRO_PLUGIN_URL . 'admin/css/cro-admin-ui.css',
+			array( 'cro-admin-design-system' ),
 			CRO_VERSION
 		);
 
@@ -640,6 +707,63 @@ class CRO_Admin {
 			return;
 		}
 
+		if ( $page === 'cro-analytics' ) {
+			wp_enqueue_script(
+				'chart-js',
+				CRO_PLUGIN_URL . 'admin/js/vendor/chart.umd.min.js',
+				array(),
+				'4.4.0',
+				true
+			);
+			wp_enqueue_script(
+				'cro-analytics-page',
+				CRO_PLUGIN_URL . 'admin/js/cro-analytics-page.js',
+				array( 'jquery', 'chart-js' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-analytics-page',
+				'croAnalyticsPage',
+				array(
+					'nonce'               => wp_create_nonce( 'cro_admin_nonce' ),
+					'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+					'setAttributionNonce' => wp_create_nonce( 'cro_set_attribution_model' ),
+					'getRevenueNonce'     => wp_create_nonce( 'cro_get_campaign_revenue_chart' ),
+				)
+			);
+		}
+
+		if ( $page === 'cro-admin-developer' ) {
+			wp_enqueue_script(
+				'cro-developer-webhooks',
+				CRO_PLUGIN_URL . 'admin/js/cro-developer-webhooks.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-developer-webhooks',
+				'croDeveloperWebhooks',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( 'cro_webhooks_admin' ),
+					'strings' => array(
+						'confirmDelete' => __( 'Delete this webhook endpoint?', 'meyvora-convert' ),
+						'testOk'        => __( 'Connection OK.', 'meyvora-convert' ),
+						'testFail'      => __( 'Request failed.', 'meyvora-convert' ),
+						'error'         => __( 'Something went wrong.', 'meyvora-convert' ),
+						'loading'       => __( 'Loading…', 'meyvora-convert' ),
+						'colTime'       => __( 'Time', 'meyvora-convert' ),
+						'colEvent'      => __( 'Event', 'meyvora-convert' ),
+						'colStatus'     => __( 'Status', 'meyvora-convert' ),
+						'colMs'         => __( 'Response time (ms)', 'meyvora-convert' ),
+						'colError'      => __( 'Error', 'meyvora-convert' ),
+					),
+				)
+			);
+		}
+
 		wp_enqueue_script(
 			'cro-admin',
 			CRO_PLUGIN_URL . 'admin/js/cro-admin.js',
@@ -650,28 +774,64 @@ class CRO_Admin {
 		wp_enqueue_media();
 
 		$cro_debug = get_option( 'cro_admin_debug', false ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG );
+		$cro_admin_l10n = array(
+			'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+			'adminUrl'  => admin_url( 'admin.php' ),
+			'siteUrl'   => get_site_url(),
+			'restUrl'   => rest_url( 'meyvora-convert/v1/' ),
+			'nonce'     => wp_create_nonce( 'cro_admin_nonce' ),
+			'restNonce' => wp_create_nonce( 'wp_rest' ),
+			'currency'       => function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '',
+			'priceDecimals'  => function_exists( 'wc_get_price_decimals' ) ? (int) wc_get_price_decimals() : 2,
+			'debug'          => (bool) apply_filters( 'cro_admin_debug', $cro_debug ),
+			'strings'   => array(
+				'confirmDelete' => __( 'Are you sure?', 'meyvora-convert' ),
+				'saving'        => __( 'Saving...', 'meyvora-convert' ),
+				'saved'         => __( 'Saved!', 'meyvora-convert' ),
+				'error'         => __( 'Error occurred', 'meyvora-convert' ),
+				'selectImage'   => __( 'Select or Upload Image', 'meyvora-convert' ),
+				'useImage'      => __( 'Use this image', 'meyvora-convert' ),
+				'clickToUpload' => __( 'Click to upload', 'meyvora-convert' ),
+				'previewError'  => __( 'Preview could not be opened. Please try again.', 'meyvora-convert' ),
+				'copied'        => __( 'Copied!', 'meyvora-convert' ),
+			),
+		);
+		if ( 'cro-settings' === $page ) {
+			$cro_admin_l10n['aiTestNonce'] = wp_create_nonce( 'cro_ai_test_connection' );
+			$cro_admin_l10n['aiStrings']   = array(
+				'testing'  => __( 'Testing…', 'meyvora-convert' ),
+				'testOk'   => __( 'Connection successful.', 'meyvora-convert' ),
+				'testFail' => __( 'Connection failed.', 'meyvora-convert' ),
+			);
+		}
 		wp_localize_script(
 			'cro-admin',
 			'croAdmin',
+			$cro_admin_l10n
+		);
+
+		wp_enqueue_script(
+			'cro-ai-chat',
+			CRO_PLUGIN_URL . 'admin/js/cro-ai-chat.js',
+			array( 'jquery' ),
+			CRO_VERSION,
+			true
+		);
+		$ai_chat_ready = class_exists( 'CRO_AI_Client' )
+			&& CRO_AI_Client::is_configured()
+			&& function_exists( 'cro_settings' )
+			&& 'yes' === cro_settings()->get( 'ai', 'feature_chat', 'yes' );
+		wp_localize_script(
+			'cro-ai-chat',
+			'croAiChat',
 			array(
-				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
-				'adminUrl'  => admin_url( 'admin.php' ),
-				'siteUrl'   => get_site_url(),
-				'restUrl'   => rest_url( 'meyvora-convert/v1/' ),
-				'nonce'     => wp_create_nonce( 'cro_admin_nonce' ),
-				'restNonce' => wp_create_nonce( 'wp_rest' ),
-				'currency'  => function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '',
-				'debug'     => (bool) apply_filters( 'cro_admin_debug', $cro_debug ),
-				'strings'   => array(
-					'confirmDelete' => __( 'Are you sure?', 'meyvora-convert' ),
-					'saving'        => __( 'Saving...', 'meyvora-convert' ),
-					'saved'         => __( 'Saved!', 'meyvora-convert' ),
-					'error'         => __( 'Error occurred', 'meyvora-convert' ),
-					'selectImage'   => __( 'Select or Upload Image', 'meyvora-convert' ),
-					'useImage'      => __( 'Use this image', 'meyvora-convert' ),
-					'clickToUpload' => __( 'Click to upload', 'meyvora-convert' ),
-					'previewError'  => __( 'Preview could not be opened. Please try again.', 'meyvora-convert' ),
-					'copied'        => __( 'Copied!', 'meyvora-convert' ),
+				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'cro_ai_chat' ),
+				'action'  => 'cro_ai_chat',
+				'aiReady' => (bool) $ai_chat_ready,
+				'strings' => array(
+					'configure' => __( 'Add your Anthropic API key in Settings → AI.', 'meyvora-convert' ),
+					'error'     => __( 'Something went wrong. Please try again.', 'meyvora-convert' ),
 				),
 			)
 		);
@@ -707,6 +867,28 @@ class CRO_Admin {
 				CRO_VERSION
 			);
 			wp_enqueue_script( 'cro-campaign-builder' );
+			wp_enqueue_script(
+				'cro-ai-copy',
+				CRO_PLUGIN_URL . 'admin/js/cro-ai-copy.js',
+				array( 'jquery', 'cro-campaign-builder' ),
+				CRO_VERSION,
+				true
+			);
+			$cro_ai_copy_debug = get_option( 'cro_admin_debug', false ) || ( defined( 'WP_DEBUG' ) && WP_DEBUG ) || ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG );
+			wp_localize_script(
+				'cro-ai-copy',
+				'croAiCopy',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( 'cro_ai_generate_copy' ),
+					'action'  => 'cro_ai_generate_copy',
+					'debug'   => (bool) apply_filters( 'cro_admin_debug', $cro_ai_copy_debug ),
+					'strings' => array(
+						'goalRequired'  => __( 'Please describe your campaign goal.', 'meyvora-convert' ),
+						'genericError'  => __( 'Something went wrong. Please try again.', 'meyvora-convert' ),
+					),
+				)
+			);
 			wp_localize_script(
 				'cro-campaign-builder',
 				'croBuilderIcons',
@@ -715,6 +897,128 @@ class CRO_Admin {
 					'upload' => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'upload', array( 'class' => 'cro-ico' ) ) : '',
 					'image'  => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'image', array( 'class' => 'cro-ico' ) ) : '',
 					'check'  => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) : '',
+				)
+			);
+		}
+
+		// Abandoned carts list + email settings: AI email preview modal.
+		if ( 'cro-abandoned-carts' === $page || 'cro-abandoned-cart' === $page ) {
+			wp_enqueue_script(
+				'cro-ai-email-preview',
+				CRO_PLUGIN_URL . 'admin/js/cro-ai-email-preview.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-ai-email-preview',
+				'croAiEmailPreview',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonces'  => array(
+						'preview' => wp_create_nonce( 'cro_ai_preview_email' ),
+						'bust'    => wp_create_nonce( 'cro_ai_bust_email_cache' ),
+					),
+					'actions' => array(
+						'preview' => 'cro_ai_preview_email',
+						'bust'    => 'cro_ai_bust_email_cache',
+					),
+					'strings' => array(
+						'loading'     => __( 'Loading…', 'meyvora-convert' ),
+						'error'       => __( 'Could not load preview.', 'meyvora-convert' ),
+						'regenerate'  => __( 'Regenerate', 'meyvora-convert' ),
+						'close'       => __( 'Close', 'meyvora-convert' ),
+						'preheader'   => __( 'Preheader', 'meyvora-convert' ),
+						'subject'     => __( 'Subject', 'meyvora-convert' ),
+						'body'        => __( 'Body', 'meyvora-convert' ),
+						'modalTitle'  => __( 'AI abandoned cart email', 'meyvora-convert' ),
+						'needCartId'  => __( 'Enter a valid abandoned cart ID (from the Abandoned Carts list).', 'meyvora-convert' ),
+					),
+				)
+			);
+		}
+
+		if ( 'cro-insights' === $page ) {
+			wp_enqueue_script(
+				'cro-insights-page',
+				CRO_PLUGIN_URL . 'admin/js/cro-insights-page.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_enqueue_script(
+				'cro-ai-insights',
+				CRO_PLUGIN_URL . 'admin/js/cro-ai-insights.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			$ai_insights_ready = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
+				&& function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'ai', 'feature_insights', 'yes' );
+			wp_localize_script(
+				'cro-ai-insights',
+				'croAiInsights',
+				array(
+					'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+					'nonces'   => array(
+						'analyse' => wp_create_nonce( 'cro_ai_analyse' ),
+						'bust'    => wp_create_nonce( 'cro_ai_bust_insights_cache' ),
+					),
+					'actions'  => array(
+						'analyse' => 'cro_ai_analyse',
+						'bust'    => 'cro_ai_bust_insights_cache',
+					),
+					'aiReady'  => (bool) $ai_insights_ready,
+					'strings'  => array(
+						'loading'        => __( 'Analysing…', 'meyvora-convert' ),
+						'error'          => __( 'Something went wrong. Please try again.', 'meyvora-convert' ),
+						/* translators: %s: number of seconds (decimal). */
+						'generatedIn'    => __( 'Generated in %ss', 'meyvora-convert' ),
+						'cached'         => __( 'Cached', 'meyvora-convert' ),
+						'clearCache'     => __( 'Clear cache', 'meyvora-convert' ),
+						/* translators: %d: cooldown seconds (integer). */
+						'waitSeconds'    => __( 'Please wait %d seconds before another analysis.', 'meyvora-convert' ),
+						'configureAi'    => __( 'Configure your API key and enable AI insights under Settings → AI.', 'meyvora-convert' ),
+						'emptyHint'      => __( 'Click “Analyse with AI” to generate insights from your data.', 'meyvora-convert' ),
+						'cacheCleared'   => __( 'Cache cleared. Run an analysis to fetch new insights.', 'meyvora-convert' ),
+					),
+				)
+			);
+		}
+
+		if ( 'cro-campaigns' === $page ) {
+			wp_enqueue_script(
+				'cro-ai-ab-hypothesis',
+				CRO_PLUGIN_URL . 'admin/js/cro-ai-ab-hypothesis.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			$ai_ab_ready = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
+				&& function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'ai', 'feature_ab', 'yes' );
+			wp_localize_script(
+				'cro-ai-ab-hypothesis',
+				'croAiAbHypothesis',
+				array(
+					'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+					'newAbBaseUrl' => admin_url( 'admin.php?page=cro-ab-test-new' ),
+					'nonce'        => wp_create_nonce( 'cro_ai_ab_hypothesis' ),
+					'action'       => 'cro_ai_ab_hypothesis',
+					'aiReady'      => (bool) $ai_ab_ready,
+					'strings'      => array(
+						'loading'        => __( 'Generating ideas…', 'meyvora-convert' ),
+						'error'          => __( 'Could not load AI suggestions.', 'meyvora-convert' ),
+						'before'         => __( 'Current', 'meyvora-convert' ),
+						'after'          => __( 'Proposed', 'meyvora-convert' ),
+						'startTest'      => __( 'Start test with this variant', 'meyvora-convert' ),
+						'configure'      => __( 'Enable AI A/B features and add an API key under Settings → AI.', 'meyvora-convert' ),
+						'hypothesis'     => __( 'Hypothesis', 'meyvora-convert' ),
+						'changeSummary'  => __( 'Change', 'meyvora-convert' ),
+						'changeType'     => __( 'Focus', 'meyvora-convert' ),
+						'headline'       => __( 'Headline', 'meyvora-convert' ),
+						'body'           => __( 'Body', 'meyvora-convert' ),
+						'cta'            => __( 'CTA', 'meyvora-convert' ),
+					),
 				)
 			);
 		}
@@ -837,6 +1141,64 @@ class CRO_Admin {
 					'editIcon'          => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ) : '',
 					'duplicateIcon'     => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) : '',
 					'deleteIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ) : '',
+					'checkConflicts'    => __( 'Check for conflicts', 'meyvora-convert' ),
+					'checkConflictsRunning' => __( 'Checking…', 'meyvora-convert' ),
+					'noConflictCycles'  => __( 'No circular conflict chains found among active offers.', 'meyvora-convert' ),
+					'checkConflictsFail' => __( 'Could not check conflicts.', 'meyvora-convert' ),
+					'conflictsLabel'    => __( 'Conflicts', 'meyvora-convert' ),
+					/* translators: %d: conflict count */
+					'conflictsBadge'    => __( '%d conflicts', 'meyvora-convert' ),
+					'dismiss'           => __( 'Dismiss', 'meyvora-convert' ),
+				)
+			);
+
+			$offers_opt   = get_option( 'cro_dynamic_offers', array() );
+			$offers_opt   = is_array( $offers_opt ) ? array_pad( $offers_opt, 5, array() ) : array_pad( array(), 5, array() );
+			$offers_used  = 0;
+			$first_empty  = 0;
+			$found_empty  = false;
+			for ( $oi = 0; $oi < 5; $oi++ ) {
+				$oo = isset( $offers_opt[ $oi ] ) && is_array( $offers_opt[ $oi ] ) ? $offers_opt[ $oi ] : array();
+				if ( ! empty( trim( (string) ( $oo['headline'] ?? '' ) ) ) ) {
+					++$offers_used;
+				} elseif ( ! $found_empty ) {
+					$first_empty = $oi;
+					$found_empty = true;
+				}
+			}
+			wp_enqueue_script(
+				'cro-ai-offer-suggest',
+				CRO_PLUGIN_URL . 'admin/js/cro-ai-offer-suggest.js',
+				array( 'jquery', 'cro-offers' ),
+				CRO_VERSION,
+				true
+			);
+			$ai_offer_ready = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
+				&& function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'ai', 'feature_offers', 'yes' )
+				&& class_exists( 'WooCommerce' );
+			wp_localize_script(
+				'cro-ai-offer-suggest',
+				'croAiOfferSuggest',
+				array(
+					'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+					'nonce'          => wp_create_nonce( 'cro_ai_suggest_offer' ),
+					'action'         => 'cro_ai_suggest_offer',
+					'aiReady'        => (bool) $ai_offer_ready,
+					'firstEmptySlot' => (int) $first_empty,
+					'offersUsed'     => (int) $offers_used,
+					'maxOffers'      => 5,
+					'atCapacity'     => $offers_used >= 5,
+					'strings'        => array(
+						'loading'       => __( 'Analysing your offers…', 'meyvora-convert' ),
+						'error'         => __( 'Could not get a suggestion. Please try again.', 'meyvora-convert' ),
+						'createOffer'   => __( 'Create this offer', 'meyvora-convert' ),
+						'conditionLbl'  => __( 'Condition', 'meyvora-convert' ),
+						'discountLbl'   => __( 'Discount', 'meyvora-convert' ),
+						'impactLbl'     => __( 'Expected impact', 'meyvora-convert' ),
+						'prefillNotice' => __( 'Pre-filled by AI · Review before saving', 'meyvora-convert' ),
+						'full'          => __( 'All offer slots are full. Delete or edit an existing offer first.', 'meyvora-convert' ),
+						'configure'     => __( 'Add your API key and enable AI offers under Settings → AI.', 'meyvora-convert' ),
+					),
 				)
 			);
 		}
@@ -901,7 +1263,7 @@ class CRO_Admin {
 
 		?>
 		<button type="button" id="cro-insert-campaign-btn" class="button" title="<?php esc_attr_e( 'Insert a Meyvora Convert campaign shortcode', 'meyvora-convert' ); ?>">
-			<?php echo class_exists( 'CRO_Icons' ) ? wp_kses_post( \CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) ) : ''; ?>
+			<?php echo class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ) : ''; ?>
 			<?php esc_html_e( 'Add CRO Campaign', 'meyvora-convert' ); ?>
 		</button>
 		<div id="cro-campaign-modal-content" class="cro-is-hidden">
@@ -967,6 +1329,10 @@ class CRO_Admin {
 			'title'           => get_admin_page_title() ?: __( 'Campaigns', 'meyvora-convert' ),
 			'subtitle'        => '',
 			'active_tab'      => 'cro-campaigns',
+			'primary_action'  => array(
+				'label' => __( 'Add New Campaign', 'meyvora-convert' ),
+				'href'  => admin_url( 'admin.php?page=cro-campaign-edit' ),
+			),
 			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-campaigns.php',
 			'wrap_class'      => 'cro-campaigns-page',
 			'header_pills'    => $pills,
@@ -1325,6 +1691,168 @@ class CRO_Admin {
 	}
 
 	/**
+	 * Build ZIP with multiple analytics CSV files (Full Report).
+	 *
+	 * @param CRO_Analytics $analytics    Analytics instance.
+	 * @param string        $date_from   Y-m-d.
+	 * @param string        $date_to     Y-m-d.
+	 * @param int|null      $campaign_id Optional campaign filter for campaign/top_pages exports.
+	 */
+	private function export_analytics_zip_report( CRO_Analytics $analytics, $date_from, $date_to, $campaign_id ) {
+		if ( ! class_exists( 'ZipArchive' ) ) {
+			wp_safe_redirect( add_query_arg( 'error', 'zip_unavailable', admin_url( 'admin.php?page=cro-analytics' ) ) );
+			exit;
+		}
+
+		$tmp = wp_tempnam( 'cro-analytics-report-' );
+		if ( ! $tmp ) {
+			wp_safe_redirect( add_query_arg( 'error', 'zip_failed', admin_url( 'admin.php?page=cro-analytics' ) ) );
+			exit;
+		}
+
+		$zip = new ZipArchive();
+		if ( true !== $zip->open( $tmp, ZipArchive::OVERWRITE ) ) {
+			if ( is_string( $tmp ) && file_exists( $tmp ) ) {
+				wp_delete_file( $tmp );
+			}
+			wp_safe_redirect( add_query_arg( 'error', 'zip_failed', admin_url( 'admin.php?page=cro-analytics' ) ) );
+			exit;
+		}
+
+		$cro_put_csv = static function ( $headers, $rows ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- In-memory CSV stream (php://temp).
+			$fh = fopen( 'php://temp', 'r+' );
+			if ( ! $fh ) {
+				return '';
+			}
+			fprintf( $fh, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
+			fputcsv( $fh, $headers );
+			foreach ( $rows as $row ) {
+				fputcsv( $fh, $row );
+			}
+			rewind( $fh );
+			$content = stream_get_contents( $fh );
+			fclose( $fh ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+			return $content ? $content : '';
+		};
+
+		$campaign_rows = array();
+		$campaigns     = $analytics->get_campaign_performance( $date_from, $date_to, 500 );
+		foreach ( is_array( $campaigns ) ? $campaigns : array() as $c ) {
+			$imp = (int) ( $c['impressions'] ?? 0 );
+			$cnv = (int) ( $c['conversions'] ?? 0 );
+			$rate = $imp > 0 ? round( ( $cnv / $imp ) * 100, 4 ) : 0;
+			$campaign_rows[] = array(
+				(int) ( $c['id'] ?? 0 ),
+				(string) ( $c['name'] ?? '' ),
+				(string) ( $c['status'] ?? '' ),
+				$imp,
+				$cnv,
+				$rate,
+				(float) ( $c['revenue'] ?? 0 ),
+				(int) ( $c['emails'] ?? 0 ),
+			);
+		}
+		$zip->addFromString(
+			'campaigns.csv',
+			$cro_put_csv(
+				array( 'campaign_id', 'name', 'status', 'impressions', 'conversions', 'conversion_rate_pct', 'revenue', 'emails_captured' ),
+				$campaign_rows
+			)
+		);
+
+		$offer_rows = array();
+		$offers     = $analytics->get_offer_revenue_attribution( $date_from, $date_to );
+		foreach ( is_array( $offers ) ? $offers : array() as $o ) {
+			$offer_rows[] = array(
+				(int) ( $o['offer_id'] ?? 0 ),
+				(string) ( $o['offer_name'] ?? '' ),
+				(int) ( $o['total_orders'] ?? 0 ),
+				(float) ( $o['total_revenue'] ?? 0 ),
+			);
+		}
+		$zip->addFromString(
+			'offers.csv',
+			$cro_put_csv(
+				array( 'offer_id', 'offer_name', 'total_orders', 'total_revenue' ),
+				$offer_rows
+			)
+		);
+
+		$cohort_rows = array();
+		$cohorts     = $analytics->get_cohort_recovery( $date_from, $date_to );
+		foreach ( is_array( $cohorts ) ? $cohorts : array() as $w ) {
+			$cohort_rows[] = array(
+				(string) ( $w['week_label'] ?? '' ),
+				(int) ( $w['total_abandoned'] ?? 0 ),
+				(int) ( $w['recovered'] ?? 0 ),
+				(float) ( $w['recovery_rate'] ?? 0 ),
+			);
+		}
+		$zip->addFromString(
+			'cohort_recovery.csv',
+			$cro_put_csv(
+				array( 'week', 'abandoned', 'recovered', 'recovery_rate_pct' ),
+				$cohort_rows
+			)
+		);
+
+		$cart_rows = array();
+		$carts     = $analytics->get_abandoned_carts_export_rows( $date_from, $date_to, 2000 );
+		foreach ( is_array( $carts ) ? $carts : array() as $ac ) {
+			$cart_rows[] = array(
+				(int) ( $ac['id'] ?? 0 ),
+				(string) ( $ac['created_at'] ?? '' ),
+				(string) ( $ac['status'] ?? '' ),
+				(string) ( $ac['recovered_at'] ?? '' ),
+				(int) ( $ac['has_email'] ?? 0 ),
+			);
+		}
+		$zip->addFromString(
+			'abandoned_carts.csv',
+			$cro_put_csv(
+				array( 'id', 'created_at', 'status', 'recovered_at', 'has_email' ),
+				$cart_rows
+			)
+		);
+
+		$page_rows = array();
+		$pages     = $analytics->get_top_pages( $date_from, $date_to, 500, $campaign_id );
+		foreach ( is_array( $pages ) ? $pages : array() as $p ) {
+			$imp = (int) ( $p['impressions'] ?? 0 );
+			$cnv = (int) ( $p['conversions'] ?? 0 );
+			$rate = $imp > 0 ? round( ( $cnv / $imp ) * 100, 4 ) : 0;
+			$page_rows[] = array(
+				(string) ( $p['page_url'] ?? '' ),
+				$imp,
+				$cnv,
+				$rate,
+				(int) ( $p['emails_captured'] ?? 0 ),
+			);
+		}
+		$zip->addFromString(
+			'top_pages.csv',
+			$cro_put_csv(
+				array( 'page_url', 'impressions', 'conversions', 'conversion_rate_pct', 'emails_captured' ),
+				$page_rows
+			)
+		);
+
+		$zip->close();
+
+		$filename = 'cro-full-report-' . sanitize_file_name( $date_from ) . '-to-' . sanitize_file_name( $date_to ) . '.zip';
+		header( 'Content-Type: application/zip' );
+		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+		header( 'Pragma: no-cache' );
+		header( 'Expires: 0' );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
+		readfile( $tmp );
+		wp_delete_file( $tmp );
+		exit;
+	}
+
+	/**
 	 * Handle CSV export
 	 */
 	public function handle_csv_export() {
@@ -1367,11 +1895,15 @@ class CRO_Admin {
 		}
 
 		$export_format = isset( $_GET['format'] ) ? sanitize_text_field( wp_unslash( $_GET['format'] ) ) : 'events';
-		if ( ! in_array( $export_format, array( 'events', 'daily' ), true ) ) {
+		if ( ! in_array( $export_format, array( 'events', 'daily', 'zip_report' ), true ) ) {
 			$export_format = 'events';
 		}
 
 		$analytics = new CRO_Analytics();
+
+		if ( $export_format === 'zip_report' ) {
+			$this->export_analytics_zip_report( $analytics, $date_from, $date_to, $campaign_id );
+		}
 
 		if ( $export_format === 'daily' ) {
 			$rows = $analytics->get_daily_summary_for_export( $date_from, $date_to );
@@ -2078,6 +2610,7 @@ class CRO_Admin {
 			'individual_use'                => ! empty( $_POST['cro_drawer_individual_use'] ),
 			'rate_limit_hours'              => isset( $_POST['cro_drawer_rate_limit_hours'] ) && is_numeric( $_POST['cro_drawer_rate_limit_hours'] ) ? absint( $_POST['cro_drawer_rate_limit_hours'] ) : 6,
 			'max_coupons_per_visitor'       => isset( $_POST['cro_drawer_max_coupons_per_visitor'] ) && is_numeric( $_POST['cro_drawer_max_coupons_per_visitor'] ) ? absint( $_POST['cro_drawer_max_coupons_per_visitor'] ) : 1,
+			'conflict_offer_ids'            => isset( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) ) : array(),
 		);
 		$allowed_raw = isset( $_POST['cro_drawer_allowed_roles'] ) && is_array( $_POST['cro_drawer_allowed_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_allowed_roles'] ) ) : array();
 		$raw['allowed_roles'] = array_values( array_filter( $allowed_raw, function ( $v ) { return $v !== ''; } ) );
@@ -2141,7 +2674,22 @@ class CRO_Admin {
 				'apply_to_categories'          => isset( $raw['apply_to_categories'] ) ? $raw['apply_to_categories'] : array(),
 				'apply_to_products'            => isset( $raw['apply_to_products'] ) ? $raw['apply_to_products'] : array(),
 				'per_category_discount'        => isset( $raw['per_category_discount'] ) && is_array( $raw['per_category_discount'] ) ? $raw['per_category_discount'] : array(),
+				'conflict_offer_ids'          => isset( $raw['conflict_offer_ids'] ) && is_array( $raw['conflict_offer_ids'] ) ? array_map( 'sanitize_text_field', $raw['conflict_offer_ids'] ) : array(),
 			);
+		}
+
+		$prev = isset( $offers[ $offer_index ] ) && is_array( $offers[ $offer_index ] ) ? $offers[ $offer_index ] : array();
+		if ( ! empty( $prev['id'] ) ) {
+			$offer['id'] = sanitize_text_field( (string) $prev['id'] );
+		} else {
+			$offer['id'] = function_exists( 'wp_generate_uuid4' ) ? wp_generate_uuid4() : ( 'cro_' . uniqid( '', true ) );
+		}
+		$offer['updated_at'] = gmdate( 'c' );
+		if ( ! empty( $offer['conflict_offer_ids'] ) && ! empty( $offer['id'] ) ) {
+			$sid = (string) $offer['id'];
+			$offer['conflict_offer_ids'] = array_values( array_filter( $offer['conflict_offer_ids'], function ( $x ) use ( $sid ) {
+				return (string) $x !== $sid && (string) $x !== '';
+			} ) );
 		}
 
 		$offers[ $offer_index ] = $offer;
@@ -2168,6 +2716,49 @@ class CRO_Admin {
 			'max_offers'         => $max_offers,
 			'offers'             => $result_offers,
 		) );
+	}
+
+	/**
+	 * AJAX: Verify Anthropic API key with a minimal messages request.
+	 */
+	public function ajax_ai_test_connection() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
+		}
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'cro_ai_test_connection' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid nonce.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! class_exists( 'CRO_AI_Client' ) || ! function_exists( 'cro_settings' ) ) {
+			wp_send_json_error( array( 'message' => __( 'AI client is not available.', 'meyvora-convert' ) ), 500 );
+		}
+		if ( ! CRO_AI_Client::is_configured() ) {
+			wp_send_json_error( array( 'message' => __( 'Add and save an API key before testing.', 'meyvora-convert' ) ) );
+		}
+		$result = CRO_AI_Client::request(
+			'',
+			array(
+				array(
+					'role'    => 'user',
+					'content' => 'ping',
+				),
+			),
+			1
+		);
+		if ( is_wp_error( $result ) ) {
+			$data = $result->get_error_data();
+			$code = is_array( $data ) && isset( $data['status'] ) ? (int) $data['status'] : 0;
+			if ( $code >= 400 && $code < 500 ) {
+				wp_send_json_error( array( 'message' => $result->get_error_message() ), $code );
+			}
+			wp_send_json_error( array( 'message' => $result->get_error_message() ), 502 );
+		}
+		cro_settings()->set( 'ai', 'connection_verified', 'yes' );
+		wp_send_json_success(
+			array(
+				'model' => CRO_AI_Client::MODEL,
+			)
+		);
 	}
 
 	/**
@@ -2263,6 +2854,163 @@ class CRO_Admin {
 			}
 		}
 		wp_send_json( array( 'results' => $results ) );
+	}
+
+	/**
+	 * Markup for KPI period-over-period change (matches meyvora_kpi_change in analytics partial).
+	 *
+	 * @param float|int $current  Current value.
+	 * @param float|int $previous Previous value.
+	 * @return string
+	 */
+	private function cro_format_kpi_change_markup( $current, $previous ) {
+		if ( ! $previous ) {
+			return '';
+		}
+		$pct  = round( ( ( (float) $current - (float) $previous ) / (float) $previous ) * 100 );
+		$dir  = $pct >= 0 ? 'up' : 'down';
+		$icon = $pct >= 0 ? '↑' : '↓';
+		return sprintf(
+			'<span class="cro-kpi-change cro-kpi-change--%s">%s %s%%</span>',
+			esc_attr( $dir ),
+			esc_html( $icon ),
+			esc_html( (string) abs( $pct ) )
+		);
+	}
+
+	/**
+	 * Build Revenue influenced KPI tooltip (attribution).
+	 *
+	 * @param string $model_label Translated model label.
+	 * @return string Plain text for title attribute.
+	 */
+	private function cro_revenue_attribution_tooltip_text( $model_label ) {
+		return implode(
+			' ',
+			array_filter(
+				array(
+					__( 'Shows revenue from orders where Meyvora Convert had a touchpoint.', 'meyvora-convert' ),
+					sprintf(
+						/* translators: %s: attribution model label, e.g. "Last touch" */
+						__( 'Attribution model: %s.', 'meyvora-convert' ),
+						$model_label
+					),
+					__( 'Change model using the selector above.', 'meyvora-convert' ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * AJAX: Save analytics attribution model.
+	 */
+	public function ajax_set_attribution_model() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
+		}
+		check_ajax_referer( 'cro_set_attribution_model', '_wpnonce' );
+		if ( ! class_exists( 'CRO_Attribution' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Attribution is unavailable.', 'meyvora-convert' ) ), 500 );
+		}
+		$raw = isset( $_POST['model'] ) ? sanitize_text_field( wp_unslash( $_POST['model'] ) ) : '';
+		$m   = CRO_Attribution::normalize_model( $raw );
+		CRO_Attribution::set_model( $m );
+		wp_send_json_success(
+			array(
+				'model'       => $m,
+				'model_label' => CRO_Attribution::get_model_label( $m ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: Revenue influenced KPI + RPV after attribution change.
+	 */
+	public function ajax_get_attributed_revenue() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
+		}
+		check_ajax_referer( 'cro_get_campaign_revenue_chart', '_wpnonce' );
+		if ( ! class_exists( 'CRO_Attribution' ) || ! class_exists( 'CRO_Analytics' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Attribution is unavailable.', 'meyvora-convert' ) ), 500 );
+		}
+		$from        = isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '';
+		$to          = isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '';
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$campaign_id = $campaign_id > 0 ? $campaign_id : null;
+		$model_raw   = isset( $_POST['model'] ) ? sanitize_text_field( wp_unslash( $_POST['model'] ) ) : '';
+		$model       = $model_raw !== '' ? CRO_Attribution::normalize_model( $model_raw ) : CRO_Attribution::get_current_model();
+
+		list( $prev_from, $prev_to ) = CRO_Attribution::get_comparison_period( $from, $to );
+
+		$current  = CRO_Attribution::get_total_campaign_attributed_revenue( $from, $to, $model, $campaign_id );
+		$previous = CRO_Attribution::get_total_campaign_attributed_revenue( $prev_from, $prev_to, $model, $campaign_id );
+
+		$analytics = new CRO_Analytics();
+		$summary   = $analytics->get_summary( $from, $to, $campaign_id );
+		$imp       = (int) ( $summary['impressions'] ?? 0 );
+		$rpv       = $imp > 0 ? $current / $imp : 0.0;
+
+		$label = CRO_Attribution::get_model_label( $model );
+
+		wp_send_json_success(
+			array(
+				'revenue'          => $current,
+				'revenue_html'     => function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $current ) ) : esc_html( (string) $current ),
+				'revenue_formatted' => function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $current ) ) : esc_html( (string) $current ),
+				'change_html'      => $this->cro_format_kpi_change_markup( $current, $previous ),
+				'rpv_html'         => function_exists( 'wc_price' ) ? wp_kses_post( wc_price( $rpv ) ) : esc_html( (string) $rpv ),
+				'model'            => $model,
+				'model_label'      => $label,
+				'tooltip'          => $this->cro_revenue_attribution_tooltip_text( $label ),
+			)
+		);
+	}
+
+	/**
+	 * AJAX: Campaign / offer revenue chart datasets for selected attribution model.
+	 */
+	public function ajax_get_campaign_revenue_chart() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
+		}
+		check_ajax_referer( 'cro_get_campaign_revenue_chart', '_wpnonce' );
+		if ( ! class_exists( 'CRO_Attribution' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Attribution is unavailable.', 'meyvora-convert' ) ), 500 );
+		}
+		$from        = isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '';
+		$to          = isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '';
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$campaign_id = $campaign_id > 0 ? $campaign_id : null;
+		$model_raw   = isset( $_POST['model'] ) ? sanitize_text_field( wp_unslash( $_POST['model'] ) ) : '';
+		$model       = $model_raw !== '' ? CRO_Attribution::normalize_model( $model_raw ) : CRO_Attribution::get_current_model();
+
+		$by_camp = CRO_Attribution::get_campaign_chart_rows( $from, $to, $model, $campaign_id, 10 );
+		$by_off  = array();
+		$off_raw = CRO_Attribution::get_offer_attribution( $from, $to, $model );
+		$n       = 0;
+		foreach ( $off_raw as $row ) {
+			$by_off[] = array(
+				'label'   => (string) ( $row['name'] ?? '' ),
+				'revenue' => (float) ( $row['revenue'] ?? 0 ),
+			);
+			++$n;
+			if ( $n >= 10 ) {
+				break;
+			}
+		}
+
+		$label = CRO_Attribution::get_model_label( $model );
+
+		wp_send_json_success(
+			array(
+				'revenueByCampaign' => $by_camp,
+				'revenueByOffer'    => $by_off,
+				'model'             => $model,
+				'model_label'       => $label,
+				'tooltip'           => $this->cro_revenue_attribution_tooltip_text( $label ),
+			)
+		);
 	}
 
 	/**
@@ -2383,15 +3131,28 @@ class CRO_Admin {
 			'email_2' => $row->email_2_sent_at ? $row->email_2_sent_at : null,
 			'email_3' => $row->email_3_sent_at ? $row->email_3_sent_at : null,
 		);
+		$segment      = 'standard';
+		$schedule     = array();
+		$segment_label = __( 'Standard', 'meyvora-convert' );
+		if ( class_exists( 'CRO_Abandoned_Cart_Reminder' ) ) {
+			$segment       = CRO_Abandoned_Cart_Reminder::get_cart_segment( $row );
+			$segment_label = ( $segment === 'high' )
+				? __( 'High Value', 'meyvora-convert' )
+				: __( 'Standard', 'meyvora-convert' );
+			$schedule = CRO_Abandoned_Cart_Reminder::get_schedule_debug( $row );
+		}
 		wp_send_json_success( array(
-			'id'            => (int) $row->id,
-			'email'         => $row->email,
-			'cart_items'    => $items,
-			'currency'      => $currency,
-			'cart_total'    => $cart_total_val,
-			'checkout_url'  => $checkout_url,
-			'email_log'     => $email_log,
+			'id'              => (int) $row->id,
+			'email'           => $row->email,
+			'cart_items'      => $items,
+			'currency'        => $currency,
+			'cart_total'      => $cart_total_val,
+			'checkout_url'    => $checkout_url,
+			'email_log'       => $email_log,
 			'discount_coupon' => ! empty( $row->discount_coupon ) ? $row->discount_coupon : null,
+			'segment'         => $segment,
+			'segment_label'   => $segment_label,
+			'schedule'        => $schedule,
 		) );
 	}
 

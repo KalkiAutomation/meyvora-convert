@@ -147,7 +147,7 @@ class CRO_REST_API {
 			'/decide',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( $this, 'decide' ),
+				'callback'            => $this->safe_endpoint( array( $this, 'decide' ) ),
 				'permission_callback' => '__return_true',
 				'args'                => array(),
 			)
@@ -158,7 +158,7 @@ class CRO_REST_API {
 			'/campaign/(?P<id>\d+)',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_campaign_by_id' ),
+				'callback'            => $this->safe_endpoint( array( $this, 'get_campaign_by_id' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -168,7 +168,7 @@ class CRO_REST_API {
 			'/track',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( $this, 'track_event' ),
+				'callback'            => $this->safe_endpoint( array( $this, 'track_event' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -178,7 +178,7 @@ class CRO_REST_API {
 			'/email',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( $this, 'capture_email' ),
+				'callback'            => $this->safe_endpoint( array( $this, 'capture_email' ) ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -189,7 +189,7 @@ class CRO_REST_API {
 			'/offer',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( $this, 'get_offer' ),
+				'callback'            => $this->safe_endpoint( array( $this, 'get_offer' ) ),
 				'permission_callback' => '__return_true',
 				'args'                => array(
 					'cart_total'       => array( 'type' => 'number', 'minimum' => 0 ),
@@ -347,17 +347,84 @@ class CRO_REST_API {
 	}
 
 	/**
+	 * Parse JSON body for /decide (shared with AJAX fallback decide).
+	 *
+	 * @param array $body Request body (signals, context, trigger_type, trigger_data, pageview_id).
+	 *                    Only context keys behavior, request, visitor are merged from the client; page_type, cart, user, device come from the server.
+	 *                    trigger_data maps to behavior: seconds|time_on_page|time → time_on_page; depth|scroll_depth → scroll_depth; idle_seconds|idle → idle_seconds.
+	 * @return array{ context: CRO_Context, signals: array, trigger_type: string, pageview_id: string }
+	 */
+	public static function parse_decide_request_body( array $body ) {
+		$signals      = isset( $body['signals'] ) && is_array( $body['signals'] ) ? $body['signals'] : array();
+		$body_context = isset( $body['context'] ) && is_array( $body['context'] ) ? $body['context'] : array();
+		$trigger_type = isset( $body['trigger_type'] ) ? sanitize_key( (string) $body['trigger_type'] ) : '';
+		$trigger_data = isset( $body['trigger_data'] ) && is_array( $body['trigger_data'] ) ? $body['trigger_data'] : array();
+		$pageview_id  = isset( $body['pageview_id'] ) ? sanitize_text_field( (string) $body['pageview_id'] ) : '';
+		$pageview_id  = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $pageview_id );
+		$pageview_id  = substr( $pageview_id, 0, 64 );
+
+		$context = new CRO_Context();
+
+		// Only trust these keys from JS — everything else (page_type, cart, user, device) is server-detected.
+		$js_trusted_keys = array( 'behavior', 'request', 'visitor' );
+
+		foreach ( $body_context as $key => $value ) {
+			$key = sanitize_key( $key );
+			if ( $key !== '' && in_array( $key, $js_trusted_keys, true ) ) {
+				$context->set( $key, $value );
+			}
+		}
+		$current_page_type = $context->get( 'page_type', '' );
+		if ( ( $current_page_type === '' || $current_page_type === 'other' ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
+			$page_type = self::infer_page_type_from_referer( sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) );
+			if ( $page_type !== '' ) {
+				$context->set( 'page_type', $page_type );
+			}
+		}
+		if ( ! empty( $trigger_data ) ) {
+			// Map trigger_data to behavior.* (canonical keys: seconds, depth, idle_seconds; aliases for older clients).
+			if ( isset( $trigger_data['seconds'] ) ) {
+				$context->set( 'behavior.time_on_page', (int) $trigger_data['seconds'] );
+			} elseif ( isset( $trigger_data['time_on_page'] ) ) {
+				$context->set( 'behavior.time_on_page', (int) $trigger_data['time_on_page'] );
+			} elseif ( isset( $trigger_data['time'] ) ) {
+				$context->set( 'behavior.time_on_page', (int) $trigger_data['time'] );
+			}
+			if ( isset( $trigger_data['depth'] ) ) {
+				$context->set( 'behavior.scroll_depth', (int) $trigger_data['depth'] );
+			} elseif ( isset( $trigger_data['scroll_depth'] ) ) {
+				$context->set( 'behavior.scroll_depth', (int) $trigger_data['scroll_depth'] );
+			}
+			if ( isset( $trigger_data['idle_seconds'] ) ) {
+				$context->set( 'behavior.idle_seconds', (int) $trigger_data['idle_seconds'] );
+			} elseif ( isset( $trigger_data['idle'] ) ) {
+				$context->set( 'behavior.idle_seconds', (int) $trigger_data['idle'] );
+			}
+		}
+		if ( $trigger_type === 'page_load' ) {
+			$context->set( 'behavior.time_on_page', 0 );
+		}
+
+		return array(
+			'context'      => $context,
+			'signals'      => $signals,
+			'trigger_type' => $trigger_type,
+			'pageview_id'  => $pageview_id,
+		);
+	}
+
+	/**
 	 * Decide which campaign (if any) to show. POST /cro/v1/decide.
 	 *
-	 * Request body: { "signals": {...}, "behavior": {...}, "context": {...}, "trigger_type", "trigger_data", "pageview_id" }.
+	 * Request body: { "signals": {...}, "context": {...}, "trigger_type", "trigger_data", "pageview_id" }.
 	 * pageview_id: optional; stable ID per page load (e.g. UUID) for A/B impression dedupe.
 	 * Response: { show, campaign_id, campaign, reason, reason_code, ab_test_id?, variation_id?, is_control?, debug? }
 	 *
-	 * @param WP_REST_Request $request Request object (JSON body: signals, behavior, pageview_id, etc.).
+	 * @param WP_REST_Request $request Request object (JSON body: signals, context, trigger_type, trigger_data, pageview_id, etc.).
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function decide( $request ) {
-		$this->ensure_decision_engine_loaded();
+		self::ensure_decision_engine_loaded();
 
 		if ( ! function_exists( 'cro_decide' ) ) {
 			return new WP_Error(
@@ -371,56 +438,32 @@ class CRO_REST_API {
 		if ( ! is_array( $body ) ) {
 			$body = array();
 		}
-		$signals      = isset( $body['signals'] ) && is_array( $body['signals'] ) ? $body['signals'] : array();
-		$behavior     = isset( $body['behavior'] ) && is_array( $body['behavior'] ) ? $body['behavior'] : array();
-		$body_context = isset( $body['context'] ) && is_array( $body['context'] ) ? $body['context'] : array();
-		$trigger_type = isset( $body['trigger_type'] ) ? sanitize_key( (string) $body['trigger_type'] ) : '';
-		$trigger_data = isset( $body['trigger_data'] ) && is_array( $body['trigger_data'] ) ? $body['trigger_data'] : array();
-		$pageview_id  = isset( $body['pageview_id'] ) ? sanitize_text_field( (string) $body['pageview_id'] ) : '';
-		$pageview_id  = preg_replace( '/[^a-zA-Z0-9_\-]/', '', $pageview_id );
-		$pageview_id  = substr( $pageview_id, 0, 64 );
-
-		$context = new CRO_Context();
-		// Use context from the frontend (page the user is on). When decide is called via REST, the server request is the API call, not the page — so page_type etc. must come from the request body.
-		foreach ( $body_context as $key => $value ) {
-			$key = sanitize_key( $key );
-			if ( $key !== '' ) {
-				$context->set( $key, $value );
+		if ( empty( $body ) ) {
+			$raw = $request->get_body();
+			if ( is_string( $raw ) && $raw !== '' ) {
+				$decoded = json_decode( $raw, true );
+				if ( is_array( $decoded ) ) {
+					$body = $decoded;
+				}
 			}
 		}
-		// When decide is called via REST, the server request is the API call, not the visitor's page — so
-		// page_type from CRO_Context constructor is wrong (e.g. "other"). Infer from Referer when
-		// page_type is missing or generic so targeting (e.g. page_type_in) can match.
-		$current_page_type = $context->get( 'page_type', '' );
-		if ( ( $current_page_type === '' || $current_page_type === 'other' ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
-			$page_type = $this->infer_page_type_from_referer( sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) );
-			if ( $page_type !== '' ) {
-				$context->set( 'page_type', $page_type );
-			}
-		}
-		foreach ( $behavior as $key => $value ) {
-			$path = 'behavior.' . sanitize_key( $key );
-			$context->set( $path, $value );
-		}
-		// Merge trigger_data into context so targeting/intent can use time_on_page, scroll_depth, etc.
-		if ( ! empty( $trigger_data ) ) {
-			if ( isset( $trigger_data['seconds'] ) ) {
-				$context->set( 'behavior.time_on_page', (int) $trigger_data['seconds'] );
-			}
-			if ( isset( $trigger_data['depth'] ) ) {
-				$context->set( 'behavior.scroll_depth', (int) $trigger_data['depth'] );
-			}
-			if ( isset( $trigger_data['idle_seconds'] ) ) {
-				$context->set( 'behavior.idle_seconds', (int) $trigger_data['idle_seconds'] );
-			}
-		}
-		// For page_load, treat as time with 0 seconds so "show immediately" campaigns qualify.
-		if ( $trigger_type === 'page_load' ) {
-			$context->set( 'behavior.time_on_page', 0 );
-		}
+		$parsed         = self::parse_decide_request_body( $body );
+		$context        = $parsed['context'];
+		$signals        = $parsed['signals'];
+		$trigger_type   = $parsed['trigger_type'];
+		$pageview_id    = $parsed['pageview_id'];
 
 		$visitor_state = CRO_Visitor_State::get_instance();
-		$decision     = cro_decide()->decide( $context, $visitor_state, $signals, $trigger_type );
+		$decision     = cro_decide()->decide( $context, $visitor_state, $signals, $trigger_type, array() );
+
+		$debug_mode = function_exists( 'cro_settings' ) && current_user_can( 'manage_options' ) && cro_settings()->get( 'general', 'debug_mode', false );
+		if ( $debug_mode && is_object( $decision ) && method_exists( $decision, 'log' ) && ! $decision->show && $trigger_type === '' ) {
+			$decision->log(
+				'WARN',
+				__( 'trigger_type was empty — JSON body may not have been parsed. Check Content-Type header and WAF rules.', 'meyvora-convert' ),
+				array( 'step' => 0 )
+			);
+		}
 
 		$payload = array(
 			'show'        => $decision->show,
@@ -429,6 +472,11 @@ class CRO_REST_API {
 			'reason'      => $decision->reason,
 			'reason_code' => $decision->reason_code,
 		);
+
+		if ( $decision->show && (int) $decision->fallback_campaign_id > 0 ) {
+			$payload['fallback_campaign_id']   = (int) $decision->fallback_campaign_id;
+			$payload['fallback_delay_seconds'] = (int) $decision->fallback_delay_seconds;
+		}
 
 		if ( $decision->show && $decision->campaign !== null ) {
 			if ( is_object( $decision->campaign ) && method_exists( $decision->campaign, 'to_frontend_array' ) ) {
@@ -451,10 +499,9 @@ class CRO_REST_API {
 
 		// Record A/B impression once per pageview (REST layer = single place, no double-count)
 		if ( $decision->show && $decision->variation_id !== null ) {
-			$this->record_ab_impression_once( $visitor_state, (int) $decision->variation_id, $pageview_id );
+			self::record_ab_impression_once( $visitor_state, (int) $decision->variation_id, $pageview_id );
 		}
 
-		$debug_mode = function_exists( 'cro_settings' ) && current_user_can( 'manage_options' ) && cro_settings()->get( 'general', 'debug_mode', false );
 		if ( $debug_mode && is_object( $decision ) && method_exists( $decision, 'to_debug_array' ) ) {
 			$payload['debug'] = $decision->to_debug_array();
 		}
@@ -471,7 +518,7 @@ class CRO_REST_API {
 	 * @param int               $variation_id Variation ID.
 	 * @param string            $pageview_id  Optional. Frontend-provided pageview ID (one per page load).
 	 */
-	private function record_ab_impression_once( CRO_Visitor_State $visitor_state, $variation_id, $pageview_id = '' ) {
+	public static function record_ab_impression_once( CRO_Visitor_State $visitor_state, $variation_id, $pageview_id = '' ) {
 		if ( ! class_exists( 'CRO_AB_Test' ) || $variation_id <= 0 ) {
 			return;
 		}
@@ -495,7 +542,7 @@ class CRO_REST_API {
 	 * @param string $referer Referer URL (e.g. https://example.com/cart).
 	 * @return string Page type: home, shop, product, product_category, cart, checkout, account, page, post, or other.
 	 */
-	private function infer_page_type_from_referer( $referer ) {
+	public static function infer_page_type_from_referer( $referer ) {
 		if ( $referer === '' ) {
 			return '';
 		}
@@ -531,23 +578,36 @@ class CRO_REST_API {
 	 */
 	public function get_campaign_by_id( $request ) {
 		$id = intval( $request->get_param( 'id' ) );
-		
+
 		if ( ! $id ) {
 			return new WP_Error( 'invalid_id', __( 'Invalid campaign ID.', 'meyvora-convert' ), array( 'status' => 400 ) );
 		}
 
-		$campaign = CRO_Campaign::get( $id );
-		
-		if ( ! $campaign ) {
+		$row = CRO_Campaign::get( $id );
+
+		if ( ! $row ) {
 			return new WP_Error( 'not_found', __( 'Campaign not found.', 'meyvora-convert' ), array( 'status' => 404 ) );
 		}
 
-		// Convert to frontend format
-		if ( is_object( $campaign ) && method_exists( $campaign, 'to_frontend_array' ) ) {
-			return new WP_REST_Response( $campaign->to_frontend_array(), 200 );
+		// Only serve active campaigns to public visitors.
+		$status = isset( $row['status'] ) ? (string) $row['status'] : '';
+		if ( $status !== 'active' ) {
+			return new WP_Error( 'not_found', __( 'Campaign not found.', 'meyvora-convert' ), array( 'status' => 404 ) );
 		}
 
-		return new WP_REST_Response( $campaign, 200 );
+		// Build a model and return only the data needed by the frontend popup renderer.
+		// Strip server-side targeting/frequency/schedule rules — frontend only needs
+		// content, styling, and trigger configuration.
+		if ( class_exists( 'CRO_Campaign_Model' ) ) {
+			$model = CRO_Campaign_Model::from_db_row( $row );
+			$data  = $model->to_frontend_array();
+			unset( $data['targeting_rules'], $data['frequency_rules'], $data['schedule'],
+				$data['fallback_id'], $data['fallback_delay_seconds'],
+				$data['brand_styles_override'] );
+			return new WP_REST_Response( $data, 200 );
+		}
+
+		return new WP_Error( 'unavailable', __( 'Campaign system unavailable.', 'meyvora-convert' ), array( 'status' => 503 ) );
 	}
 
 	/**
@@ -684,14 +744,11 @@ class CRO_REST_API {
 		$matched_payload   = null;
 		$matched_preview   = null;
 
-		foreach ( $offers as $offer ) {
-			$preview = CRO_Offer_Engine::preview_offer( $offer, $context );
-			if ( ! empty( $preview['passed'] ) ) {
-				$matched_offer_obj = $offer;
-				$matched_payload   = CRO_Offer_Engine::offer_to_payload( $offer );
-				$matched_preview   = $preview;
-				break;
-			}
+		$resolved = CRO_Offer_Engine::get_matched_offers_resolved( $context );
+		if ( ! empty( $resolved[0] ) ) {
+			$matched_offer_obj = $resolved[0];
+			$matched_payload   = CRO_Offer_Engine::offer_to_payload( $matched_offer_obj );
+			$matched_preview   = CRO_Offer_Engine::preview_offer( $matched_offer_obj, $context );
 		}
 
 		if ( ! $matched_offer_obj || ! is_array( $matched_payload ) ) {
@@ -899,7 +956,7 @@ class CRO_REST_API {
 	 * Load decision engine and dependencies if cro_decide() is not available.
 	 * Requires includes/engine/ (Context, Decision, RuleEngine, IntentScorer, CampaignModel, DecisionEngine).
 	 */
-	private function ensure_decision_engine_loaded() {
+	public static function ensure_decision_engine_loaded() {
 		if ( function_exists( 'cro_decide' ) ) {
 			return;
 		}

@@ -31,6 +31,8 @@ class CRO_System_Status {
 		$checks[] = self::check_cart_checkout_blocks();
 		$checks[] = self::check_rest_endpoints();
 		$checks[] = self::check_db_tables();
+		$checks[] = self::check_ai_configuration();
+		$checks[] = self::check_webhook_configuration();
 		$checks[] = self::check_active_boosters();
 		$checks[] = self::check_asset_loading_mode();
 		$checks[] = self::check_cron();
@@ -433,6 +435,27 @@ class CRO_System_Status {
 			}
 		}
 		if ( empty( $missing ) ) {
+			$col_warnings = array();
+			$campaigns_tbl = $wpdb->prefix . 'cro_campaigns';
+			$offers_tbl    = $wpdb->prefix . 'cro_offers';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check.
+			$has_fb = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $campaigns_tbl, 'fallback_delay_seconds' ) );
+			if ( ! $has_fb ) {
+				$col_warnings[] = __( 'cro_campaigns.fallback_delay_seconds missing (run Repair Database Tables).', 'meyvora-convert' );
+			}
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check.
+			$has_conflict = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $offers_tbl, 'conflict_ids' ) );
+			if ( ! $has_conflict ) {
+				$col_warnings[] = __( 'cro_offers.conflict_ids missing (run Repair Database Tables).', 'meyvora-convert' );
+			}
+			if ( ! empty( $col_warnings ) ) {
+				return array(
+					'label'   => __( 'Custom tables status', 'meyvora-convert' ),
+					'status'  => 'warning',
+					'message' => implode( ' ', $col_warnings ),
+					'detail'  => __( 'Use “Repair Database Tables” on the System Status page to apply migrations (CRO_Activator::maybe_upgrade_tables).', 'meyvora-convert' ),
+				);
+			}
 			return array(
 				'label'   => __( 'Custom tables status', 'meyvora-convert' ),
 				'status'  => 'ok',
@@ -446,6 +469,73 @@ class CRO_System_Status {
 		/* translators: %s is a comma-separated list of missing database table names. */
 			'message'  => sprintf( __( 'Missing: %s', 'meyvora-convert' ), implode( ', ', $missing ) ),
 			'detail'  => __( 'Deactivate and reactivate the plugin to create tables, or run the activation routine.', 'meyvora-convert' ),
+		);
+	}
+
+	/**
+	 * AI: any feature enabled requires a configured API key.
+	 *
+	 * @return array
+	 */
+	private static function check_ai_configuration() {
+		$ai_enabled = false;
+		$ai_features = array( 'feature_copy', 'feature_emails', 'feature_insights', 'feature_offers', 'feature_ab', 'feature_chat' );
+		if ( function_exists( 'cro_settings' ) ) {
+			foreach ( $ai_features as $f ) {
+				if ( 'yes' === cro_settings()->get( 'ai', $f, 'yes' ) ) {
+					$ai_enabled = true;
+					break;
+				}
+			}
+		}
+		if ( ! $ai_enabled ) {
+			return array(
+				'label'   => __( 'AI features', 'meyvora-convert' ),
+				'status'  => 'ok',
+				'message' => __( 'AI features disabled.', 'meyvora-convert' ),
+				'detail'  => '',
+			);
+		}
+		$configured = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured();
+		return array(
+			'label'   => __( 'AI configuration (Anthropic API key)', 'meyvora-convert' ),
+			'status'  => $configured ? 'ok' : 'warning',
+			'message' => $configured
+				? __( 'API key configured. Test connection in Settings → AI.', 'meyvora-convert' )
+				: __( 'AI features are enabled but no API key is set. Add your key in Settings → AI.', 'meyvora-convert' ),
+			'detail'  => '',
+		);
+	}
+
+	/**
+	 * Webhook endpoints (optional integration).
+	 *
+	 * @return array
+	 */
+	private static function check_webhook_configuration() {
+		if ( ! class_exists( 'CRO_Webhook' ) || ! function_exists( 'cro_settings' ) ) {
+			return array(
+				'label'   => __( 'Webhook endpoints', 'meyvora-convert' ),
+				'status'  => 'ok',
+				'message' => __( 'Webhook class not loaded.', 'meyvora-convert' ),
+				'detail'  => '',
+			);
+		}
+		$endpoints = CRO_Webhook::get_endpoints();
+		$active    = 0;
+		foreach ( $endpoints as $ep ) {
+			if ( ! empty( $ep['active'] ) ) {
+				++$active;
+			}
+		}
+		return array(
+			'label'   => __( 'Webhook endpoints', 'meyvora-convert' ),
+			'status'  => 'ok',
+			'message' => $active > 0
+				/* translators: %d: number of active webhook endpoints */
+				? sprintf( __( '%d active endpoint(s) configured.', 'meyvora-convert' ), $active )
+				: __( 'No active webhook endpoints (optional).', 'meyvora-convert' ),
+			'detail'  => __( 'Configure outbound webhooks under Developer settings if you need external integrations.', 'meyvora-convert' ),
 		);
 	}
 

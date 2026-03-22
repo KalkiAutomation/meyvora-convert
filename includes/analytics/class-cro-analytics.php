@@ -503,7 +503,8 @@ class CRO_Analytics {
                         page_url,
                         COUNT(CASE WHEN event_type = 'impression' THEN 1 END) as impressions,
                         COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) as conversions,
-                        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue
+                        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue,
+                        COUNT(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 END) as emails_captured
                     FROM {$events_table}
                     WHERE DATE(created_at) BETWEEN %s AND %s AND source_type = 'campaign' AND source_id = %d
                     GROUP BY page_url
@@ -524,7 +525,8 @@ class CRO_Analytics {
                     page_url,
                     COUNT(CASE WHEN event_type = 'impression' THEN 1 END) as impressions,
                     COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) as conversions,
-                    COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue
+                    COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue,
+                    COUNT(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 END) as emails_captured
                 FROM {$events_table}
                 WHERE DATE(created_at) BETWEEN %s AND %s
                 GROUP BY page_url
@@ -759,5 +761,631 @@ class CRO_Analytics {
             ARRAY_A
         );
         return is_array( $rows ) ? $rows : array();
+    }
+
+    /**
+     * Whether WooCommerce uses the HPOS orders table.
+     *
+     * @return bool
+     */
+    private function wc_orders_use_hpos() {
+        return class_exists( '\Automattic\WooCommerce\Utilities\OrderUtil' )
+            && \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled();
+    }
+
+    /**
+     * Revenue from conversion events grouped by campaign (source_id).
+     *
+     * @param string   $date_from   Y-m-d.
+     * @param string   $date_to     Y-m-d.
+     * @param int|null $campaign_id Optional. Limit to one campaign.
+     * @return array<int, array{ campaign_id: int, campaign_name: string, total_revenue: float, order_count: int }>
+     */
+    public function get_revenue_by_campaign( $date_from, $date_to, $campaign_id = null ) {
+        global $wpdb;
+
+        $events_table    = esc_sql( $this->events_table );
+        $campaigns_table = esc_sql( $this->campaigns_table );
+        $events_ok       = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
+        $campaigns_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $campaigns_table ) ) === $campaigns_table;
+        if ( ! $events_ok ) {
+            return array();
+        }
+
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $et            = $this->events_table;
+        $ct            = $this->campaigns_table;
+
+        if ( $campaign_id ) {
+            if ( $campaigns_ok ) {
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        'SELECT
+                        e.source_id AS campaign_id,
+                        COALESCE(MAX(c.name), CONCAT(\'Campaign #\', e.source_id)) AS campaign_name,
+                        COALESCE(SUM(e.order_value), 0) AS total_revenue,
+                        COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
+                    FROM %i e
+                    LEFT JOIN %i c ON c.id = e.source_id
+                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    AND e.event_type = \'conversion\'
+                    AND e.order_value IS NOT NULL
+                    AND e.source_type = \'campaign\'
+                    AND e.source_id = %d
+                    GROUP BY e.source_id',
+                        $et,
+                        $ct,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    ),
+                    ARRAY_A
+                );
+            } else {
+                $rows = $wpdb->get_results(
+                    $wpdb->prepare(
+                        'SELECT
+                        e.source_id AS campaign_id,
+                        CONCAT(\'Campaign #\', e.source_id) AS campaign_name,
+                        COALESCE(SUM(e.order_value), 0) AS total_revenue,
+                        COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
+                    FROM %i e
+                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    AND e.event_type = \'conversion\'
+                    AND e.order_value IS NOT NULL
+                    AND e.source_type = \'campaign\'
+                    AND e.source_id = %d
+                    GROUP BY e.source_id',
+                        $et,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    ),
+                    ARRAY_A
+                );
+            }
+        } elseif ( $campaigns_ok ) {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    'SELECT
+                        e.source_id AS campaign_id,
+                        COALESCE(MAX(c.name), CONCAT(\'Campaign #\', e.source_id)) AS campaign_name,
+                        COALESCE(SUM(e.order_value), 0) AS total_revenue,
+                        COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
+                    FROM %i e
+                    LEFT JOIN %i c ON c.id = e.source_id
+                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    AND e.event_type = \'conversion\'
+                    AND e.order_value IS NOT NULL
+                    AND e.source_type = \'campaign\'
+                    AND e.source_id IS NOT NULL AND e.source_id > 0
+                    GROUP BY e.source_id
+                    ORDER BY total_revenue DESC',
+                    $et,
+                    $ct,
+                    $date_from,
+                    $date_to
+                ),
+                ARRAY_A
+            );
+        } else {
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    'SELECT
+                        e.source_id AS campaign_id,
+                        CONCAT(\'Campaign #\', e.source_id) AS campaign_name,
+                        COALESCE(SUM(e.order_value), 0) AS total_revenue,
+                        COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
+                    FROM %i e
+                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    AND e.event_type = \'conversion\'
+                    AND e.order_value IS NOT NULL
+                    AND e.source_type = \'campaign\'
+                    AND e.source_id IS NOT NULL AND e.source_id > 0
+                    GROUP BY e.source_id
+                    ORDER BY total_revenue DESC',
+                    $et,
+                    $date_from,
+                    $date_to
+                ),
+                ARRAY_A
+            );
+        }
+
+        $out = array();
+        foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+            $out[] = array(
+                'campaign_id'    => (int) ( $row['campaign_id'] ?? 0 ),
+                'campaign_name'  => (string) ( $row['campaign_name'] ?? '' ),
+                'total_revenue'  => (float) ( $row['total_revenue'] ?? 0 ),
+                'order_count'    => (int) ( $row['order_count'] ?? 0 ),
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * Conversion funnel counts from events (and cro_emails for capture step).
+     *
+     * @param string   $date_from   Y-m-d.
+     * @param string   $date_to     Y-m-d.
+     * @param int|null $campaign_id Optional. Restrict to campaign-sourced events.
+     * @return array{ impressions: int, clicks: int, emails_captured: int, orders: int }
+     */
+    public function get_conversion_funnel( $date_from, $date_to, $campaign_id = null ) {
+        global $wpdb;
+
+        $events_table = esc_sql( $this->events_table );
+        $events_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
+        if ( ! $events_ok ) {
+            return array(
+                'impressions'      => 0,
+                'clicks'           => 0,
+                'emails_captured'  => 0,
+                'orders'           => 0,
+            );
+        }
+
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $et          = $this->events_table;
+
+        if ( $campaign_id ) {
+            $impressions = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'impression\' AND source_type = %s AND source_id = %d',
+                    $et,
+                    $date_from,
+                    $date_to,
+                    'campaign',
+                    $campaign_id
+                )
+            );
+            $clicks      = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'interaction\' AND source_type = %s AND source_id = %d',
+                    $et,
+                    $date_from,
+                    $date_to,
+                    'campaign',
+                    $campaign_id
+                )
+            );
+            $orders      = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND source_type = %s AND source_id = %d',
+                    $et,
+                    $date_from,
+                    $date_to,
+                    'campaign',
+                    $campaign_id
+                )
+            );
+        } else {
+            $impressions = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'impression\'',
+                    $et,
+                    $date_from,
+                    $date_to
+                )
+            );
+            $clicks      = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'interaction\'',
+                    $et,
+                    $date_from,
+                    $date_to
+                )
+            );
+            $orders      = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\'',
+                    $et,
+                    $date_from,
+                    $date_to
+                )
+            );
+        }
+
+        $emails_table = $wpdb->prefix . 'cro_emails';
+        $emails_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $emails_table ) ) === $emails_table;
+        $emails       = 0;
+        if ( $emails_ok ) {
+            if ( $campaign_id ) {
+                $emails = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE DATE(subscribed_at) BETWEEN %s AND %s AND source_type = %s AND source_id = %d',
+                        $emails_table,
+                        $date_from,
+                        $date_to,
+                        'campaign',
+                        $campaign_id
+                    )
+                );
+            } else {
+                $emails = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE DATE(subscribed_at) BETWEEN %s AND %s',
+                        $emails_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+            }
+        } elseif ( $campaign_id ) {
+            $emails = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' AND source_type = %s AND source_id = %d',
+                    $et,
+                    $date_from,
+                    $date_to,
+                    'campaign',
+                    $campaign_id
+                )
+            );
+        } else {
+            $emails = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\'',
+                    $et,
+                    $date_from,
+                    $date_to
+                )
+            );
+        }
+
+        return array(
+            'impressions'     => $impressions,
+            'clicks'          => $clicks,
+            'emails_captured' => $emails,
+            'orders'          => $orders,
+        );
+    }
+
+    /**
+     * Weekly abandoned-cart recovery cohorts (up to 8 ISO weeks in range).
+     *
+     * @param string $date_from Y-m-d.
+     * @param string $date_to   Y-m-d.
+     * @return array<int, array{ week_label: string, total_abandoned: int, recovered: int, recovery_rate: float }>
+     */
+    public function get_cohort_recovery( $date_from, $date_to ) {
+        global $wpdb;
+
+        $table     = esc_sql( $wpdb->prefix . 'cro_abandoned_carts' );
+        $table_ok  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+        if ( ! $table_ok ) {
+            return array();
+        }
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT 
+                    YEARWEEK(created_at, 3) AS yw,
+                    MIN(DATE(created_at)) AS week_start,
+                    COUNT(*) AS total_abandoned,
+                    SUM(CASE WHEN status = 'recovered' OR recovered_at IS NOT NULL THEN 1 ELSE 0 END) AS recovered
+                FROM {$table}
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                GROUP BY YEARWEEK(created_at, 3)
+                ORDER BY yw DESC
+                LIMIT 8",
+                $date_from,
+                $date_to
+            ),
+            ARRAY_A
+        );
+
+        $rows = is_array( $rows ) ? array_reverse( $rows ) : array();
+        $out  = array();
+        foreach ( $rows as $row ) {
+            $total = (int) ( $row['total_abandoned'] ?? 0 );
+            $rec   = (int) ( $row['recovered'] ?? 0 );
+            $rate  = $total > 0 ? round( ( $rec / $total ) * 100, 2 ) : 0.0;
+            $start = isset( $row['week_start'] ) ? (string) $row['week_start'] : '';
+            $out[] = array(
+                'week_label'       => $start
+                    ? sprintf(
+                        /* translators: %s: week start date */
+                        __( 'Week of %s', 'meyvora-convert' ),
+                        wp_date( 'M j, Y', strtotime( $start ) )
+                    )
+                    : '',
+                'total_abandoned'  => $total,
+                'recovered'        => $rec,
+                'recovery_rate'    => $rate,
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * Email capture rate: cro_emails rows in period / impressions × 100.
+     *
+     * @param string   $date_from   Y-m-d.
+     * @param string   $date_to     Y-m-d.
+     * @param int|null $campaign_id Optional.
+     * @return float
+     */
+    public function get_email_capture_rate( $date_from, $date_to, $campaign_id = null ) {
+        global $wpdb;
+
+        $events_table = esc_sql( $this->events_table );
+        $events_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
+        if ( ! $events_ok ) {
+            return 0.0;
+        }
+
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        if ( $campaign_id ) {
+            $impressions = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression' AND source_type = 'campaign' AND source_id = %d",
+                    $date_from,
+                    $date_to,
+                    $campaign_id
+                )
+            );
+        } else {
+            $impressions = (int) $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression'",
+                    $date_from,
+                    $date_to
+                )
+            );
+        }
+
+        $emails_table = $wpdb->prefix . 'cro_emails';
+        $emails_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $emails_table ) ) === $emails_table;
+        $captures     = 0;
+        if ( $emails_ok ) {
+            if ( $campaign_id ) {
+                $captures = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$emails_table} WHERE DATE(subscribed_at) BETWEEN %s AND %s AND source_type = %s AND source_id = %d",
+                        $date_from,
+                        $date_to,
+                        'campaign',
+                        $campaign_id
+                    )
+                );
+            } else {
+                $captures = (int) $wpdb->get_var(
+                    $wpdb->prepare(
+                        "SELECT COUNT(*) FROM {$emails_table} WHERE DATE(subscribed_at) BETWEEN %s AND %s",
+                        $date_from,
+                        $date_to
+                    )
+                );
+            }
+        }
+
+        if ( $impressions <= 0 ) {
+            return 0.0;
+        }
+        return round( ( $captures / $impressions ) * 100, 2 );
+    }
+
+    /**
+     * Offer revenue from orders linked in cro_offer_logs (MYV- coupon prefix).
+     *
+     * @param string $date_from Y-m-d.
+     * @param string $date_to   Y-m-d.
+     * @return array<int, array{ offer_id: int, offer_name: string, total_orders: int, total_revenue: float }>
+     */
+    public function get_offer_revenue_attribution( $date_from, $date_to ) {
+        global $wpdb;
+
+        $logs_table   = esc_sql( $wpdb->prefix . 'cro_offer_logs' );
+        $offers_table = esc_sql( $wpdb->prefix . 'cro_offers' );
+        $logs_ok      = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $logs_table ) ) === $logs_table;
+        $offers_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $offers_table ) ) === $offers_table;
+        if ( ! $logs_ok || ! $offers_ok ) {
+            return array();
+        }
+
+        $prefix_like = $wpdb->esc_like( 'MYV-' ) . '%';
+
+        if ( $this->wc_orders_use_hpos() ) {
+            $orders_table = esc_sql( $wpdb->prefix . 'wc_orders' );
+            $orders_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_table ) ) === $orders_table;
+            if ( ! $orders_ok ) {
+                return array();
+            }
+            $rows = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT 
+                        l.offer_id,
+                        MAX(o.name) AS offer_name,
+                        COUNT(DISTINCT l.order_id) AS total_orders,
+                        COALESCE(SUM(CAST(ord.total_amount AS DECIMAL(12,4))), 0) AS total_revenue
+                    FROM {$logs_table} l
+                    INNER JOIN {$offers_table} o ON o.id = l.offer_id
+                    INNER JOIN {$orders_table} ord ON ord.id = l.order_id AND ord.type = %s AND ord.status NOT IN ('trash','draft','auto-draft')
+                    WHERE DATE(l.created_at) BETWEEN %s AND %s
+                    AND l.order_id IS NOT NULL AND l.order_id > 0
+                    AND l.coupon_code IS NOT NULL AND LOWER(l.coupon_code) LIKE LOWER(%s)
+                    GROUP BY l.offer_id",
+                    'shop_order',
+                    $date_from,
+                    $date_to,
+                    $prefix_like
+                ),
+                ARRAY_A
+            );
+        } else {
+            $posts = esc_sql( $wpdb->posts );
+            $pm    = esc_sql( $wpdb->postmeta );
+            $rows  = $wpdb->get_results(
+                $wpdb->prepare(
+                    "SELECT 
+                        l.offer_id,
+                        MAX(o.name) AS offer_name,
+                        COUNT(DISTINCT l.order_id) AS total_orders,
+                        COALESCE(SUM(CAST(pm.meta_value AS DECIMAL(12,4))), 0) AS total_revenue
+                    FROM {$logs_table} l
+                    INNER JOIN {$offers_table} o ON o.id = l.offer_id
+                    INNER JOIN {$posts} p ON p.ID = l.order_id AND p.post_type = %s
+                    INNER JOIN {$pm} pm ON pm.post_id = p.ID AND pm.meta_key = %s
+                    WHERE DATE(l.created_at) BETWEEN %s AND %s
+                    AND l.order_id IS NOT NULL AND l.order_id > 0
+                    AND l.coupon_code IS NOT NULL AND LOWER(l.coupon_code) LIKE LOWER(%s)
+                    GROUP BY l.offer_id",
+                    'shop_order',
+                    '_order_total',
+                    $date_from,
+                    $date_to,
+                    $prefix_like
+                ),
+                ARRAY_A
+            );
+        }
+
+        $out = array();
+        foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+            $out[] = array(
+                'offer_id'      => (int) ( $row['offer_id'] ?? 0 ),
+                'offer_name'    => (string) ( $row['offer_name'] ?? '' ),
+                'total_orders'  => (int) ( $row['total_orders'] ?? 0 ),
+                'total_revenue' => (float) ( $row['total_revenue'] ?? 0 ),
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * A/B tests summary for analytics (running, paused, completed in/around range).
+     *
+     * @param string $date_from Y-m-d.
+     * @param string $date_to   Y-m-d.
+     * @return array<int, array<string, mixed>>
+     */
+    public function get_ab_test_summary( $date_from, $date_to ) {
+        global $wpdb;
+
+        if ( ! class_exists( 'CRO_AB_Test' ) || ! class_exists( 'CRO_AB_Statistics' ) ) {
+            return array();
+        }
+
+        $tests_table = esc_sql( $wpdb->prefix . 'cro_ab_tests' );
+        $tests_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tests_table ) ) === $tests_table;
+        if ( ! $tests_ok ) {
+            return array();
+        }
+
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM {$tests_table}
+                WHERE status != %s
+                AND status IN ('running','paused','completed')
+                ORDER BY 
+                    CASE status WHEN 'running' THEN 1 WHEN 'paused' THEN 2 ELSE 3 END,
+                    COALESCE(started_at, created_at) DESC
+                LIMIT 40",
+                'draft'
+            ),
+            ARRAY_A
+        );
+        $rows = apply_filters( 'cro_analytics_ab_test_summary_raw_rows', $rows, $date_from, $date_to );
+        if ( ! is_array( $rows ) ) {
+            $rows = array();
+        }
+
+        $model = new CRO_AB_Test();
+        $out   = array();
+        foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+            $tid = (int) ( $row['id'] ?? 0 );
+            if ( ! $tid ) {
+                continue;
+            }
+            $test = $model->get( $tid );
+            if ( ! $test || empty( $test->variations ) ) {
+                continue;
+            }
+            $stats = in_array( $test->status, array( 'running', 'paused', 'completed' ), true )
+                ? CRO_AB_Statistics::calculate( $test )
+                : null;
+
+            $winner_name = '—';
+            if ( is_array( $stats ) && ! empty( $stats['has_winner'] ) && ! empty( $stats['winner']['variation_name'] ) ) {
+                $winner_name = $stats['winner']['variation_name'];
+            }
+
+            if ( ! CRO_AB_Statistics::has_reached_sample_size( $test ) ) {
+                $sig_label = __( 'Pending data', 'meyvora-convert' );
+            } elseif ( is_array( $stats ) && ! empty( $stats['has_winner'] ) ) {
+                $sig_label = __( 'Significant', 'meyvora-convert' );
+            } else {
+                $sig_label = __( 'Not significant', 'meyvora-convert' );
+            }
+
+            $vars_out = array();
+            foreach ( $test->variations as $v ) {
+                $imp = (int) ( $v->impressions ?? 0 );
+                $conv = (int) ( $v->conversions ?? 0 );
+                $rate = $imp > 0 ? round( ( $conv / $imp ) * 100, 2 ) : 0.0;
+                $vars_out[] = array(
+                    'id'           => (int) $v->id,
+                    'name'         => (string) $v->name,
+                    'impressions'  => $imp,
+                    'conversions'  => $conv,
+                    'rate'         => $rate,
+                    'rate_display' => number_format_i18n( $rate, 2 ) . '%',
+                );
+            }
+
+            $started = ! empty( $test->started_at )
+                ? wp_date( get_option( 'date_format' ), strtotime( $test->started_at ) )
+                : '—';
+
+            $out[] = array(
+                'id'              => $tid,
+                'name'            => (string) $test->name,
+                'status'          => (string) $test->status,
+                'variants_count'  => count( $test->variations ),
+                'winner'          => $winner_name,
+                'significance'    => $sig_label,
+                'started'         => $started,
+                'variations'      => $vars_out,
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * Abandoned cart rows for CSV export (no raw email).
+     *
+     * @param string $date_from Y-m-d.
+     * @param string $date_to   Y-m-d.
+     * @param int    $limit     Max rows.
+     * @return array<int, array<string, mixed>>
+     */
+    public function get_abandoned_carts_export_rows( $date_from, $date_to, $limit = 2000 ) {
+        global $wpdb;
+
+        $table    = esc_sql( $wpdb->prefix . 'cro_abandoned_carts' );
+        $table_ok = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+        if ( ! $table_ok ) {
+            return array();
+        }
+
+        $limit = max( 1, min( 10000, absint( $limit ) ) );
+
+        return $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT id, created_at, status, recovered_at,
+                    CASE WHEN email IS NOT NULL AND email != '' THEN 1 ELSE 0 END AS has_email
+                FROM {$table}
+                WHERE DATE(created_at) BETWEEN %s AND %s
+                ORDER BY created_at DESC
+                LIMIT %d",
+                $date_from,
+                $date_to,
+                $limit
+            ),
+            ARRAY_A
+        );
     }
 }

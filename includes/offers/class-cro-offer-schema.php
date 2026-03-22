@@ -131,6 +131,8 @@ class CRO_Offer_Schema {
 		$max_pv                         = isset( $limits['max_coupons_per_visitor'] ) ? $limits['max_coupons_per_visitor'] : ( isset( $limits['max_per_visitor'] ) ? $limits['max_per_visitor'] : ( isset( $raw['max_coupons_per_visitor'] ) ? $raw['max_coupons_per_visitor'] : 1 ) );
 		$flat['max_coupons_per_visitor'] = absint( $max_pv );
 
+		$flat['conflict_offer_ids'] = self::sanitize_conflict_offer_ids( isset( $raw['conflict_offer_ids'] ) ? $raw['conflict_offer_ids'] : array() );
+
 		return $flat;
 	}
 
@@ -186,6 +188,13 @@ class CRO_Offer_Schema {
 		$max_pv = isset( $offer['max_coupons_per_visitor'] ) ? (int) $offer['max_coupons_per_visitor'] : 1;
 		if ( $max_pv < self::MAX_PER_VISITOR_MIN || $max_pv > self::MAX_PER_VISITOR_MAX ) {
 			$err->add( 'max_coupons_per_visitor', sprintf( /* translators: %1$d is the minimum value, %2$d is the maximum value. */ __( 'Max per visitor must be between %1$d and %2$d.', 'meyvora-convert' ), self::MAX_PER_VISITOR_MIN, self::MAX_PER_VISITOR_MAX ) );
+		}
+
+		$conf = isset( $offer['conflict_offer_ids'] ) ? $offer['conflict_offer_ids'] : array();
+		if ( ! is_array( $conf ) ) {
+			$err->add( 'conflict_offer_ids', __( 'Cannot combine with must be a list.', 'meyvora-convert' ) );
+		} elseif ( count( $conf ) > 20 ) {
+			$err->add( 'conflict_offer_ids', __( 'Too many conflict entries (max 20).', 'meyvora-convert' ) );
 		}
 
 		if ( $err->has_errors() ) {
@@ -262,6 +271,33 @@ class CRO_Offer_Schema {
 	 * @param mixed $input Associative array or list of { category_id, min_qty }.
 	 * @return array<int,int>
 	 */
+	/**
+	 * Sanitize conflict_offer_ids: positive integers (DB) or non-empty strings (option UUID ids).
+	 *
+	 * @param mixed $input Raw list.
+	 * @return array<int|string>
+	 */
+	private static function sanitize_conflict_offer_ids( $input ) {
+		if ( ! is_array( $input ) ) {
+			return array();
+		}
+		$out = array();
+		foreach ( $input as $v ) {
+			if ( is_int( $v ) || ( is_string( $v ) && is_numeric( $v ) && strpos( $v, '.' ) === false ) ) {
+				$n = absint( $v );
+				if ( $n > 0 ) {
+					$out[] = $n;
+				}
+			} elseif ( is_string( $v ) ) {
+				$s = sanitize_text_field( $v );
+				if ( $s !== '' ) {
+					$out[] = $s;
+				}
+			}
+		}
+		return array_values( array_unique( $out, SORT_REGULAR ) );
+	}
+
 	private static function sanitize_min_qty_for_category( $input ) {
 		$out = array();
 		if ( ! is_array( $input ) ) {

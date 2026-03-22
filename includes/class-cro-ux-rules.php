@@ -62,6 +62,21 @@ class CRO_UX_Rules {
 	}
 
 	/**
+	 * Whether intent signals from the client indicate form interaction (typing or focus).
+	 * Used by the decision engine without running min-time / max-popup rules (those are handled elsewhere).
+	 *
+	 * @param array $intent_signals Intent signals from REST (e.g. cro-signals.js).
+	 * @return bool
+	 */
+	public function is_form_interaction_blocked( array $intent_signals ) {
+		$context = array(
+			'is_typing'    => ! empty( $intent_signals['is_typing'] ),
+			'form_focused' => ! empty( $intent_signals['form_focused'] ),
+		);
+		return $this->is_form_interaction( $context );
+	}
+
+	/**
 	 * Check if the user is interacting with checkout.
 	 *
 	 * @param array $context Context array.

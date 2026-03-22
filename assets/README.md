@@ -45,7 +45,7 @@ under `== Screenshots ==`. WordPress requires the numbering to match exactly.
 ## Adding assets
 
 1. Place the final image files in this folder using the exact names above.
-2. Run `bash build-zip.sh` or `bash scripts/release.sh` — both scripts
+2. Run `bash scripts/build-zip.sh` or `bash scripts/release.sh` — both scripts
    automatically include `assets/` in the distribution zip.
 3. The build scripts verify that all 6 screenshots referenced in `readme.txt`
    are present and warn if any are missing.

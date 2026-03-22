@@ -40,6 +40,20 @@ class CRO_Settings {
 	private $table_name;
 
 	/**
+	 * Whether DB self-heal (create_tables) was already attempted this request (avoids loops on reload).
+	 *
+	 * @var bool
+	 */
+	private static $settings_repair_attempted = false;
+
+	/**
+	 * Whether shutdown seed/reload was scheduled after repair.
+	 *
+	 * @var bool
+	 */
+	private static $repair_shutdown_scheduled = false;
+
+	/**
 	 * Get singleton instance.
 	 *
 	 * @return CRO_Settings
@@ -73,7 +87,35 @@ class CRO_Settings {
 			OBJECT
 		);
 
-		if ( ! $results ) {
+		// Self-heal: if query failed (e.g. missing table), create tables and retry once per request.
+		if ( null === $results && $wpdb->last_error && class_exists( 'CRO_Database' ) && ! self::$settings_repair_attempted ) {
+			self::$settings_repair_attempted = true;
+			CRO_Database::create_tables();
+			// Defer defaults — CRO_Activator::set_default_settings() uses CRO_Settings::get_instance()
+			// and cannot run synchronously while this constructor is still running.
+			if ( class_exists( 'CRO_Activator' ) && ! self::$repair_shutdown_scheduled ) {
+				self::$repair_shutdown_scheduled = true;
+				add_action(
+					'shutdown',
+					static function () {
+						if ( class_exists( 'CRO_Activator' ) ) {
+							CRO_Activator::set_default_settings();
+						}
+						if ( class_exists( 'CRO_Settings' ) ) {
+							CRO_Settings::get_instance()->reload();
+						}
+					},
+					1
+				);
+			}
+			$results = $wpdb->get_results(
+				"SELECT setting_group, setting_key, setting_value 
+				FROM {$this->table_name}",
+				OBJECT
+			);
+		}
+
+		if ( null === $results || ! is_array( $results ) ) {
 			return;
 		}
 
@@ -206,7 +248,9 @@ class CRO_Settings {
 		if ( empty( $feature ) || ! is_string( $feature ) ) {
 			return false;
 		}
-		return (bool) $this->get( 'general', $feature . '_enabled', false );
+		// Campaigns default on when unset (matches activation seed); other features default off.
+		$default = ( 'campaigns' === $feature ) ? true : false;
+		return (bool) $this->get( 'general', $feature . '_enabled', $default );
 	}
 
 	/**
@@ -464,6 +508,7 @@ class CRO_Settings {
 			'per_product_custom_discount'   => array(),
 			'email_subject_template'        => __( 'You left something in your cart – {store_name}', 'meyvora-convert' ),
 			'email_body_template'           => '',
+			'high_value_threshold'          => 100,
 		);
 	}
 
@@ -480,7 +525,7 @@ class CRO_Settings {
 			. '<p><strong>Your cart:</strong></p>'
 			. '<p>{cart_items}</p>'
 			. '<p><strong>Cart total: {cart_total}</strong></p>'
-			. '<p><a href="{checkout_url}" style="display:inline-block;padding:12px 24px;background:#333;color:#fff;text-decoration:none;border-radius:4px;">Complete your purchase</a></p>'
+			. '<p><a href="{checkout_url}" style="display:inline-block;padding:12px 24px;background:#333;color:#fff;text-decoration:none;border-radius:6px;display: inline-block;">Complete your purchase</a></p>'
 			. '{discount_text}'
 			. '<p>Thanks,<br>{store_name}</p>'
 			. '</div></body></html>';

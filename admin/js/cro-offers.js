@@ -189,12 +189,34 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			min_qty_for_category: {},
 			apply_to_categories: [],
 			apply_to_products: [],
-			per_category_discount: {}
+			per_category_discount: {},
+			conflict_offer_ids: []
 		};
+	}
+
+	function rebuildConflictOfferSelect(excludeId) {
+		var $sel = $('#cro-drawer-conflict-offers');
+		if (!$sel.length) {
+			return;
+		}
+		var choices = Array.isArray(window.croOfferConflictChoices) ? window.croOfferConflictChoices : [];
+		var ex = excludeId != null && excludeId !== '' ? String(excludeId) : '';
+		$sel.empty();
+		choices.forEach(function (c) {
+			if (!c || c.id == null) {
+				return;
+			}
+			if (ex && String(c.id) === ex) {
+				return;
+			}
+			$sel.append($('<option/>', { value: String(c.id), text: c.name || String(c.id) }));
+		});
 	}
 
 	function populateForm(offer) {
 		offer = offer || getEmptyOffer(0);
+		var excludeConflict = (offer.id != null && String(offer.id) !== '') ? String(offer.id) : '';
+		rebuildConflictOfferSelect(excludeConflict);
 		$('#cro-drawer-headline').val(offer.headline || '');
 		$('#cro-drawer-description').val(offer.description || '');
 		$('#cro-drawer-enabled').prop('checked', !!offer.enabled);
@@ -230,6 +252,8 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 		$('#cro-drawer-apply-to-categories').val(Array.isArray(offer.apply_to_categories) ? offer.apply_to_categories.map(String) : []);
 		$('#cro-drawer-apply-to-products').val(Array.isArray(offer.apply_to_products) ? offer.apply_to_products.map(String) : []);
 		buildPerCategoryDiscountList(offer.per_category_discount || {});
+		var confIds = Array.isArray(offer.conflict_offer_ids) ? offer.conflict_offer_ids.map(String) : [];
+		$('#cro-drawer-conflict-offers').val(confIds);
 		// Sync SelectWoo (if present) after setting values
 		$('#cro-offer-drawer-panel .cro-selectwoo').trigger('change');
 		$(document).trigger('cro-select-woo-init');
@@ -349,7 +373,8 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			reward_amount: '#cro-drawer-reward-amount',
 			coupon_ttl_hours: '#cro-drawer-coupon-ttl',
 			rate_limit_hours: '#cro-drawer-rate-limit-hours',
-			max_coupons_per_visitor: '#cro-drawer-max-coupons-per-visitor'
+			max_coupons_per_visitor: '#cro-drawer-max-coupons-per-visitor',
+			conflict_offer_ids: '#cro-drawer-conflict-offers'
 		};
 
 		function showFieldErrors(errors) {
@@ -434,13 +459,22 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 		var statusClass = o.enabled ? 'active' : 'inactive';
 		var statusText = o.enabled ? (i18n.active || 'Active') : (i18n.inactive || 'Inactive');
 		var priorityText = (i18n.priorityLabel || 'Priority: %s').replace('%s', o.priority);
-		var editBtn = '<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="' + item.index + '">' + editIcon + ' ' + (i18n.edit || 'Edit') + '</button>';
 		var offerId = (o.id != null && o.id !== '') ? String(o.id) : '';
 		var moveUpIcon = (i18n.moveUpIcon != null && i18n.moveUpIcon !== '') ? i18n.moveUpIcon : '↑';
 		var moveDownIcon = (i18n.moveDownIcon != null && i18n.moveDownIcon !== '') ? i18n.moveDownIcon : '↓';
 		var editIcon = (i18n.editIcon != null && i18n.editIcon !== '') ? i18n.editIcon : '';
 		var duplicateIcon = (i18n.duplicateIcon != null && i18n.duplicateIcon !== '') ? i18n.duplicateIcon : '';
 		var deleteIcon = (i18n.deleteIcon != null && i18n.deleteIcon !== '') ? i18n.deleteIcon : '';
+		var editBtn = '<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="' + item.index + '">' + editIcon + ' ' + (i18n.edit || 'Edit') + '</button>';
+		var confN = Array.isArray(o.conflict_offer_ids) ? o.conflict_offer_ids.length : 0;
+		var conflictsLabel = i18n.conflictsLabel || 'Conflicts';
+		var confBlock = '';
+		if (confN > 0) {
+			var badgeText = (i18n.conflictsBadge || '%d conflicts').replace('%d', String(confN));
+			confBlock = '<div class="cro-offer-card-conflicts-row"><span class="cro-offer-card-conflicts-label">' + escapeHtml(conflictsLabel) + '</span> <span class="cro-offer-conflict-badge">' + escapeHtml(badgeText) + '</span></div>';
+		} else {
+			confBlock = '<div class="cro-offer-card-conflicts-row"><span class="cro-offer-card-conflicts-label">' + escapeHtml(conflictsLabel) + '</span> <span class="cro-offer-conflict-badge cro-offer-conflict-badge--none" aria-hidden="true">—</span></div>';
+		}
 		var moveUpDown = '<span class="cro-offer-card-move-btns">' +
 			'<button type="button" class="button button-small cro-offer-move-up" data-cro-offer-index="' + item.index + '" title="' + escapeHtml(i18n.moveUp || 'Move up') + '" aria-label="' + escapeHtml(i18n.moveUp || 'Move up') + '">' + moveUpIcon + '</button>' +
 			'<button type="button" class="button button-small cro-offer-move-down" data-cro-offer-index="' + item.index + '" title="' + escapeHtml(i18n.moveDown || 'Move down') + '" aria-label="' + escapeHtml(i18n.moveDown || 'Move down') + '">' + moveDownIcon + '</button></span>';
@@ -463,6 +497,7 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			'<p class="cro-offer-card-rule">' + escapeHtml(item.rule_summary) + '</p>' +
 			'<p class="cro-offer-card-reward">' + escapeHtml(item.reward_summary) + '</p>' +
 			'<p class="cro-offer-card-priority">' + escapeHtml(priorityText) + '</p>' +
+			confBlock +
 			'</div>' +
 			'<div class="cro-offer-card-actions">' +
 			moveUpDown + toggleForm + editBtn + duplicateBtn + deleteBtn +
@@ -519,6 +554,36 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			});
 	}
 
+	function syncConflictChoicesFromOffersData() {
+		var choices = [];
+		(offersData || []).forEach(function (slot) {
+			if (!slot || !String(slot.headline || '').trim()) {
+				return;
+			}
+			if (slot.id) {
+				choices.push({ id: String(slot.id), name: String(slot.headline) });
+			}
+		});
+		window.croOfferConflictChoices = choices;
+	}
+
+	function toggleCheckConflictsButton() {
+		var container = $('.cro-offers-page');
+		var $bar = container.find('.cro-offers-toolbar');
+		if (!$bar.length) {
+			return;
+		}
+		if (usedCount > 0) {
+			if (!$bar.find('#cro-offers-check-conflicts').length) {
+				var $btn = $('<button type="button" id="cro-offers-check-conflicts" class="button button-secondary cro-offers-check-conflicts"></button>');
+				$btn.text(i18n.checkConflicts || 'Check for conflicts');
+				$bar.append($btn);
+			}
+		} else {
+			$bar.find('#cro-offers-check-conflicts').remove();
+		}
+	}
+
 	// When response has offers, we need to show empty state if 0 or grid if 1+. Use server-returned count/max, not cached DOM state.
 	function updatePageFromResponse(data) {
 		if (data.max_offers !== undefined) {
@@ -537,6 +602,7 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 				offersData[item.index] = item.offer;
 			});
 		}
+		syncConflictChoicesFromOffersData();
 
 		var container = $('.cro-offers-page');
 		var countEl = container.find('.cro-offers-count');
@@ -565,6 +631,7 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 					'</div>'
 				);
 			}
+			toggleCheckConflictsButton();
 			return;
 		}
 
@@ -579,9 +646,53 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			);
 			initOfferReorder();
 		}
+		toggleCheckConflictsButton();
 	}
 
 	$(function () {
+		syncConflictChoicesFromOffersData();
+
+		$(document).on('click', '#cro-offers-check-conflicts', function () {
+			var $btn = $(this);
+			var ajaxUrl = (window.croAdmin && window.croAdmin.ajaxUrl) ? window.croAdmin.ajaxUrl : (window.ajaxurl || '/wp-admin/admin-ajax.php');
+			var nonce = i18n.reorderNonce || '';
+			var prevText = $btn.text();
+			$btn.prop('disabled', true).text(i18n.checkConflictsRunning || 'Checking…');
+			$.post(ajaxUrl, { action: 'cro_detect_offer_conflicts', nonce: nonce })
+				.done(function (res) {
+					var $holder = $('#cro-offers-conflict-notices');
+					$holder.empty();
+					if (res && res.success && res.data) {
+						var w = res.data.warnings;
+						if (!w || !w.length) {
+							var $ok = $('<div class="notice notice-success is-dismissible"></div>');
+							$ok.append($('<p></p>').text(i18n.noConflictCycles || 'No circular conflict chains found.'));
+							var $d0 = $('<button type="button" class="notice-dismiss"></button>');
+							$d0.append($('<span class="screen-reader-text"></span>').text(i18n.dismiss || 'Dismiss'));
+							$ok.append($d0);
+							$d0.on('click', function () { $ok.remove(); });
+							$holder.append($ok);
+							return;
+						}
+						w.forEach(function (msg) {
+							var $n = $('<div class="notice notice-warning is-dismissible"></div>');
+							$n.append($('<p></p>').text(msg));
+							var $d = $('<button type="button" class="notice-dismiss"></button>');
+							$d.append($('<span class="screen-reader-text"></span>').text(i18n.dismiss || 'Dismiss'));
+							$n.append($d);
+							$d.on('click', function () { $n.remove(); });
+							$holder.append($n);
+						});
+					}
+				})
+				.fail(function () {
+					showNotice(i18n.checkConflictsFail || 'Could not check conflicts.', 'error');
+				})
+				.always(function () {
+					$btn.prop('disabled', false).text(prevText);
+				});
+		});
+
 		$(document).on('click', '[data-cro-drawer="add"]', function () {
 			openDrawer('add', undefined, $(this));
 		});

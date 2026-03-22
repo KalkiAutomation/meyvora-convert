@@ -11,12 +11,18 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-// Handle save
-if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'], 'cro_save_settings' ) ) {
+$cro_settings_tab = isset( $_GET['settings_tab'] ) ? sanitize_key( wp_unslash( $_GET['settings_tab'] ) ) : 'general';
+if ( ! in_array( $cro_settings_tab, array( 'general', 'ai' ), true ) ) {
+	$cro_settings_tab = 'general';
+}
+
+// Handle save (general & other sections).
+if ( isset( $_POST['cro_save_settings'] ) && ! isset( $_POST['cro_save_ai_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'], 'cro_save_settings' ) ) {
 	update_option( 'cro_enable_analytics', isset( $_POST['enable_analytics'] ) ? 1 : 0 );
 	update_option( 'cro_remove_data_on_uninstall', ! empty( $_POST['remove_data_on_uninstall'] ) ? 'yes' : 'no' );
 	cro_settings()->set( 'general', 'debug_mode', ! empty( $_POST['debug_mode'] ) );
 	cro_settings()->set( 'general', 'blocks_debug_mode', ! empty( $_POST['blocks_debug_mode'] ) );
+	cro_settings()->set( 'general', 'load_google_fonts', ! empty( $_POST['load_google_fonts'] ) ? 'yes' : 'no' );
 
 	// Save Brand Styles
 	cro_settings()->set( 'styles', 'primary_color', sanitize_hex_color( $_POST['primary_color'] ?? '#333333' ) ?: '#333333' );
@@ -42,8 +48,39 @@ if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'
 
 	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Settings saved.', 'meyvora-convert' ) . '</p></div>';
 }
+
+// AI settings (separate form; does not wipe API key when field left blank).
+if ( isset( $_POST['cro_save_ai_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'], 'cro_save_settings' ) ) {
+	$key_input = isset( $_POST['anthropic_api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['anthropic_api_key'] ) ) : '';
+	if ( '' !== $key_input ) {
+		cro_settings()->set( 'ai', 'anthropic_api_key', $key_input );
+		cro_settings()->set( 'ai', 'connection_verified', 'no' );
+	}
+	$ai_feature_keys = array( 'feature_copy', 'feature_emails', 'feature_insights', 'feature_offers', 'feature_ab', 'feature_chat' );
+	foreach ( $ai_feature_keys as $fk ) {
+		$post_key = 'ai_' . $fk;
+		cro_settings()->set( 'ai', $fk, ! empty( $_POST[ $post_key ] ) ? 'yes' : 'no' );
+	}
+	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Settings saved.', 'meyvora-convert' ) . '</p></div>';
+}
 ?>
 
+<nav class="cro-ui-nav cro-settings-inner-nav" aria-label="<?php esc_attr_e( 'Settings sections', 'meyvora-convert' ); ?>">
+	<ul class="cro-ui-nav__list" role="list">
+		<li class="cro-ui-nav__item">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-settings&settings_tab=general' ) ); ?>" class="cro-ui-nav__link<?php echo ( 'general' === $cro_settings_tab ) ? ' cro-ui-nav__link--active' : ''; ?>">
+				<?php esc_html_e( 'General', 'meyvora-convert' ); ?>
+			</a>
+		</li>
+		<li class="cro-ui-nav__item">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-settings&settings_tab=ai' ) ); ?>" class="cro-ui-nav__link<?php echo ( 'ai' === $cro_settings_tab ) ? ' cro-ui-nav__link--active' : ''; ?>">
+				<?php esc_html_e( 'AI', 'meyvora-convert' ); ?>
+			</a>
+		</li>
+	</ul>
+</nav>
+
+<?php if ( 'general' === $cro_settings_tab ) : ?>
 <div class="cro-card">
 	<header class="cro-card__header"><h2><?php esc_html_e( 'General', 'meyvora-convert' ); ?></h2></header>
 	<div class="cro-card__body">
@@ -78,6 +115,15 @@ if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'
 						<?php esc_html_e( 'Enable Blocks debug mode', 'meyvora-convert' ); ?>
 					</label>
 					<p class="cro-help"><?php esc_html_e( 'Shows a fixed badge on Cart/Checkout block pages and logs settings to the console so you can confirm the extension is loaded.', 'meyvora-convert' ); ?></p>
+				</div>
+			</div>
+
+			<div class="cro-field">
+				<div class="cro-field__control">
+					<label>
+						<input type="checkbox" name="load_google_fonts" value="1" <?php checked( cro_settings()->get( 'general', 'load_google_fonts', 'yes' ), 'yes' ); ?> />
+						<?php esc_html_e( 'Load DM Sans from Google Fonts for campaign popups (may require cookie consent in the EU)', 'meyvora-convert' ); ?>
+					</label>
 				</div>
 			</div>
 
@@ -123,7 +169,7 @@ if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'
 
 			<div class="cro-field">
 				<label class="cro-field__label" for="cro-button-radius"><?php esc_html_e( 'Button Radius', 'meyvora-convert' ); ?></label>
-				<div class="cro-field__control">
+				<div class="cro-field__control cro-field__control--flex">
 					<input type="number" id="cro-button-radius" name="button_radius" value="<?php echo esc_attr( (string) ( cro_settings()->get( 'styles', 'button_radius', 8 ) ?: cro_settings()->get( 'styles', 'border_radius', 8 ) ) ); ?>" min="0" max="30" class="small-text" /> px
 					<p class="cro-help"><?php esc_html_e( 'Border radius for buttons and pill elements.', 'meyvora-convert' ); ?></p>
 				</div>
@@ -131,7 +177,7 @@ if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'
 
 			<div class="cro-field">
 				<label class="cro-field__label" for="cro-spacing"><?php esc_html_e( 'Spacing', 'meyvora-convert' ); ?></label>
-				<div class="cro-field__control">
+				<div class="cro-field__control cro-field__control--flex">
 					<input type="number" id="cro-spacing" name="spacing" value="<?php echo esc_attr( (string) ( cro_settings()->get( 'styles', 'spacing', 8 ) ) ); ?>" min="2" max="32" class="small-text" /> px
 					<p class="cro-help"><?php esc_html_e( 'Base spacing (padding, gaps) for CRO elements.', 'meyvora-convert' ); ?></p>
 				</div>
@@ -298,3 +344,138 @@ if ( isset( $_POST['cro_save_settings'] ) && wp_verify_nonce( $_POST['cro_nonce'
 		</form>
 	</div>
 </div>
+<?php endif; ?>
+
+<?php if ( 'ai' === $cro_settings_tab ) : ?>
+	<?php
+	$ai_has_key        = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured();
+	$ai_feature_default = $ai_has_key ? 'yes' : 'no';
+	$ai_ok             = $ai_has_key && ( 'yes' === cro_settings()->get( 'ai', 'connection_verified', 'no' ) );
+	?>
+<div class="cro-card" id="cro-settings-ai">
+	<header class="cro-card__header"><h2><?php esc_html_e( 'AI', 'meyvora-convert' ); ?></h2></header>
+	<div class="cro-card__body">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=cro-settings&settings_tab=ai' ) ); ?>">
+			<?php wp_nonce_field( 'cro_save_settings', 'cro_nonce' ); ?>
+			<input type="hidden" name="cro_save_settings" value="1" />
+			<input type="hidden" name="cro_save_ai_settings" value="1" />
+
+			<div class="cro-field">
+				<label class="cro-field__label" for="cro-ai-api-key"><?php esc_html_e( 'Anthropic API Key', 'meyvora-convert' ); ?></label>
+				<div class="cro-field__control cro-field__control--flex cro-ai-api-key-row">
+					<input type="password" name="anthropic_api_key" id="cro-ai-api-key" class="regular-text" value="" autocomplete="off" spellcheck="false"
+						placeholder="<?php echo $ai_has_key ? esc_attr__( 'Saved key on file — enter new key to replace', 'meyvora-convert' ) : esc_attr__( 'sk-ant-api03-...', 'meyvora-convert' ); ?>" />
+					<button type="button" class="button" id="cro-ai-api-key-toggle" aria-pressed="false"><?php esc_html_e( 'Show', 'meyvora-convert' ); ?></button>
+					<span class="cro-ai-connection-status" role="status">
+						<?php if ( $ai_ok ) : ?>
+							<span class="cro-ai-connection-status__icon cro-ai-connection-status__icon--ok dashicons dashicons-yes" aria-hidden="true"></span>
+							<span class="screen-reader-text"><?php esc_html_e( 'API key saved and connection verified', 'meyvora-convert' ); ?></span>
+						<?php else : ?>
+							<span class="cro-ai-connection-status__icon cro-ai-connection-status__icon--pending dashicons dashicons-minus" aria-hidden="true"></span>
+							<span class="screen-reader-text"><?php esc_html_e( 'Not configured or not verified', 'meyvora-convert' ); ?></span>
+						<?php endif; ?>
+					</span>
+					<button type="button" class="button button-secondary" id="cro-ai-test-connection"><?php esc_html_e( 'Test connection', 'meyvora-convert' ); ?></button>
+				</div>
+				<p class="cro-help" id="cro-ai-test-feedback" hidden></p>
+				<p class="cro-help"><?php esc_html_e( 'The key is stored in the database and is never shown after saving. Leave the field blank to keep the current key.', 'meyvora-convert' ); ?></p>
+			</div>
+
+			<div class="cro-field">
+				<label class="cro-field__label"><?php esc_html_e( 'AI features', 'meyvora-convert' ); ?></label>
+				<div class="cro-field__control">
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_copy" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_copy', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'AI Copy Generator', 'meyvora-convert' ); ?>
+					</label>
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_emails" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_emails', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'AI Abandoned Cart Emails', 'meyvora-convert' ); ?>
+					</label>
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_insights" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_insights', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'AI Insights Analyst', 'meyvora-convert' ); ?>
+					</label>
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_offers" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_offers', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'AI Offer Suggester', 'meyvora-convert' ); ?>
+					</label>
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_ab" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_ab', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'AI A/B Test Hypotheses', 'meyvora-convert' ); ?>
+					</label>
+					<label style="display:block; margin-bottom:6px;">
+						<input type="checkbox" name="ai_feature_chat" value="1" <?php checked( 'yes', cro_settings()->get( 'ai', 'feature_chat', $ai_feature_default ) ); ?> />
+						<?php esc_html_e( 'Admin AI Chat', 'meyvora-convert' ); ?>
+					</label>
+				</div>
+			</div>
+
+			<p class="cro-section-desc"><?php esc_html_e( 'AI features use the Anthropic Claude API. Usage is billed by Anthropic to your API account.', 'meyvora-convert' ); ?></p>
+
+			<?php submit_button( __( 'Save AI Settings', 'meyvora-convert' ) ); ?>
+		</form>
+	</div>
+</div>
+<style>
+	.cro-ai-connection-status { display: inline-flex; align-items: center; margin: 0 8px; vertical-align: middle; }
+	.cro-ai-connection-status__icon--ok { color: #00a32a; }
+	.cro-ai-connection-status__icon--pending { color: #787c82; }
+	.cro-ai-test-feedback--ok { color: #00a32a; }
+	.cro-ai-test-feedback--err { color: #d63638; }
+	.cro-settings-inner-nav { margin-bottom: 16px; }
+</style>
+<script>
+(function ($) {
+	var verifiedSr = <?php echo wp_json_encode( __( 'API key saved and connection verified', 'meyvora-convert' ) ); ?>;
+	var $key = $('#cro-ai-api-key');
+	var $toggle = $('#cro-ai-api-key-toggle');
+	var showLabel = <?php echo wp_json_encode( __( 'Show', 'meyvora-convert' ) ); ?>;
+	var hideLabel = <?php echo wp_json_encode( __( 'Hide', 'meyvora-convert' ) ); ?>;
+	$toggle.on('click', function () {
+		var isPwd = $key.attr('type') === 'password';
+		$key.attr('type', isPwd ? 'text' : 'password');
+		$toggle.attr('aria-pressed', isPwd ? 'true' : 'false');
+		$toggle.text(isPwd ? hideLabel : showLabel);
+	});
+	$('#cro-ai-test-connection').on('click', function () {
+		var $btn = $(this);
+		var $fb = $('#cro-ai-test-feedback');
+		if (typeof croAdmin === 'undefined' || !croAdmin.aiTestNonce) {
+			return;
+		}
+		$btn.prop('disabled', true);
+		$fb.removeClass('cro-ai-test-feedback--ok cro-ai-test-feedback--err').attr('hidden', true).text('');
+		$.ajax({
+			url: croAdmin.ajaxUrl,
+			type: 'POST',
+			dataType: 'json',
+			data: {
+				action: 'cro_ai_test_connection',
+				nonce: croAdmin.aiTestNonce
+			}
+		}).done(function (res) {
+			if (res && res.success && res.data && res.data.model) {
+				$fb.text((croAdmin.aiStrings && croAdmin.aiStrings.testOk ? croAdmin.aiStrings.testOk + ' ' : '') + '(' + res.data.model + ')')
+					.addClass('cro-ai-test-feedback--ok').removeAttr('hidden');
+				var $st = $('.cro-ai-connection-status');
+				$st.empty();
+				$st.append($('<span class="cro-ai-connection-status__icon cro-ai-connection-status__icon--ok dashicons dashicons-yes" aria-hidden="true"></span>'));
+				$st.append($('<span class="screen-reader-text"></span>').text(verifiedSr));
+			} else {
+				var msg = (res && res.data && res.data.message) ? res.data.message : (croAdmin.aiStrings && croAdmin.aiStrings.testFail ? croAdmin.aiStrings.testFail : 'Error');
+				$fb.text(msg).addClass('cro-ai-test-feedback--err').removeAttr('hidden');
+			}
+		}).fail(function (xhr) {
+			var msg = croAdmin.aiStrings && croAdmin.aiStrings.testFail ? croAdmin.aiStrings.testFail : 'Error';
+			if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+				msg = xhr.responseJSON.data.message;
+			}
+			$fb.text(msg).addClass('cro-ai-test-feedback--err').removeAttr('hidden');
+		}).always(function () {
+			$btn.prop('disabled', false);
+		});
+	});
+})(jQuery);
+</script>
+<?php endif; ?>

@@ -23,7 +23,7 @@
   --cro-border-light: 1px solid #dcdcde;
   --cro-radius-sm: 4px;
   --cro-radius-md: 6px;
-  --cro-radius-lg: 8px;
+  --cro-radius-lg: 10px;
 
   /* Shadows */
   --cro-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -38,25 +38,27 @@
   --cro-text-lg: 16px;
   --cro-text-xl: 18px;
 
-  /* Colors (WP admin aligned) */
-  --cro-bg: #fff;
-  --cro-bg-subtle: #f6f7f7;
+  /* Colors — WordPress admin palette (matches wp-admin) */
+  --cro-bg: #ffffff;
+  --cro-bg-subtle: #f0f0f1;
   --cro-bg-tabs: #f0f0f1;
   --cro-text: #1d2327;
   --cro-text-muted: #646970;
   --cro-primary: #2271b1;
   --cro-primary-hover: #135e96;
-  --cro-focus-ring: 0 0 0 1px #fff, 0 0 0 3px var(--cro-primary);
+  --cro-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #2271b1;
   --cro-success: #00a32a;
   --cro-error: #d63638;
+  --cro-accent: #2271b1;
+  --cro-accent-light: #f0f6fc;
 
   /* Form controls */
   --cro-input-height: 42px;
   --cro-input-padding-x: 12px;
-  --cro-input-radius: var(--cro-radius-sm);
+  --cro-input-radius: var(--cro-radius-md);
 
   /* Layout container: header, nav, content share same width and padding */
-  --cro-container-max: 1600px;
+  --cro-container-max: 1920px;
   --cro-container-padding-x: 24px;
 }
 
@@ -90,103 +92,112 @@
 .cro-admin-layout__header {
   width: 100%;
   background: var(--cro-bg);
-  border-bottom: var(--cro-border-light);
-  box-shadow: var(--cro-shadow-sm);
+  border-bottom: 1px solid #dcdcde;
+  box-shadow: 0 1px 0 #dcdcde;
   box-sizing: border-box;
-  margin-block-end: 40px;
+  margin-block-end: 0;
 }
 
 .cro-admin-layout__header-inner {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto;
+  display: flex;
   align-items: center;
-  gap: var(--cro-space-lg) var(--cro-space-2xl);
-  padding-top: var(--cro-space-lg);
-  padding-bottom: var(--cro-space-lg);
-  padding-left: var(--cro-container-padding-x);
-  padding-right: var(--cro-container-padding-x);
-  min-height: 0;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px var(--cro-container-padding-x);
+  min-height: 72px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.cro-admin-layout__header-inner > .cro-ui-header__right {
-  min-width: 0;
+.cro-ui-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cro-ui-header__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--cro-radius-md);
+  background: var(--cro-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cro-ui-header__logo svg,
+.cro-ui-header__logo .dashicons {
+  color: #ffffff;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
 }
 
 .cro-admin-layout__header-inner .cro-ui-header__text,
 .cro-ui-header__text {
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: var(--cro-space-xs);
+  gap: 2px;
+  min-width: 0;
 }
 
 .cro-admin-layout__header-inner .cro-ui-header__title,
 .cro-ui-header__title {
   margin: 0;
-  font-size: 23px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
   line-height: 1.3;
   color: var(--cro-text);
+  letter-spacing: -0.01em;
 }
 
 .cro-admin-layout__header-inner .cro-ui-header__subtitle,
 .cro-ui-header__subtitle {
   margin: 0;
-  font-size: var(--cro-text-base);
+  font-size: 12px;
   color: var(--cro-text-muted);
-  line-height: 1.5;
-  max-width: 560px;
+  line-height: 1.4;
+  max-width: 480px;
 }
 
 .cro-admin-layout__header-inner .cro-ui-header__meta,
 .cro-ui-header__meta {
-  margin-top: var(--cro-space-xs);
-  font-size: var(--cro-text-sm);
+  font-size: 11px;
   color: var(--cro-text-muted);
+  margin-top: 2px;
 }
 
-.cro-admin-layout__header-inner .cro-ui-header__actions,
-.cro-ui-header__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--cro-space-sm);
-  flex-shrink: 0;
-}
-
-/* Right column: optional pills row + primary action */
 .cro-ui-header__right {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--cro-space-sm);
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .cro-ui-header__pills {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--cro-space-sm);
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
-/* Pill component: subtle background, border, 12px font, 6–8px padding */
 .cro-pill {
   display: inline-flex;
   align-items: center;
-  padding: 6px 10px;
-  font-size: 12px;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
   line-height: 1.3;
   color: var(--cro-text-muted);
   background: var(--cro-bg-subtle);
-  border: var(--cro-border-light);
-  border-radius: var(--cro-radius-lg);
+  border: 1px solid #c3c4c7;
+  border-radius: 999px;
   white-space: nowrap;
-  box-sizing: border-box;
 }
 
 .cro-pill--muted {
@@ -196,28 +207,72 @@
 
 .cro-pill--success {
   background: #edfaef;
-  border-color: #00a32a;
-  color: #00a32a;
+  border-color: #68de7c;
+  color: var(--cro-success);
 }
 
-.cro-admin-layout__header-inner .cro-ui-header__actions .button-primary,
-.cro-ui-header__actions .button-primary {
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+.cro-pill--accent {
+  background: var(--cro-accent-light);
+  border-color: #c3d7e1;
+  color: #135e96;
+  font-weight: 600;
+}
+
+.cro-ui-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cro-ui-header__actions .button-primary,
+.cro-ui-btn-primary {
+  background: var(--cro-primary);
+  border-color: var(--cro-primary);
+  color: #fff;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--cro-radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: background 0.15s ease;
+}
+
+.cro-ui-header__actions .button-primary:hover,
+.cro-ui-btn-primary:hover {
+  background: var(--cro-primary-hover);
+  border-color: var(--cro-primary-hover);
+  color: #fff;
+}
+
+.cro-ui-header__actions .button:not(.button-primary) {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  border-radius: var(--cro-radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  background: var(--cro-bg);
+  border: 1px solid #c3c4c7;
+  color: var(--cro-text);
 }
 
 @media (max-width: 782px) {
   .cro-admin-layout__header-inner {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: auto;
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
   .cro-ui-header__right {
-    align-items: flex-start;
-    width: 100%;
-  }
-  .cro-ui-header__pills {
-    justify-content: flex-start;
-  }
-  .cro-admin-layout__header-inner .cro-ui-header__actions,
-  .cro-ui-header__actions {
     width: 100%;
     justify-content: flex-start;
   }
@@ -226,14 +281,14 @@
 /* ----- Nav (tabs): sticky under WP admin bar ----- */
 .cro-admin-layout__nav {
   width: 100%;
-  background: var(--cro-bg-tabs);
+  background: var(--cro-bg);
   border: var(--cro-border);
-  border-radius: var(--cro-radius-md) var(--cro-radius-md) 0 0;
-  box-shadow: var(--cro-shadow-sm);
+  box-shadow: none;
   box-sizing: border-box;
   position: sticky;
   top: 0;
   z-index: 10;
+  border-radius: var(--cro-radius-md) var(--cro-radius-md) 0 0;
 }
 
 /* Offset when WP admin bar is present so tabs sit under it */
@@ -313,13 +368,12 @@ body.admin-bar .cro-admin-layout__nav {
 
 .cro-admin-layout__nav .cro-ui-nav__link--active,
 .cro-ui-nav__link--active {
-  background: #f0f6fc;
+  background: var(--cro-accent-light);
   color: var(--cro-primary);
-  font-weight: 500;
-  border-bottom-color: var(--cro-primary);
+  font-weight: 600;
+  border-bottom-color: var(--cro-accent);
   position: relative;
   z-index: 1;
-  box-shadow: 0 -1px 0 #fff inset;
 }
 
 /* ----- Content ----- */
@@ -449,12 +503,13 @@ body.admin-bar .cro-admin-layout__nav {
 }
 
 .cro-field__control input[type="text"],
+.cro-field__control input[type="password"],
 .cro-field__control input[type="number"],
 .cro-field__control input[type="email"],
 .cro-field__control input[type="search"],
 .cro-field__control input[type="date"],
 .cro-field__control input[type="url"],
-.cro-field__control select,
+.cro-field__control select:not(.select2-hidden-accessible),
 .cro-field__control textarea {
   width: 100%;
   max-width: 400px;
@@ -464,12 +519,13 @@ body.admin-bar .cro-admin-layout__nav {
    Form controls: 42px height, padding, focus (exclude Select2 search field)
    ========================================================================== */
 .cro-admin-layout__content input[type="text"],
+.cro-admin-layout__content input[type="password"],
 .cro-admin-layout__content input[type="number"],
 .cro-admin-layout__content input[type="email"],
 .cro-admin-layout__content input[type="search"],
 .cro-admin-layout__content input[type="date"],
 .cro-admin-layout__content input[type="url"],
-.cro-admin-layout__content select {
+.cro-admin-layout__content select:not(.select2-hidden-accessible) {
   height: var(--cro-input-height);
   min-height: var(--cro-input-height);
   padding: 0 var(--cro-input-padding-x);
@@ -481,6 +537,7 @@ body.admin-bar .cro-admin-layout__nav {
 }
 
 .cro-admin-layout__content input[type="text"]:not(.select2-search__field):focus,
+.cro-admin-layout__content input[type="password"]:focus,
 .cro-admin-layout__content
   input[type="number"]:not(.select2-search__field):focus,
 .cro-admin-layout__content
@@ -489,9 +546,9 @@ body.admin-bar .cro-admin-layout__nav {
   input[type="search"]:not(.select2-search__field):focus,
 .cro-admin-layout__content input[type="date"]:not(.select2-search__field):focus,
 .cro-admin-layout__content input[type="url"]:not(.select2-search__field):focus,
-.cro-admin-layout__content select:focus,
+.cro-admin-layout__content select:not(.select2-hidden-accessible):focus,
 .cro-admin-layout__content textarea:focus {
-  border-color: var(--cro-primary);
+  border-color: var(--cro-accent);
   box-shadow: var(--cro-focus-ring);
   outline: none;
 }
@@ -504,6 +561,259 @@ body.admin-bar .cro-admin-layout__nav {
   font-size: var(--cro-text-base);
   line-height: 1.5;
   box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Custom select – styled native <select> with CSS chevron
+   ========================================================================== */
+
+/*
+ * Embedded SVG paths follow Lucide icons (same geometry as the SVG files).
+ * Reference pack: lucide-main/icons (e.g. …/lucide-main/icons/chevron-down.svg).
+ *
+ * Wrap any <select> that needs custom styling in:
+ *   <div class="cro-select-wrap"> ... </div>
+ * Or apply .cro-select directly on the <select> element when unwrapped.
+ * Both approaches are supported.
+ */
+
+.cro-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 400px;
+}
+
+.cro-select-wrap select,
+.cro-admin-layout__content select:not(.select2-hidden-accessible),
+.cro-field__control select:not(.select2-hidden-accessible) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--cro-input-height);
+  padding: 0 40px 0 var(--cro-input-padding-x);
+  background-color: var(--cro-bg);
+  /* Stronger edge than default gray so the control reads clearly */
+  border: 1px solid #8c8f94;
+  border-radius: var(--cro-radius-md);
+  font-size: var(--cro-text-base);
+  color: var(--cro-text);
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  /* lucide-main/icons/chevron-down.svg */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2350575e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.cro-admin-layout__content select:not(.select2-hidden-accessible):focus,
+.cro-field__control select:not(.select2-hidden-accessible):focus,
+.cro-select-wrap select:focus {
+  border-color: var(--cro-accent);
+  box-shadow:
+    var(--cro-focus-ring),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.cro-field__control .cro-select-wrap {
+  max-width: 400px;
+}
+
+/* WP list tables: bulk action <select> + Apply must stay on one line (not width:100%). */
+.cro-admin-layout__content .tablenav .bulkactions,
+.cro-admin-layout__content .alignleft.actions.bulkactions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.cro-admin-layout__content
+  .tablenav
+  .bulkactions
+  select:not(.select2-hidden-accessible),
+.cro-admin-layout__content
+  .alignleft.actions.bulkactions
+  select:not(.select2-hidden-accessible) {
+  width: auto;
+  min-width: 10em;
+  max-width: min(25rem, 100%);
+  flex: 0 1 auto;
+}
+
+/* ==========================================================================
+   Custom checkbox
+   ========================================================================== */
+
+/*
+ * Checked mark: Lucide check.svg (lucide-main/icons/check.svg), path M20 6 9 17l-5-5.
+ */
+
+.cro-admin-layout__content input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  /* Explicit color — do not use var(--cro-border) here (it is a full shorthand and breaks this rule). */
+  border: 2px solid #8c8f94;
+  border-radius: 4px;
+  background: var(--cro-bg);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+/*
+ * WordPress 6.4+ wp-admin applies a checkmark via input[type=checkbox]:checked::before.
+ * Remove those pseudo-elements so our appearance:none + background-image checkmark wins.
+ */
+.cro-admin-layout__content input[type="checkbox"]::before,
+.cro-admin-layout__content input[type="checkbox"]::after,
+.cro-admin-layout__content input[type="checkbox"]:checked::before,
+.cro-admin-layout__content input[type="checkbox"]:checked::after,
+.cro-admin-layout__content input[type="checkbox"]:indeterminate::before,
+.cro-admin-layout__content input[type="checkbox"]:indeterminate::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.cro-admin-layout__content input[type="checkbox"]:hover {
+  border-color: var(--cro-accent);
+}
+
+.cro-admin-layout__content input[type="checkbox"]:checked {
+  background-color: var(--cro-primary);
+  border-color: var(--cro-primary);
+  /* Same geometry as Lucide check.svg; stroke-width 3 for legibility at 12px */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px;
+  /* White ring separates control from page / colored backgrounds */
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 0 0 2px var(--cro-primary);
+}
+
+.cro-admin-layout__content input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: var(--cro-focus-ring);
+}
+
+.cro-admin-layout__content input[type="checkbox"]:checked:focus {
+  box-shadow:
+    var(--cro-focus-ring),
+    0 0 0 1px #ffffff,
+    0 0 0 2px var(--cro-primary);
+}
+
+.cro-admin-layout__content .cro-field__control label,
+.cro-admin-layout__content .cro-toggle-large {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text);
+  line-height: 1.4;
+}
+
+.cro-admin-layout__content .cro-field__control label + br + label {
+  margin-top: 12px;
+}
+
+/* ==========================================================================
+   Custom radio
+   ========================================================================== */
+
+.cro-admin-layout__content input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid #8c8f94;
+  border-radius: 50%;
+  background: var(--cro-bg);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.cro-admin-layout__content input[type="radio"]:hover {
+  border-color: var(--cro-accent);
+}
+
+/* Filled disc + white inner ring — much clearer than inset-only dot on white */
+.cro-admin-layout__content input[type="radio"]:checked {
+  border: 2px solid #ffffff;
+  background-color: var(--cro-primary);
+  box-shadow:
+    0 0 0 1px var(--cro-primary),
+    inset 0 0 0 3px #ffffff;
+}
+
+.cro-admin-layout__content input[type="radio"]:focus {
+  outline: none;
+  box-shadow: var(--cro-focus-ring);
+}
+
+.cro-admin-layout__content input[type="radio"]:checked:focus {
+  box-shadow:
+    var(--cro-focus-ring),
+    0 0 0 1px var(--cro-primary),
+    inset 0 0 0 3px #ffffff;
+}
+
+.cro-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cro-radio-group--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.cro-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text);
 }
 
 /* ==========================================================================
@@ -632,6 +942,12 @@ body.admin-bar .cro-admin-layout__nav {
   align-items: center;
 }
 
+/* Abandoned cart “Body (HTML)”: placeholder + reset buttons — inline-block so rows wrap predictably. */
+.cro-admin-layout__content .cro-email-body-editor-wrap .button {
+  display: inline-block;
+  vertical-align: middle;
+}
+
 .cro-admin-layout__content .button-primary,
 .cro-ui-btn-primary {
   background: var(--cro-primary);
@@ -667,7 +983,8 @@ body.admin-bar .cro-admin-layout__nav {
 
 .cro-badge--success {
   background: #edfaef;
-  color: var(--cro-success);
+  border: 1px solid #68de7c;
+  color: #00a32a;
 }
 
 .cro-badge--warning {
@@ -1157,7 +1474,7 @@ body.admin-bar .cro-ui-toast-container {
 }
 
 .cro-toggle input:checked + .cro-toggle-slider {
-  background-color: #333;
+  background-color: var(--cro-accent);
 }
 
 .cro-toggle input:checked + .cro-toggle-slider::before {
@@ -1268,6 +1585,137 @@ body.admin-bar .cro-ui-toast-container {
   color: var(--cro-text-muted);
 }
 
+/* Matches storefront .cro-shipping-bar structure (Boosters → Free shipping bar preview). */
+.cro-shipping-bar-preview .cro-shipping-bar--admin-preview {
+  margin: 0;
+  padding: var(--cro-space-sm) var(--cro-space-md);
+  text-align: center;
+  border-radius: var(--cro-radius-sm);
+  overflow: hidden;
+  border: var(--cro-border);
+}
+
+.cro-shipping-bar-preview .cro-shipping-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cro-space-sm);
+  flex-wrap: wrap;
+}
+
+.cro-shipping-bar-preview .cro-shipping-bar-message {
+  font-size: var(--cro-text-md);
+  color: var(--cro-text);
+  line-height: 1.45;
+}
+
+.cro-shipping-bar-preview .cro-shipping-bar-progress {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: var(--cro-space-sm);
+  overflow: hidden;
+}
+
+.cro-shipping-bar-preview .cro-shipping-bar-fill {
+  height: 100%;
+  transition: width 0.2s ease, background-color 0.15s ease;
+}
+
+.cro-shipping-bar-preview-hint {
+  margin: var(--cro-space-sm) 0 0;
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+}
+
+/* Sticky add-to-cart: matches public .cro-sticky-cart layout (Boosters → preview). */
+.cro-sticky-cart-preview .cro-sticky-cart--admin-preview {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 1;
+  transform: none;
+  transition: none;
+  box-shadow: none;
+  max-width: 100%;
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  background: #fff;
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-image {
+  flex-shrink: 0;
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-image img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: var(--cro-radius-sm);
+  display: block;
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-preview-img-fallback {
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--cro-radius-sm);
+  background: var(--cro-bg-muted, #e8e8e8);
+  border: 1px dashed var(--cro-border);
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-title {
+  font-size: var(--cro-text-md);
+  font-weight: 600;
+  color: var(--cro-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-price {
+  font-size: var(--cro-text-md);
+  font-weight: 700;
+  color: var(--cro-text);
+}
+
+.cro-sticky-cart-preview .cro-sticky-cart-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--cro-radius-sm);
+  font-size: var(--cro-text-sm);
+  font-weight: 600;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.cro-sticky-cart-preview-hint {
+  margin: var(--cro-space-sm) 0 0;
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+}
+
 /* ==========================================================================
    Impact notice (checkout, cart pages)
    ========================================================================== */
@@ -1344,8 +1792,8 @@ body.admin-bar .cro-ui-toast-container {
 .cro-status--active,
 .cro-status-badge.cro-status--running,
 .cro-status-badge.cro-status--active {
-  background: #cce5ff;
-  color: #004085;
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .cro-status--paused,
@@ -1417,11 +1865,21 @@ body.admin-bar .cro-ui-toast-container {
 /* ==========================================================================
    Utility classes
    ========================================================================== */
-.cro-mt-1 { margin-top: var(--cro-space-sm); }
-.cro-mt-2 { margin-top: var(--cro-space-md); }
-.cro-mt-3 { margin-top: var(--cro-space-lg); }
-.cro-mb-1 { margin-bottom: var(--cro-space-sm); }
-.cro-mb-2 { margin-bottom: var(--cro-space-md); }
+.cro-mt-1 {
+  margin-top: var(--cro-space-sm);
+}
+.cro-mt-2 {
+  margin-top: var(--cro-space-md);
+}
+.cro-mt-3 {
+  margin-top: var(--cro-space-lg);
+}
+.cro-mb-1 {
+  margin-bottom: var(--cro-space-sm);
+}
+.cro-mb-2 {
+  margin-bottom: var(--cro-space-md);
+}
 .cro-section-desc {
   margin-top: 0;
   margin-bottom: var(--cro-space-md);
@@ -1429,9 +1887,15 @@ body.admin-bar .cro-ui-toast-container {
   font-size: var(--cro-text-base);
   line-height: 1.5;
 }
-.cro-fw-600 { font-weight: 600; }
-.cro-select-min { min-width: 200px; }
-.cro-select-min--wide { min-width: 260px; }
+.cro-fw-600 {
+  font-weight: 600;
+}
+.cro-select-min {
+  min-width: 200px;
+}
+.cro-select-min--wide {
+  min-width: 260px;
+}
 
 /* ==========================================================================
    Onboarding wizard
@@ -1882,4 +2346,394 @@ body.admin-bar .cro-ui-toast-container {
   color: var(--cro-text-muted);
   font-size: var(--cro-text-base);
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Meyvora AI chat (admin)
+   ========================================================================== */
+.cro-admin-layout__nav-inner--with-chat-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.cro-admin-layout__nav-inner--with-chat-toggle .cro-ui-nav__list {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cro-aichat-nav-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cro-aichat-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 24px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.3;
+}
+
+.cro-aichat-launcher:hover,
+.cro-aichat-launcher:focus {
+  color: #fff;
+  background: #1557b0;
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.cro-aichat-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 480px;
+  max-height: calc(100vh - 120px);
+  z-index: 9999;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.cro-aichat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.cro-aichat-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  color: #64748b;
+}
+
+.cro-aichat-close:hover {
+  color: #1a1a1a;
+}
+
+.cro-aichat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px;
+  min-height: 0;
+}
+
+.cro-aichat-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cro-aichat-starters--hidden {
+  display: none;
+}
+
+.cro-aichat-pill {
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+}
+
+.cro-aichat-pill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.cro-aichat-msg-wrap {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.cro-aichat-msg-wrap--user {
+  justify-content: flex-end;
+}
+
+.cro-aichat-msg-wrap--assistant {
+  justify-content: flex-start;
+}
+
+.cro-aichat-bubble {
+  max-width: 85%;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.cro-aichat-bubble--user {
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 12px 12px 2px 12px;
+}
+
+.cro-aichat-bubble--assistant {
+  background: #f0f4f8;
+  color: #1a1a1a;
+  border-radius: 12px 12px 12px 2px;
+}
+
+.cro-aichat-bubble--assistant p {
+  margin: 0 0 0.5em;
+}
+
+.cro-aichat-bubble--assistant p:last-child {
+  margin-bottom: 0;
+}
+
+.cro-aichat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #e2e8f0;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.cro-aichat-input-row .cro-aichat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cro-aichat-footer {
+  flex: 0 0 auto;
+  padding: 6px 12px 10px;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ==========================================================================
+   Delay grid (abandoned-cart page)
+   ========================================================================== */
+
+.cro-delay-grid {
+  display: flex;
+  gap: var(--cro-space-md);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: var(--cro-space-sm);
+}
+
+.cro-delay-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 90px;
+}
+
+.cro-delay-label {
+  font-size: var(--cro-text-sm);
+  font-weight: 600;
+  color: var(--cro-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cro-delay-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-md);
+  background: var(--cro-bg);
+  padding: 0 10px 0 0;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cro-delay-input-wrap:focus-within {
+  border-color: var(--cro-accent);
+  box-shadow: var(--cro-focus-ring);
+}
+
+.cro-delay-hours-input {
+  width: 64px;
+  height: 38px;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 8px;
+  font-size: var(--cro-text-base);
+  color: var(--cro-text);
+  background: transparent;
+  -moz-appearance: textfield;
+}
+
+.cro-delay-hours-input::-webkit-outer-spin-button,
+.cro-delay-hours-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.cro-delay-unit {
+  font-size: 11px;
+  color: var(--cro-text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Inline input + button group (test email, AI preview)
+   ========================================================================== */
+
+.cro-inline-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  max-width: 420px;
+  border: var(--cro-border);
+  border-radius: var(--cro-radius-md);
+  overflow: hidden;
+  background: var(--cro-bg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.cro-inline-input-group:focus-within {
+  border-color: var(--cro-accent);
+  box-shadow: var(--cro-focus-ring);
+}
+
+.cro-inline-input-group__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--cro-input-height) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 var(--cro-input-padding-x) !important;
+  font-size: var(--cro-text-base) !important;
+  color: var(--cro-text) !important;
+  border-radius: 0 !important;
+}
+
+.cro-inline-input-group__btn {
+  flex: 0 0 auto;
+  height: var(--cro-input-height);
+  padding: 0 var(--cro-space-md);
+  border: none !important;
+  border-left: var(--cro-border) !important;
+  border-radius: 0 !important;
+  background: var(--cro-bg-subtle) !important;
+  color: var(--cro-text) !important;
+  font-size: var(--cro-text-base);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: none !important;
+}
+
+.cro-inline-input-group__btn:hover {
+  background: var(--cro-accent-light) !important;
+  color: var(--cro-primary) !important;
+}
+
+/* ==========================================================================
+   AI preview controls
+   ========================================================================== */
+
+.cro-ai-preview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cro-space-md);
+  align-items: flex-start;
+}
+
+.cro-ai-preview-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cro-ai-preview-btns .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--cro-radius-md);
+  font-weight: 500;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cro-ai-preview-btns .button:hover {
+  background: var(--cro-accent-light);
+  border-color: var(--cro-accent);
+  color: var(--cro-primary);
+}
+
+.cro-ai-preview-section {
+  background: linear-gradient(
+    135deg,
+    var(--cro-bg) 0%,
+    var(--cro-accent-light) 100%
+  );
+  border-color: #c3c4c7;
+}
+
+/* ==========================================================================
+   Field control layout helpers
+   ========================================================================== */
+
+/* When .cro-field__control contains multiple sibling elements (e.g. input + button),
+   use flexbox so they don't wrap chaotically */
+.cro-field__control--flex {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--cro-space-sm);
+}
+
+/* Number input inside a flex field row */
+.cro-field__control--flex input[type="number"],
+.cro-field__control--flex input[type="text"],
+.cro-field__control--flex input[type="password"],
+.cro-field__control--flex input[type="email"] {
+  flex: 1 1 auto;
+  min-width: 80px;
+}
+
+/* Unit/suffix text */
+.cro-field__unit {
+  font-size: var(--cro-text-sm);
+  color: var(--cro-text-muted);
+  white-space: nowrap;
+  line-height: var(--cro-input-height);
 }

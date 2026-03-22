@@ -362,6 +362,16 @@
   margin: 0;
 }
 
+.tablenav {
+  height: auto;
+}
+
+.tablenav:after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
 /* -------------------------------------------------------------------------
    Tables: .cro-table (sticky header, zebra, hover, tighter spacing)
    ------------------------------------------------------------------------- */
@@ -372,6 +382,7 @@
   border-radius: var(--cro-radius);
   box-shadow: var(--cro-shadow);
   background: #fff;
+  clear: both;
 }
 
 .cro-table,
@@ -586,14 +597,14 @@ table.cro-table {
 /* -------------------------------------------------------------------------
    Unified layout (CRO_Admin_UI / CRO_Admin_Layout): full-width wrapper, header,
    tabs, content. Used on EVERY CRO admin page. Header/nav/content inners share
-   one container (max-width 1600px, padding 24px, margin 0 auto) — see
+   one container (max-width var(--cro-container-max), padding 24px, margin 0 auto) — see
    cro-admin-modern.css for shared rule. No 100vw; use width: 100% to avoid overflow.
    ------------------------------------------------------------------------- */
 /* Top-level layout wrapper. When used by CRO_Admin_UI (no .wrap), margin matches WP .wrap. Only CRO_Admin_Layout::render_page() outputs .wrap. */
 .cro-admin-layout {
   width: 100%;
   max-width: none;
-  margin: 12px 0 0 20px;
+  margin: 12px 0 0;
   box-sizing: border-box;
 }
 
@@ -606,19 +617,9 @@ table.cro-table {
 
 /* Header: H1 + subtitle + primary CTA. Horizontal padding from shared container (modern). */
 .cro-admin-layout__header-inner {
-  max-width: 1600px;
-  padding-left: 24px;
-  padding-right: 24px;
+  max-width: var(--cro-container-max);
   margin-left: auto;
   margin-right: auto;
-  padding-top: 0;
-  padding-bottom: 23px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  box-sizing: border-box;
 }
 
 .cro-admin-layout__content {
@@ -652,7 +653,7 @@ table.cro-table {
 }
 
 .cro-ui-layout__header-inner {
-  max-width: 1600px;
+  max-width: var(--cro-container-max);
   padding-left: 24px;
   padding-right: 24px;
   margin-left: auto;
@@ -679,7 +680,7 @@ table.cro-table {
 }
 
 .cro-ui-layout__tabs-inner {
-  max-width: 1600px;
+  max-width: var(--cro-container-max);
   padding-left: 24px;
   padding-right: 24px;
   margin-left: auto;
@@ -734,7 +735,7 @@ table.cro-table {
 
 .cro-ui-layout__content {
   width: 100%;
-  max-width: 1600px;
+  max-width: var(--cro-container-max);
   padding-left: 24px;
   padding-right: 24px;
   margin-left: auto;
