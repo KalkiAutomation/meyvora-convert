@@ -1,12 +1,16 @@
 {
   "name": "meyvora-convert-cart-checkout-extension",
   "version": "1.0.0",
+  "description": "WooCommerce Cart/Checkout Blocks extension for Meyvora Convert",
   "private": true,
   "scripts": {
     "build": "wp-scripts build",
     "start": "wp-scripts start"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^27.0.0"
+    "@wordpress/scripts": "^30.0.0"
+  },
+  "peerDependencies": {
+    "@woocommerce/blocks-checkout": "*"
   }
 }

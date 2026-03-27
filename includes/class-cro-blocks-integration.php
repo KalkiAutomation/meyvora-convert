@@ -50,10 +50,10 @@ class CRO_Blocks_Integration {
 			$load_boosters = true;
 		}
 		if ( $load_boosters ) {
-			wp_enqueue_style( 'cro-boosters', CRO_PLUGIN_URL . 'public/css/cro-boosters.css', array(), CRO_VERSION );
+			wp_enqueue_style( 'cro-boosters', CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css', array(), CRO_VERSION );
 		}
 		if ( function_exists( 'is_checkout' ) && is_checkout() && cro_settings()->is_feature_enabled( 'checkout_optimizer' ) ) {
-			wp_enqueue_style( 'cro-checkout', CRO_PLUGIN_URL . 'public/css/cro-checkout.css', array(), CRO_VERSION );
+			wp_enqueue_style( 'cro-checkout', CRO_PLUGIN_URL . 'public/css/cro-checkout' . cro_asset_min_suffix() . '.css', array(), CRO_VERSION );
 		}
 	}
 
@@ -240,7 +240,8 @@ class CRO_Blocks_Integration {
 		if ( empty( $text ) ) {
 			return '';
 		}
-		return '<div class="cro-blocks-checkout-suffix cro-checkout-optimizer-block"><div class="cro-guarantee"><span class="cro-guarantee-icon">' . CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) . '</span><span class="cro-guarantee-text">' . esc_html( (string) $text ) . '</span></div></div>';
+		$icon = wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() );
+		return '<div class="cro-blocks-checkout-suffix cro-checkout-optimizer-block"><div class="cro-guarantee"><span class="cro-guarantee-icon">' . $icon . '</span><span class="cro-guarantee-text">' . esc_html( (string) $text ) . '</span></div></div>';
 	}
 
 	/**
@@ -268,18 +269,6 @@ class CRO_Blocks_Integration {
 				</form>
 			</div>
 		</div>
-		<script>
-		(function() {
-			var link = document.querySelector('.cro-blocks-coupon .cro-coupon-toggle-link');
-			var form = document.querySelector('.cro-blocks-coupon .cro-coupon-form');
-			if ( link && form ) {
-				link.addEventListener('click', function(e) {
-					e.preventDefault();
-					form.style.display = form.style.display === 'none' ? '' : 'none';
-				});
-			}
-		})();
-		</script>
 		<?php
 		return ob_get_clean();
 	}
@@ -293,7 +282,8 @@ class CRO_Blocks_Integration {
 		$settings = cro_settings()->get_checkout_settings();
 		$out      = '<div class="cro-checkout-trust cro-blocks-trust">';
 		if ( ! empty( $settings['show_secure_badge'] ) ) {
-			$out .= '<div class="cro-secure-badge"><span class="cro-secure-icon">' . CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ) . '</span><span class="cro-secure-text">' . esc_html__( 'Secure Checkout', 'meyvora-convert' ) . '</span></div>';
+			$icon = wp_kses( CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() );
+			$out .= '<div class="cro-secure-badge"><span class="cro-secure-icon">' . $icon . '</span><span class="cro-secure-text">' . esc_html__( 'Secure Checkout', 'meyvora-convert' ) . '</span></div>';
 		}
 		if ( ! empty( $settings['show_trust_message'] ) ) {
 			$msg = $settings['trust_message_text'] ?? __( 'Secure checkout - Your data is protected', 'meyvora-convert' );

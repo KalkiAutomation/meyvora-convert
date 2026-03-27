@@ -2,13 +2,27 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 /**
  * Frontend asset loading (campaign popup styles + unified window.croConfig).
  *
  * Scripts for campaigns are enqueued by CRO_Public; this class outputs config and popup-related CSS.
  */
 class CRO_Frontend {
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Cached should_load() result for this request.
@@ -29,7 +43,7 @@ class CRO_Frontend {
 	 */
 	public function __construct() {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
-		add_action( 'wp_footer', array( $this, 'output_config' ), 5 );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_frontend_config_script' ), 100 );
 	}
 
 	/**
@@ -59,9 +73,21 @@ class CRO_Frontend {
 			return $result;
 		}
 		global $wpdb;
-		$t = esc_sql( $table );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table aggregate.
-		$count  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$t}` WHERE status = 'active' LIMIT 1" );
+		$ck     = self::read_cache_key( 'active_campaigns_count', array( $table ) );
+		$found  = false;
+		$count  = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$count = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE status = %s LIMIT 1',
+					$table,
+					'active'
+				)
+			);
+			wp_cache_set( $ck, $count, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		} else {
+			$count = (int) $count;
+		}
 		$result = $count > 0;
 		set_transient( 'cro_has_active_campaigns', $result ? '1' : '0', 5 * MINUTE_IN_SECONDS );
 		if ( $result ) {
@@ -130,7 +156,7 @@ class CRO_Frontend {
 		if ( ! $this->should_load() ) {
 			return;
 		}
-		if ( function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'general', 'load_google_fonts', 'yes' ) ) {
+		if ( function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'general', 'load_google_fonts', 'no' ) ) {
 			wp_enqueue_style(
 				'cro-google-fonts',
 				'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap',
@@ -140,22 +166,22 @@ class CRO_Frontend {
 		}
 		wp_enqueue_style(
 			'cro-popup',
-			CRO_PLUGIN_URL . 'public/css/cro-popup.css',
+			CRO_PLUGIN_URL . 'public/css/cro-popup' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);
 		wp_enqueue_style(
 			'cro-animations',
-			CRO_PLUGIN_URL . 'public/css/cro-animations.css',
+			CRO_PLUGIN_URL . 'public/css/cro-animations' . cro_asset_min_suffix() . '.css',
 			array( 'cro-popup' ),
 			CRO_VERSION
 		);
 	}
 
 	/**
-	 * Output window.croConfig (and croTemplates when campaigns load). Single source; avoids duplicate wp_localize_script data.
+	 * Print window.croConfig / window.croTemplates via wp_add_inline_script (before cro-public) when assets load.
 	 */
-	public function output_config() {
+	public function enqueue_frontend_config_script() {
 		if ( is_admin() ) {
 			return;
 		}
@@ -171,6 +197,9 @@ class CRO_Frontend {
 		if ( ! cro_settings()->get( 'general', 'plugin_enabled', true ) ) {
 			return;
 		}
+		if ( ! wp_script_is( 'cro-public', 'enqueued' ) ) {
+			return;
+		}
 
 		$settings = cro_settings();
 		$features = array(
@@ -179,11 +208,18 @@ class CRO_Frontend {
 			'shippingBar' => $settings->is_feature_enabled( 'shipping_bar' ),
 		);
 
-		// Always expose REST base URL + public URLs: cro-controller falls back to origin + /wp-json/ when restUrl
-		// is missing, which breaks subdirectory installs. Scripts may load whenever frontend assets load.
+		$login_page_url = '';
+		if ( function_exists( 'wc_get_page_permalink' ) ) {
+			$login_page_url = wc_get_page_permalink( 'myaccount' );
+		}
+		if ( ! is_string( $login_page_url ) || $login_page_url === '' ) {
+			$login_page_url = wp_login_url();
+		}
+
 		$config = array(
 			'features'       => $features,
 			'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+			'debugMode'      => (bool) $settings->get( 'general', 'debug_mode', false ),
 			'errorReporting' => (bool) $settings->get( 'general', 'debug_mode', false ),
 			'logErrorNonce'  => wp_create_nonce( 'cro_log_error' ),
 			'nonce'          => wp_create_nonce( 'wp_rest' ),
@@ -192,6 +228,7 @@ class CRO_Frontend {
 			'siteUrl'        => home_url(),
 			'cartUrl'        => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : '/cart',
 			'checkoutUrl'    => function_exists( 'wc_get_checkout_url' ) ? wc_get_checkout_url() : '/checkout',
+			'loginUrl'       => $login_page_url,
 		);
 
 		$templates = array();
@@ -203,15 +240,15 @@ class CRO_Frontend {
 			$config  = array_merge(
 				$config,
 				array(
-					'nonce'         => wp_create_nonce( 'wp_rest' ),
-					'siteUrl'       => home_url(),
-					'siteName'      => get_bloginfo( 'name' ),
-					'currency'      => function_exists( 'get_woocommerce_currency_symbol' )
+					'nonce'    => wp_create_nonce( 'wp_rest' ),
+					'siteUrl'  => home_url(),
+					'siteName' => get_bloginfo( 'name' ),
+					'currency' => function_exists( 'get_woocommerce_currency_symbol' )
 						? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
 						: '$',
-					'debug'         => current_user_can( 'manage_meyvora_convert' ) && $settings->get( 'general', 'debug_mode', false ),
-					'context'       => $context && method_exists( $context, 'to_frontend_array' ) ? $context->to_frontend_array() : array(),
-					'visitor'       => $visitor && method_exists( $visitor, 'to_frontend_array' ) ? $visitor->to_frontend_array() : array(),
+					'debug'    => current_user_can( 'manage_meyvora_convert' ) && $settings->get( 'general', 'debug_mode', false ),
+					'context'  => $context && method_exists( $context, 'to_frontend_array' ) ? $context->to_frontend_array() : array(),
+					'visitor'  => $visitor && method_exists( $visitor, 'to_frontend_array' ) ? $visitor->to_frontend_array() : array(),
 				)
 			);
 			if ( class_exists( 'CRO_Templates' ) && method_exists( 'CRO_Templates', 'get_all' ) ) {
@@ -225,13 +262,11 @@ class CRO_Frontend {
 		}
 
 		self::$config_output = true;
-		?>
-		<script>
-			window.croConfig = <?php echo wp_json_encode( $config ); ?>;
-			<?php if ( $full ) : ?>
-			window.croTemplates = <?php echo wp_json_encode( $templates ); ?>;
-			<?php endif; ?>
-		</script>
-		<?php
+		$json_flags          = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
+		$inline              = 'window.croConfig = ' . wp_json_encode( $config, $json_flags ) . ';';
+		if ( $full ) {
+			$inline .= "\n" . 'window.croTemplates = ' . wp_json_encode( $templates, $json_flags ) . ';';
+		}
+		wp_add_inline_script( 'cro-public', $inline, 'before' );
 	}
 }

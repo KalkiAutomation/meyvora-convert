@@ -51,15 +51,124 @@ class CRO_Checkout_Optimizer {
 			add_action( 'woocommerce_review_order_after_submit', array( $this, 'render_guarantee' ) );
 		}
 
-		// Auto-focus.
-		if ( ! empty( $this->settings['autofocus_first_field'] ) ) {
-			add_action( 'wp_footer', array( $this, 'add_autofocus_script' ) );
-		}
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_checkout_optimizer_script' ), 15 );
 
 		// Inline validation.
 		if ( ! empty( $this->settings['inline_validation'] ) ) {
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_validation_script' ) );
 		}
+
+		if ( ! empty( $this->settings['prefill_from_last_order'] ) ) {
+			add_filter( 'woocommerce_checkout_get_value', array( $this, 'prefill_from_last_order' ), 10, 2 );
+		}
+
+		if ( ! empty( $this->settings['show_express_checkout_prompt'] ) ) {
+			add_action( 'woocommerce_before_checkout_form', array( $this, 'render_express_prompt' ), 2 );
+		}
+
+		if ( ! empty( $this->settings['show_progress_steps'] ) ) {
+			add_action( 'woocommerce_before_checkout_form', array( $this, 'render_progress_steps' ), 1 );
+		}
+	}
+
+	/**
+	 * Prefill empty checkout fields from the customer's most recent order.
+	 *
+	 * @param string     $value Current value.
+	 * @param string     $input Field key.
+	 * @return string|null
+	 */
+	public function prefill_from_last_order( $value, $input ) {
+		if ( ( $value !== null && $value !== '' ) || ! is_string( $input ) || $input === '' ) {
+			return $value;
+		}
+		$user_id = get_current_user_id();
+		if ( ! $user_id || ! function_exists( 'wc_get_orders' ) ) {
+			return $value;
+		}
+		$orders = wc_get_orders(
+			array(
+				'customer_id' => $user_id,
+				'limit'       => 1,
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'status'      => array( 'wc-completed', 'wc-processing' ),
+			)
+		);
+		$order = ! empty( $orders[0] ) && is_a( $orders[0], 'WC_Order' ) ? $orders[0] : null;
+		if ( ! $order ) {
+			return $value;
+		}
+		$map = array(
+			'billing_first_name'   => $order->get_billing_first_name(),
+			'billing_last_name'    => $order->get_billing_last_name(),
+			'billing_company'      => $order->get_billing_company(),
+			'billing_address_1'    => $order->get_billing_address_1(),
+			'billing_address_2'    => $order->get_billing_address_2(),
+			'billing_city'         => $order->get_billing_city(),
+			'billing_state'        => $order->get_billing_state(),
+			'billing_postcode'     => $order->get_billing_postcode(),
+			'billing_country'      => $order->get_billing_country(),
+			'billing_phone'        => $order->get_billing_phone(),
+			'billing_email'        => $order->get_billing_email(),
+			'shipping_first_name'  => $order->get_shipping_first_name(),
+			'shipping_last_name'   => $order->get_shipping_last_name(),
+			'shipping_company'     => $order->get_shipping_company(),
+			'shipping_address_1'   => $order->get_shipping_address_1(),
+			'shipping_address_2'   => $order->get_shipping_address_2(),
+			'shipping_city'        => $order->get_shipping_city(),
+			'shipping_state'       => $order->get_shipping_state(),
+			'shipping_postcode'    => $order->get_shipping_postcode(),
+			'shipping_country'     => $order->get_shipping_country(),
+		);
+		return isset( $map[ $input ] ) && $map[ $input ] !== '' ? $map[ $input ] : $value;
+	}
+
+	/**
+	 * Lightweight express-wallet prompt (tracks one interaction per session).
+	 */
+	public function render_express_prompt() {
+		$text = isset( $this->settings['express_prompt_text'] ) ? (string) $this->settings['express_prompt_text'] : '';
+		if ( $text === '' ) {
+			return;
+		}
+		if ( function_exists( 'WC' ) && WC()->session ) {
+			$key = 'cro_express_prompt_tracked';
+			if ( ! WC()->session->get( $key ) ) {
+				WC()->session->set( $key, 1 );
+				if ( class_exists( 'CRO_Tracker' ) ) {
+					$t = new CRO_Tracker();
+					$page_url = '';
+					$req_uri  = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_UNSAFE_RAW );
+					if ( is_string( $req_uri ) && $req_uri !== '' ) {
+						$page_url = esc_url_raw( home_url( wp_unslash( $req_uri ) ) );
+					}
+					$t->track(
+						'checkout_express_prompt',
+						0,
+						array(
+							'page_url' => $page_url,
+						),
+						'trust_badge',
+						0
+					);
+				}
+			}
+		}
+		echo '<div class="cro-checkout-express-prompt"><p>' . esc_html( $text ) . '</p></div>';
+	}
+
+	/**
+	 * Simple 3-step progress indicator (informational).
+	 */
+	public function render_progress_steps() {
+		?>
+		<ol class="cro-checkout-progress" aria-label="<?php esc_attr_e( 'Checkout progress', 'meyvora-convert' ); ?>">
+			<li class="is-active"><span><?php esc_html_e( 'Details', 'meyvora-convert' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Shipping & payment', 'meyvora-convert' ); ?></span></li>
+			<li><span><?php esc_html_e( 'Confirmation', 'meyvora-convert' ); ?></span></li>
+		</ol>
+		<?php
 	}
 
 	/**
@@ -124,14 +233,6 @@ class CRO_Checkout_Optimizer {
 				</form>
 			</div>
 		</div>
-		<script>
-		jQuery(function($) {
-			$('.cro-coupon-toggle-link').on('click', function(e) {
-				e.preventDefault();
-				$('.cro-coupon-form').slideToggle();
-			});
-		});
-		</script>
 		<?php
 	}
 
@@ -145,7 +246,7 @@ class CRO_Checkout_Optimizer {
 		<div class="cro-checkout-trust">
 			<?php if ( ! empty( $this->settings['show_secure_badge'] ) ) : ?>
 			<div class="cro-secure-badge">
-				<span class="cro-secure-icon"><?php echo CRO_Icons::svg_kses( 'lock', array( 'class' => 'cro-ico' ) ); ?></span>
+				<span class="cro-secure-icon"><?php echo wp_kses( CRO_Icons::svg( 'lock', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 				<span class="cro-secure-text"><?php esc_html_e( 'Secure Checkout', 'meyvora-convert' ); ?></span>
 			</div>
 			<?php endif; ?>
@@ -172,7 +273,7 @@ class CRO_Checkout_Optimizer {
 		do_action( 'cro_frontend_before_render', 'checkout_guarantee', $context );
 		?>
 		<div class="cro-guarantee">
-			<span class="cro-guarantee-icon"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-guarantee-icon"><?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 			<span class="cro-guarantee-text"><?php echo esc_html( $guarantee_text ); ?></span>
 		</div>
 		<?php
@@ -180,26 +281,27 @@ class CRO_Checkout_Optimizer {
 	}
 
 	/**
-	 * Add autofocus script for first empty field.
+	 * Enqueue classic checkout helper JS (coupon toggle + optional autofocus). No inline scripts.
 	 */
-	public function add_autofocus_script() {
+	public function enqueue_checkout_optimizer_script() {
 		if ( ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
 			return;
 		}
-		?>
-		<script>
-		jQuery(function($) {
-			// Find first empty visible input.
-			var $fields = $('.woocommerce-checkout input[type="text"], .woocommerce-checkout input[type="email"]').filter(':visible');
-			$fields.each(function() {
-				if ($(this).val() === '') {
-					$(this).focus();
-					return false;
-				}
-			});
-		});
-		</script>
-		<?php
+		if ( ! class_exists( 'CRO_Public' ) || ! CRO_Public::should_enqueue_assets( 'checkout' ) ) {
+			return;
+		}
+		$need_coupon = ! empty( $this->settings['move_coupon_to_top'] );
+		$need_focus  = ! empty( $this->settings['autofocus_first_field'] );
+		if ( ! $need_coupon && ! $need_focus ) {
+			return;
+		}
+		wp_enqueue_script(
+			'cro-checkout-optimizer',
+			CRO_PLUGIN_URL . 'public/js/cro-checkout-optimizer' . cro_asset_min_suffix() . '.js',
+			array( 'jquery' ),
+			CRO_VERSION,
+			true
+		);
 	}
 
 	/**
@@ -215,7 +317,7 @@ class CRO_Checkout_Optimizer {
 
 		wp_enqueue_style(
 			'cro-checkout',
-			CRO_PLUGIN_URL . 'public/css/cro-checkout.css',
+			CRO_PLUGIN_URL . 'public/css/cro-checkout' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);

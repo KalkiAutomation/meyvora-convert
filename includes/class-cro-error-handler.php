@@ -24,50 +24,41 @@ class CRO_Error_Handler {
 	 * Initialize error handler
 	 */
 	public static function init() {
-		self::$log_file  = WP_CONTENT_DIR . '/meyvora-convert-errors.log';
+		self::$log_file = self::get_log_file_path();
 		self::$debug_mode = defined( 'WP_DEBUG' ) && WP_DEBUG;
 
 		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_emergency_notice' ) );
 		add_action( 'admin_init', array( __CLASS__, 'maybe_clear_emergency' ) );
 
-		// Set custom error handler for CRO operations
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler
-		set_error_handler( array( __CLASS__, 'handle_error' ), E_ALL );
-
-		// Register shutdown function for fatal errors
+		// Register shutdown function for fatal errors (avoid set_error_handler — not recommended for production / PHPCS).
 		register_shutdown_function( array( __CLASS__, 'handle_shutdown' ) );
 	}
 
 	/**
-	 * Custom error handler
+	 * Log file path — under uploads/meyvora-convert/ (not web-servable when server honors .htaccess).
 	 *
-	 * @param int    $severity Error severity.
-	 * @param string $message  Error message.
-	 * @param string $file     File path.
-	 * @param int    $line     Line number.
-	 * @return bool
+	 * @return string
 	 */
-	public static function handle_error( $severity, $message, $file, $line ) {
-		// Only handle errors from our plugin
-		if ( strpos( $file, 'meyvora-convert' ) === false ) {
-			return false; // Let PHP handle it
+	private static function get_log_file_path() {
+		$upload_dir = wp_upload_dir();
+		if ( empty( $upload_dir['error'] ) && ! empty( $upload_dir['basedir'] ) ) {
+			$log_file = trailingslashit( $upload_dir['basedir'] ) . 'meyvora-convert/errors.log';
+			$log_dir  = dirname( $log_file );
+			if ( ! is_dir( $log_dir ) ) {
+				wp_mkdir_p( $log_dir );
+				// Block direct web access (Apache; nginx should deny /wp-content/uploads/ execution separately).
+				$ht = $log_dir . '/.htaccess';
+				if ( ! is_file( $ht ) ) {
+					file_put_contents( $ht, "Deny from all\n" );
+				}
+				$idx = $log_dir . '/index.php';
+				if ( ! is_file( $idx ) ) {
+					file_put_contents( $idx, '<?php // Silence is golden.' );
+				}
+			}
+			return $log_file;
 		}
-
-		$error_type = self::get_error_type( $severity );
-
-		// Log the error
-		self::log( $error_type, $message, array(
-			'file' => $file,
-			'line' => $line,
-		) );
-
-		// In debug mode, also trigger PHP's error handler
-		if ( self::$debug_mode ) {
-			return false;
-		}
-
-		// Suppress non-fatal errors in production
-		return true;
+		return WP_CONTENT_DIR . '/meyvora-convert-errors.log';
 	}
 
 	/**
@@ -87,6 +78,29 @@ class CRO_Error_Handler {
 				self::emergency_deactivate();
 			}
 		}
+	}
+
+	/**
+	 * WordPress Filesystem API (direct) for log I/O.
+	 *
+	 * @return \WP_Filesystem_Base|null
+	 */
+	private static function get_wp_filesystem() {
+		global $wp_filesystem;
+
+		if ( ! empty( $wp_filesystem ) ) {
+			return $wp_filesystem;
+		}
+
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+
+		if ( ! WP_Filesystem( false, false, true ) ) {
+			return null;
+		}
+
+		return $wp_filesystem;
 	}
 
 	/**
@@ -114,31 +128,38 @@ class CRO_Error_Handler {
 
 		$log_entry = "[{$timestamp}] [{$level}] {$message}{$context_str}" . PHP_EOL;
 
-		// Write to log file
-		if ( is_writable( dirname( self::$log_file ) ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
-			file_put_contents( self::$log_file, $log_entry, FILE_APPEND | LOCK_EX );
+		$fs  = self::get_wp_filesystem();
+		$dir = dirname( self::$log_file );
+		if ( $fs && $fs->is_dir( $dir ) && $fs->is_writable( $dir ) ) {
+			$prev = '';
+			if ( $fs->exists( self::$log_file ) ) {
+				$read = $fs->get_contents( self::$log_file );
+				$prev = is_string( $read ) ? $read : '';
+			}
+			$fs->put_contents( self::$log_file, $prev . $log_entry );
 
-			// Rotate log if too large (> 5MB)
-			if ( file_exists( self::$log_file ) && filesize( self::$log_file ) > 5 * 1024 * 1024 ) {
+			if ( $fs->exists( self::$log_file ) && (int) $fs->size( self::$log_file ) > 5 * 1024 * 1024 ) {
 				self::rotate_log();
 			}
 		}
 
-		// Also log to WordPress debug.log if enabled
-		if ( self::$debug_mode ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( "[Meyvora Convert] [{$level}] {$message}" );
-		}
 	}
 
 	/**
 	 * Rotate log file
 	 */
 	private static function rotate_log() {
-		$backup = self::$log_file . '.' . gmdate( 'Y-m-d-His' ) . '.bak';
-		rename( self::$log_file, $backup ); // phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+		$fs = self::get_wp_filesystem();
+		if ( ! $fs || ! $fs->exists( self::$log_file ) ) {
+			return;
+		}
 
-		// Keep only last 3 backups
+		$backup = self::$log_file . '.' . gmdate( 'Y-m-d-His' ) . '.bak';
+		if ( ! $fs->move( self::$log_file, $backup ) ) {
+			$fs->put_contents( self::$log_file, '' );
+			return;
+		}
+
 		$backups = glob( self::$log_file . '.*.bak' );
 		if ( is_array( $backups ) && count( $backups ) > 3 ) {
 			usort( $backups, function( $a, $b ) {
@@ -146,31 +167,11 @@ class CRO_Error_Handler {
 			} );
 			$to_remove = array_slice( $backups, 0, -3 );
 			foreach ( $to_remove as $path ) {
-				if ( is_file( $path ) ) {
-					unlink( $path ); // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+				if ( is_string( $path ) && $path !== '' ) {
+					wp_delete_file( $path );
 				}
 			}
 		}
-	}
-
-	/**
-	 * Get error type name
-	 *
-	 * @param int $severity Error severity constant.
-	 * @return string
-	 */
-	private static function get_error_type( $severity ) {
-		$types = array(
-			E_ERROR             => 'ERROR',
-			E_WARNING           => 'WARNING',
-			E_NOTICE            => 'NOTICE',
-			E_DEPRECATED        => 'DEPRECATED',
-			E_USER_ERROR        => 'USER_ERROR',
-			E_USER_WARNING      => 'USER_WARNING',
-			E_USER_NOTICE       => 'USER_NOTICE',
-		);
-
-		return $types[ $severity ] ?? 'UNKNOWN';
 	}
 
 	/**

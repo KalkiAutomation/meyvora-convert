@@ -28,6 +28,13 @@ class CRO_AI_Client {
 		if ( ! function_exists( 'cro_settings' ) ) {
 			return '';
 		}
+		$enc = cro_settings()->get( 'ai', 'anthropic_api_key_enc', '' );
+		if ( is_string( $enc ) && $enc !== '' && class_exists( 'CRO_Security' ) ) {
+			$decrypted = CRO_Security::decrypt_secret( $enc );
+			if ( is_string( $decrypted ) && $decrypted !== '' ) {
+				return $decrypted;
+			}
+		}
 		$key = cro_settings()->get( 'ai', 'anthropic_api_key', '' );
 		return is_string( $key ) ? $key : '';
 	}
@@ -67,7 +74,7 @@ class CRO_AI_Client {
 			$body['system'] = $system;
 		}
 
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			self::API_URL,
 			array(
 				'timeout' => self::TIMEOUT,

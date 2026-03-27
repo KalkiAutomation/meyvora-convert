@@ -14,6 +14,10 @@
 		$(document).trigger('cro:exit-intent', source ? [source] : []);
 	}
 
+	function triggerMobileExitIntent(source) {
+		triggerExitIntent(source);
+	}
+
 	/**
 	 * Signal collector for exit intent validation
 	 */
@@ -126,8 +130,12 @@
 			return velocity < -1000; // Negative = scrolling up
 		}
 		
+		getTimeOnPageSeconds() {
+			return Math.floor((Date.now() - this.signals.page_load_time) / 1000);
+		}
+
 		getSignalData() {
-			const timeOnPage = Math.floor((Date.now() - this.signals.page_load_time) / 1000);
+			const timeOnPage = this.getTimeOnPageSeconds();
 			const mouseVelocity = this.getMouseVelocity();
 			const exitFromTop = mouseVelocity < -200 && this.signals.mouse_positions.length > 0;
 
@@ -175,12 +183,15 @@
 	 */
 	class CRODebugger {
 		constructor() {
-			this.enabled = typeof croPublic !== 'undefined' && croPublic.debugMode && croPublic.isAdmin;
 			this.logs = [];
 		}
 
+		_isOn() {
+			return typeof window.CRODebug !== 'undefined' && window.CRODebug.isEnabled();
+		}
+
 		log(category, message, data = null) {
-			if (!this.enabled) return;
+			if (!this._isOn()) return;
 
 			const entry = {
 				time: new Date().toISOString(),
@@ -190,11 +201,11 @@
 			};
 
 			this.logs.push(entry);
-			console.log(`[CRO Debug] ${category}: ${message}`, data || '');
+			window.CRODebug.log(`[CRO Debug] ${category}: ${message}`, data || '');
 		}
 
 		render() {
-			if (!this.enabled) return;
+			if (!this._isOn()) return;
 
 			const $panel = $('<div>', {
 				id: 'cro-debug-panel',
@@ -247,7 +258,7 @@
 		}
 
 		checkCampaign(campaign, context) {
-			if (!this.enabled) return true;
+			if (!this._isOn()) return true;
 
 			this.log('CHECK', `Evaluating campaign: ${campaign.name || campaign.id || 'Unknown'}`);
 
@@ -278,14 +289,17 @@
 		}
 
 		checkPages(rules, context) {
-			if (!rules || (!rules.include && !rules.exclude)) {
+			const excludedSlugs = Array.isArray(rules.excluded_pages)
+				? rules.excluded_pages
+				: (Array.isArray(rules.exclude) ? rules.exclude : []);
+			if (!rules || (!rules.include && !rules.exclude && !rules.excluded_pages)) {
 				return true;
 			}
 
 			const pageType = context.page_type || this.getPageType();
 
-			// Check exclusions first
-			if (rules.exclude && Array.isArray(rules.exclude) && rules.exclude.indexOf(pageType) !== -1) {
+			// Check exclusions first (excluded_pages; legacy exclude for cached payloads)
+			if (excludedSlugs.length && excludedSlugs.indexOf(pageType) !== -1) {
 				return false;
 			}
 
@@ -458,9 +472,9 @@
 		}
 	}
 
-	// Initialize debugger
+	// Initialize debugger (panel only when debug mode is on — same gate as CRODebug).
 	const croDebugger = new CRODebugger();
-	if (croDebugger.enabled) {
+	if (window.CRODebug && window.CRODebug.isEnabled()) {
 		$(document).ready(function() {
 			croDebugger.render();
 		});
@@ -470,27 +484,52 @@
 	window.croDebugger = croDebugger;
 
 	$(document).ready(function() {
-		// Detect mouse leaving viewport
-		$(document).on('mouseleave', function(e) {
-			if (!exitIntentDetected && e.clientY <= 0) {
-				exitIntentDetected = true;
-				$(document).trigger('cro:exit-intent');
-			}
-		});
+		var sig = window.croSignals;
+		var isMobile = sig && typeof sig.isMobile === 'function' && sig.isMobile();
 
-		// Mobile exit intent: scroll-up velocity + back-button interception (no mouseleave available).
-		if (window.croSignals && window.croSignals.isMobile()) {
+		// Desktop: mouse leaving viewport toward browser chrome.
+		if (!isMobile) {
+			$(document).on('mouseleave', function(e) {
+				if (!exitIntentDetected && e.clientY <= 0) {
+					triggerExitIntent('mouse_leave_top');
+				}
+			});
+		}
+
+		// Mobile / tablet: back button, rapid scroll-up near top, tab switch.
+		if (isMobile && sig) {
+			var lastScrollY = window.scrollY;
+			var lastScrollTime = Date.now();
+			var throttledScroll = sig.throttle(function() {
+				if (exitIntentDetected) {
+					return;
+				}
+				var now = Date.now();
+				var delta = lastScrollY - window.scrollY;
+				var elapsed = now - lastScrollTime;
+				if (delta > window.innerHeight * 0.4 && elapsed < 400 && window.scrollY < 200) {
+					triggerMobileExitIntent('rapid_scroll_up');
+				}
+				lastScrollY = window.scrollY;
+				lastScrollTime = now;
+			}, 50);
+			window.addEventListener('scroll', throttledScroll, { passive: true });
+
 			history.pushState({ cro_exit_guard: true }, '');
 			window.addEventListener('popstate', function() {
 				if (!exitIntentDetected) {
-					triggerExitIntent('mobile_back_button');
 					history.pushState({ cro_exit_guard: true }, '');
+					triggerMobileExitIntent('back_button');
 				}
 			});
-			$(window).on('scroll', function() {
-				if (exitIntentDetected) return;
-				if (window.croSignals.getScrollVelocity() < -500) {
-					triggerExitIntent('mobile_scroll_up');
+
+			document.addEventListener('visibilitychange', function() {
+				if (!document.hidden || exitIntentDetected) {
+					return;
+				}
+				var t = typeof sig.getTimeOnPageSeconds === 'function' ? sig.getTimeOnPageSeconds() : 0;
+				if (t > 10) {
+					triggerMobileExitIntent('tab_switch');
 				}
 			});
 		}

@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -48,12 +47,14 @@ class CRO_REST_API {
 	 */
 	public function allow_public_routes_without_auth( $result ) {
 		$path = '';
-		if ( ! empty( $_SERVER['REQUEST_URI'] ) ) {
-			$path = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+		$req_uri = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_UNSAFE_RAW );
+		if ( is_string( $req_uri ) && $req_uri !== '' ) {
+			$path = sanitize_text_field( wp_unslash( $req_uri ) );
 		}
 		// Also check rest_route query param (e.g. ?rest_route=/cro/v1/decide)
-		if ( ! empty( $_GET['rest_route'] ) ) {
-			$path = '/' . ltrim( sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ), '/' );
+		$rest_route = filter_input( INPUT_GET, 'rest_route', FILTER_UNSAFE_RAW );
+		if ( is_string( $rest_route ) && $rest_route !== '' ) {
+			$path = '/' . ltrim( sanitize_text_field( wp_unslash( $rest_route ) ), '/' );
 		}
 		$path = preg_replace( '#\?.*$#', '', $path );
 		$is_public = strpos( $path, 'cro/v1/decide' ) !== false
@@ -142,6 +143,7 @@ class CRO_REST_API {
 			)
 		);
 
+		// Public endpoint — intentionally unauthenticated. Storefront visitors call this (rate-limited in the callback).
 		register_rest_route(
 			'cro/v1',
 			'/decide',
@@ -153,6 +155,7 @@ class CRO_REST_API {
 			)
 		);
 
+		// Public endpoint — intentionally unauthenticated. Fetches campaign payload for display (rate-limited in the callback).
 		register_rest_route(
 			'cro/v1',
 			'/campaign/(?P<id>\d+)',
@@ -163,6 +166,7 @@ class CRO_REST_API {
 			)
 		);
 
+		// Public endpoint — intentionally unauthenticated. Analytics/tracking from the storefront (rate-limited in the callback).
 		register_rest_route(
 			'cro/v1',
 			'/track',
@@ -173,6 +177,7 @@ class CRO_REST_API {
 			)
 		);
 
+		// Public endpoint — intentionally unauthenticated. Email capture from campaign modals (rate-limited in the callback).
 		register_rest_route(
 			'cro/v1',
 			'/email',
@@ -183,7 +188,7 @@ class CRO_REST_API {
 			)
 		);
 
-		// Offer for blocks: GET returns best offer + coupon code + preview (pass/fail + reasons). Optional query params for context.
+		// Public endpoint — intentionally unauthenticated. Offer resolution for blocks/storefront (rate-limited in the callback). GET returns best offer + coupon code + preview.
 		register_rest_route(
 			'cro/v1',
 			'/offer',
@@ -347,10 +352,71 @@ class CRO_REST_API {
 	}
 
 	/**
+	 * Normalize client cart for rule engine (canonical CRO shape or WooCommerce Store API / cart blocks).
+	 *
+	 * @param array $cart_in Raw context.cart from JSON.
+	 * @return array<string, mixed>|null
+	 */
+	private static function normalize_client_cart_for_decide( array $cart_in ) {
+		$cart_in = apply_filters( 'cro_rest_decide_client_cart_raw', $cart_in );
+
+		// Canonical shape from croConfig / CRO_Context::to_frontend_array().
+		if ( isset( $cart_in['total'] ) || isset( $cart_in['item_count'] ) || isset( $cart_in['product_ids'] ) || isset( $cart_in['categories'] ) || isset( $cart_in['has_items'] ) ) {
+			$out = array(
+				'total'            => isset( $cart_in['total'] ) ? (float) $cart_in['total'] : 0.0,
+				'item_count'       => isset( $cart_in['item_count'] ) ? absint( $cart_in['item_count'] ) : 0,
+				'categories'       => isset( $cart_in['categories'] ) && is_array( $cart_in['categories'] ) ? array_map( 'intval', $cart_in['categories'] ) : array(),
+				'product_ids'      => isset( $cart_in['product_ids'] ) && is_array( $cart_in['product_ids'] ) ? array_map( 'intval', $cart_in['product_ids'] ) : array(),
+				'sale_item_count'  => isset( $cart_in['sale_item_count'] ) ? absint( $cart_in['sale_item_count'] ) : 0,
+				'low_stock_count'  => isset( $cart_in['low_stock_count'] ) ? absint( $cart_in['low_stock_count'] ) : 0,
+				'has_items'        => false,
+			);
+			if ( isset( $cart_in['has_items'] ) ) {
+				$out['has_items'] = (bool) $cart_in['has_items'];
+			} else {
+				$out['has_items'] = $out['item_count'] > 0 || $out['total'] > 0;
+			}
+			return apply_filters( 'cro_rest_decide_client_cart_normalized', $out, $cart_in );
+		}
+
+		// WooCommerce Store API / cart blocks (totals.total_price in minor currency units).
+		if ( isset( $cart_in['totals'] ) && is_array( $cart_in['totals'] ) && isset( $cart_in['totals']['total_price'] ) ) {
+			$minor = isset( $cart_in['totals']['currency_minor_unit'] ) ? max( 0, (int) $cart_in['totals']['currency_minor_unit'] ) : 2;
+			$raw   = is_numeric( $cart_in['totals']['total_price'] ) ? (string) $cart_in['totals']['total_price'] : '0';
+			$total = (float) $raw / pow( 10, $minor );
+			$items = isset( $cart_in['items'] ) && is_array( $cart_in['items'] ) ? $cart_in['items'] : array();
+			$line_count = count( $items );
+			$product_ids = array();
+			foreach ( $items as $item ) {
+				if ( isset( $item['id'] ) ) {
+					$product_ids[] = (int) $item['id'];
+				}
+			}
+			$items_count = isset( $cart_in['items_count'] ) ? (int) $cart_in['items_count'] : 0;
+			// Match WC cart line count vs total quantity: use max so cart_item_count_gte behaves sensibly.
+			$item_count = max( $line_count, $items_count );
+
+			$out = array(
+				'total'            => $total,
+				'item_count'       => $item_count,
+				'categories'       => array(),
+				'product_ids'      => array_values( array_unique( array_filter( $product_ids ) ) ),
+				'sale_item_count'  => 0,
+				'low_stock_count'  => 0,
+				'has_items'        => $total > 0.00001 || $line_count > 0 || $items_count > 0,
+			);
+			return apply_filters( 'cro_rest_decide_client_cart_normalized', $out, $cart_in );
+		}
+
+		return null;
+	}
+
+	/**
 	 * Parse JSON body for /decide (shared with AJAX fallback decide).
 	 *
 	 * @param array $body Request body (signals, context, trigger_type, trigger_data, pageview_id).
-	 *                    Only context keys behavior, request, visitor are merged from the client; page_type, cart, user, device come from the server.
+	 *                    Merges behavior, request, visitor from the client. page_type/device_type are not in is_shop() during REST — allowlisted client values override server detection.
+	 *                    context.cart is merged for REST (no WC session); supports CRO snapshot or Woo Store API cart blocks.
 	 *                    trigger_data maps to behavior: seconds|time_on_page|time → time_on_page; depth|scroll_depth → scroll_depth; idle_seconds|idle → idle_seconds.
 	 * @return array{ context: CRO_Context, signals: array, trigger_type: string, pageview_id: string }
 	 */
@@ -374,6 +440,47 @@ class CRO_REST_API {
 				$context->set( $key, $value );
 			}
 		}
+
+		// REST /decide is not the storefront request — is_product() is false, so server page_type is wrong. Trust allowlisted client snapshot.
+		$allowed_page_types = array(
+			'home',
+			'shop',
+			'product',
+			'product_category',
+			'category',
+			'cart',
+			'checkout',
+			'account',
+			'page',
+			'post',
+			'blog',
+			'other',
+		);
+		if ( isset( $body_context['page_type'] ) ) {
+			$pt = sanitize_key( (string) $body_context['page_type'] );
+			if ( 'category' === $pt ) {
+				$pt = 'product_category';
+			}
+			if ( $pt !== '' && in_array( $pt, $allowed_page_types, true ) ) {
+				$context->set( 'page_type', $pt );
+			}
+		}
+		$allowed_devices = array( 'desktop', 'mobile', 'tablet' );
+		if ( isset( $body_context['device_type'] ) ) {
+			$dt = sanitize_key( (string) $body_context['device_type'] );
+			if ( $dt !== '' && in_array( $dt, $allowed_devices, true ) ) {
+				$context->set( 'device_type', $dt );
+			}
+		}
+
+		// REST has no Woo session cart like a normal page; trust client cart snapshot (same as page_type).
+		if ( isset( $body_context['cart'] ) && is_array( $body_context['cart'] ) ) {
+			$merged_cart = self::normalize_client_cart_for_decide( $body_context['cart'] );
+			if ( ! empty( $merged_cart ) && is_array( $merged_cart ) ) {
+				$context->set( 'cart', $merged_cart );
+			}
+		}
+
 		$current_page_type = $context->get( 'page_type', '' );
 		if ( ( $current_page_type === '' || $current_page_type === 'other' ) && ! empty( $_SERVER['HTTP_REFERER'] ) ) {
 			$page_type = self::infer_page_type_from_referer( sanitize_text_field( wp_unslash( $_SERVER['HTTP_REFERER'] ) ) );
@@ -405,6 +512,11 @@ class CRO_REST_API {
 			$context->set( 'behavior.time_on_page', 0 );
 		}
 
+		// If scroll depth is still 0 but signals/trigger_data disagree (e.g. behavior merged before trigger_data), use signals.
+		if ( (int) $context->get( 'behavior.scroll_depth', 0 ) < 1 && isset( $signals['scroll_depth'] ) ) {
+			$context->set( 'behavior.scroll_depth', (int) $signals['scroll_depth'] );
+		}
+
 		return array(
 			'context'      => $context,
 			'signals'      => $signals,
@@ -414,11 +526,37 @@ class CRO_REST_API {
 	}
 
 	/**
+	 * Whether this REST request may receive full decide() debug (same checks as payload inclusion).
+	 *
+	 * context.user.is_admin in JSON does not authenticate the HTTP request. Use logged-in WP user
+	 * (cookies + X-WP-Nonce), or define CRO_DECIDE_DEBUG_SECRET and send matching decide_debug_secret in JSON.
+	 *
+	 * @param WP_REST_Request $request Request.
+	 * @param array           $body    Parsed JSON body.
+	 * @return bool
+	 */
+	private static function rest_can_return_decide_debug( $request, array $body ) {
+		if ( current_user_can( 'manage_options' ) || current_user_can( 'manage_meyvora_convert' ) ) {
+			return true;
+		}
+		if ( defined( 'CRO_DECIDE_DEBUG_SECRET' ) && is_string( CRO_DECIDE_DEBUG_SECRET ) && CRO_DECIDE_DEBUG_SECRET !== ''
+			&& isset( $body['decide_debug_secret'] ) && is_string( $body['decide_debug_secret'] )
+			&& hash_equals( CRO_DECIDE_DEBUG_SECRET, $body['decide_debug_secret'] ) ) {
+			return true;
+		}
+		return (bool) apply_filters( 'cro_rest_decide_debug_allowed', false, $request, $body );
+	}
+
+	/**
 	 * Decide which campaign (if any) to show. POST /cro/v1/decide.
 	 *
 	 * Request body: { "signals": {...}, "context": {...}, "trigger_type", "trigger_data", "pageview_id" }.
 	 * pageview_id: optional; stable ID per page load (e.g. UUID) for A/B impression dedupe.
-	 * Response: { show, campaign_id, campaign, reason, reason_code, ab_test_id?, variation_id?, is_control?, debug? }
+	 * Response: { show, campaign_id, campaign, reason, reason_code, ab_test_id?, variation_id?, is_control?, debug? }.
+	 * With "debug": true, the response includes full debug only if this HTTP request is authenticated as
+	 * an admin (WordPress cookies + X-WP-Nonce for REST), OR you send "decide_debug_secret" matching
+	 * CRO_DECIDE_DEBUG_SECRET in wp-config.php. context.user.is_admin in JSON does not grant debug.
+	 * If debug was requested but rejected, the response includes debug_request_rejected with a reason.
 	 *
 	 * @param WP_REST_Request $request Request object (JSON body: signals, context, trigger_type, trigger_data, pageview_id, etc.).
 	 * @return WP_REST_Response|WP_Error
@@ -456,8 +594,13 @@ class CRO_REST_API {
 		$visitor_state = CRO_Visitor_State::get_instance();
 		$decision     = cro_decide()->decide( $context, $visitor_state, $signals, $trigger_type, array() );
 
-		$debug_mode = function_exists( 'cro_settings' ) && current_user_can( 'manage_options' ) && cro_settings()->get( 'general', 'debug_mode', false );
-		if ( $debug_mode && is_object( $decision ) && method_exists( $decision, 'log' ) && ! $decision->show && $trigger_type === '' ) {
+		$wants_debug          = ! empty( $body['debug'] ) || ! empty( $body['decide_debug'] );
+		$can_see_debug        = self::rest_can_return_decide_debug( $request, $body );
+		$debug_mode           = function_exists( 'cro_settings' ) && $can_see_debug && cro_settings()->get( 'general', 'debug_mode', false );
+		$request_debug        = $wants_debug && $can_see_debug;
+		$include_decide_debug = $debug_mode || $request_debug;
+
+		if ( $include_decide_debug && is_object( $decision ) && method_exists( $decision, 'log' ) && ! $decision->show && $trigger_type === '' ) {
 			$decision->log(
 				'WARN',
 				__( 'trigger_type was empty — JSON body may not have been parsed. Check Content-Type header and WAF rules.', 'meyvora-convert' ),
@@ -502,8 +645,13 @@ class CRO_REST_API {
 			self::record_ab_impression_once( $visitor_state, (int) $decision->variation_id, $pageview_id );
 		}
 
-		if ( $debug_mode && is_object( $decision ) && method_exists( $decision, 'to_debug_array' ) ) {
+		if ( $include_decide_debug && is_object( $decision ) && method_exists( $decision, 'to_debug_array' ) ) {
 			$payload['debug'] = $decision->to_debug_array();
+		} elseif ( $wants_debug && ! $include_decide_debug ) {
+			$payload['debug_request_rejected'] = array(
+				'reason'  => 'not_authenticated',
+				'message' => __( 'Debug is not included: this REST request is not authenticated as a WordPress admin. Send the wordpress_logged_in cookie and X-WP-Nonce (from wp-api), or add define( \'CRO_DECIDE_DEBUG_SECRET\', \'your-secret\' ); to wp-config.php and pass the same value as "decide_debug_secret" in the JSON body. Note: context.user.is_admin in the JSON body does not authenticate the request.', 'meyvora-convert' ),
+			);
 		}
 
 		return new WP_REST_Response( $payload, 200 );
@@ -681,9 +829,8 @@ class CRO_REST_API {
 		// Save email
 		global $wpdb;
 		$emails_table = $wpdb->prefix . 'cro_emails';
-		
-		$wpdb->replace(
-			$emails_table,
+
+		$wpdb->replace( $emails_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			array(
 				'email' => $email,
 				'source_type' => 'campaign',
@@ -693,6 +840,9 @@ class CRO_REST_API {
 			),
 			array( '%s', '%s', '%d', '%s', '%s' )
 		);
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
 
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
@@ -833,6 +983,29 @@ class CRO_REST_API {
 	}
 
 	/**
+	 * Ensure WooCommerce cart is loaded. REST requests often have WC()->cart unset until wc_load_cart().
+	 *
+	 * @return bool True if cart is available.
+	 */
+	private function ensure_wc_cart_loaded() {
+		if ( ! function_exists( 'WC' ) || ! WC() ) {
+			return false;
+		}
+		if ( WC()->cart ) {
+			return true;
+		}
+		if ( ! function_exists( 'wc_load_cart' ) ) {
+			return false;
+		}
+		if ( ! did_action( 'woocommerce_init' ) ) {
+			return false;
+		}
+		wc_load_cart();
+
+		return (bool) WC()->cart;
+	}
+
+	/**
 	 * POST /cro/v1/offer/apply — Applies CRO coupon to cart (nonce protected).
 	 * Body: { coupon_code }. Validates coupon belongs to visitor/user via meta; rate-limited.
 	 * Returns { success, message, coupon_code, cart_fragments? }.
@@ -841,7 +1014,7 @@ class CRO_REST_API {
 	 * @return WP_REST_Response|WP_Error
 	 */
 	public function apply_offer_coupon( $request ) {
-		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
+		if ( ! $this->ensure_wc_cart_loaded() ) {
 			return $this->offer_error( 'unavailable', __( 'Cart is unavailable.', 'meyvora-convert' ), 503 );
 		}
 
@@ -873,7 +1046,26 @@ class CRO_REST_API {
 			$allowed = (string) $meta_visitor === $visitor_id && $visitor_id !== '';
 		}
 		if ( ! $allowed ) {
-			return $this->offer_error( 'forbidden', __( 'This coupon is not assigned to you.', 'meyvora-convert' ), 403 );
+			if ( 0 === $user_id ) {
+				$login_url = '';
+				if ( function_exists( 'wc_get_page_permalink' ) ) {
+					$login_url = wc_get_page_permalink( 'myaccount' );
+				}
+				if ( ! is_string( $login_url ) || $login_url === '' ) {
+					$login_url = wp_login_url();
+				}
+				return $this->offer_error(
+					'forbidden',
+					__( 'Login to your account to use this coupon.', 'meyvora-convert' ),
+					403,
+					array( 'login_url' => $login_url )
+				);
+			}
+			return $this->offer_error(
+				'forbidden',
+				__( 'This coupon is not assigned to your account.', 'meyvora-convert' ),
+				403
+			);
 		}
 
 		$applied = WC()->cart->get_applied_coupons();
@@ -912,8 +1104,9 @@ class CRO_REST_API {
 	 * @param int    $status  HTTP status.
 	 * @return WP_Error
 	 */
-	private function offer_error( $code, $message, $status = 400 ) {
-		return new WP_Error( $code, $message, array( 'status' => $status ) );
+	private function offer_error( $code, $message, $status = 400, $extra = array() ) {
+		$data = array_merge( array( 'status' => (int) $status ), is_array( $extra ) ? $extra : array() );
+		return new WP_Error( $code, $message, $data );
 	}
 
 	/**
@@ -1040,38 +1233,75 @@ class CRO_REST_API {
 	}
 
 	/**
-	 * Rate limiting check (60 requests per minute per IP).
+	 * Rate limiting per IP. Uses separate buckets so /decide is not starved by /track, /offer, etc.
+	 *
+	 * Filters:
+	 * - `cro_rest_decide_rate_limit_max` (default 500) — POST /decide only.
+	 * - `cro_rest_decide_rate_limit_window_seconds` (default 60).
+	 * - `cro_rest_rate_limit_max` (default 120) — other public CRO REST routes.
+	 * - `cro_rest_rate_limit_window_seconds` (default 60).
 	 *
 	 * @param WP_REST_Request $request Request object.
 	 * @return bool True if under limit.
 	 */
 	private function check_rate_limit( $request ) {
-		$ip   = $this->get_client_ip();
-		$key  = 'cro_rate_' . md5( $ip );
+		$ip    = $this->get_client_ip();
+		$route = is_object( $request ) && method_exists( $request, 'get_route' ) ? (string) $request->get_route() : '';
+
+		$bucket = 'rest';
+		if ( strpos( $route, '/decide' ) !== false ) {
+			$bucket = 'decide';
+		} elseif ( strpos( $route, '/track' ) !== false ) {
+			$bucket = 'track';
+		}
+
+		if ( 'decide' === $bucket ) {
+			$max    = (int) apply_filters( 'cro_rest_decide_rate_limit_max', 500 );
+			$window = (int) apply_filters( 'cro_rest_decide_rate_limit_window_seconds', 60 );
+		} else {
+			$max    = (int) apply_filters( 'cro_rest_rate_limit_max', 120 );
+			$window = (int) apply_filters( 'cro_rest_rate_limit_window_seconds', 60 );
+		}
+
+		$max    = max( 10, $max );
+		$window = max( 10, $window );
+
+		$key   = 'cro_rate_' . md5( $ip . '|' . $bucket );
 		$count = (int) get_transient( $key );
 
-		if ( $count >= 60 ) {
+		if ( $count >= $max ) {
 			return false;
 		}
-		set_transient( $key, $count + 1, 60 );
+		set_transient( $key, $count + 1, $window );
 		return true;
 	}
 
 	/**
-	 * Get client IP safely (Cloudflare, X-Forwarded-For, X-Real-IP, REMOTE_ADDR).
+	 * Client IP for rate limiting. Trusts forwarded headers only when REMOTE_ADDR is a trusted proxy.
 	 *
 	 * @return string IP address or '0.0.0.0' if none valid.
 	 */
 	private function get_client_ip() {
-		$headers = array(
-			'HTTP_CF_CONNECTING_IP',
-			'HTTP_X_FORWARDED_FOR',
-			'HTTP_X_REAL_IP',
-			'REMOTE_ADDR',
-		);
+		$remote = isset( $_SERVER['REMOTE_ADDR'] )
+			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+			: '0.0.0.0';
 
-		foreach ( $headers as $header ) {
-			if ( ! empty( $_SERVER[ $header ] ) && is_string( $_SERVER[ $header ] ) ) {
+		$trusted_proxies = apply_filters(
+			'cro_trusted_proxy_ips',
+			array(
+				'127.0.0.1',
+				'::1',
+			)
+		);
+		if ( ! is_array( $trusted_proxies ) ) {
+			$trusted_proxies = array();
+		}
+
+		if ( in_array( $remote, $trusted_proxies, true ) ) {
+			foreach ( array( 'HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'HTTP_X_REAL_IP' ) as $header ) {
+				if ( empty( $_SERVER[ $header ] ) || ! is_string( $_SERVER[ $header ] ) ) {
+					continue;
+				}
 				$ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) ) );
 				$ip  = trim( $ips[0] );
 				if ( filter_var( $ip, FILTER_VALIDATE_IP ) ) {
@@ -1079,6 +1309,11 @@ class CRO_REST_API {
 				}
 			}
 		}
+
+		if ( filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+			return $remote;
+		}
+
 		return '0.0.0.0';
 	}
 }

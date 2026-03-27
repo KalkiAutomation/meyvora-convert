@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -30,7 +29,7 @@ if ( isset( $_POST['cro_save_cart'] ) && $nonce_valid ) {
 
 	// Benefits list.
 	$settings->set( 'cart_optimizer', 'show_benefits', ! empty( $_POST['show_benefits'] ) );
-	$benefits_raw = isset( $_POST['benefits_list'] ) ? wp_unslash( $_POST['benefits_list'] ) : '';
+	$benefits_raw = isset( $_POST['benefits_list'] ) ? sanitize_textarea_field( wp_unslash( $_POST['benefits_list'] ) ) : '';
 	$benefits     = array_filter( array_map( 'sanitize_text_field', explode( "\n", (string) ( $benefits_raw ?? '' ) ) ) );
 	$settings->set( 'cart_optimizer', 'benefits_list', $benefits );
 
@@ -77,18 +76,19 @@ if ( isset( $_POST['cro_save_cart'] ) && $nonce_valid ) {
 	if ( method_exists( $settings, 'get_abandoned_cart_settings' ) ) {
 		$settings->set( 'abandoned_cart', 'enable_abandoned_cart_emails', ! empty( $_POST['cro_abandoned_cart_emails'] ) );
 		$settings->set( 'abandoned_cart', 'require_opt_in', ! empty( $_POST['cro_abandoned_cart_require_opt_in'] ) );
-		$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, (int) ( $_POST['cro_email_1_delay_hours'] ?? 1 ) ) );
-		$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, (int) ( $_POST['cro_email_2_delay_hours'] ?? 24 ) ) );
-		$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, (int) ( $_POST['cro_email_3_delay_hours'] ?? 72 ) ) );
+		$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_1_delay_hours'] ?? 1 ) ) ) ) );
+		$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_2_delay_hours'] ?? 24 ) ) ) ) );
+		$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_3_delay_hours'] ?? 72 ) ) ) ) );
 		$settings->set( 'abandoned_cart', 'enable_discount_in_emails', ! empty( $_POST['cro_enable_discount_in_emails'] ) );
 		$discount_type = isset( $_POST['cro_discount_type'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_discount_type'] ) ) : 'percent';
 		if ( ! in_array( $discount_type, array( 'percent', 'fixed_cart', 'free_shipping' ), true ) ) {
 			$discount_type = 'percent';
 		}
 		$settings->set( 'abandoned_cart', 'discount_type', $discount_type );
-		$settings->set( 'abandoned_cart', 'discount_amount', isset( $_POST['cro_discount_amount'] ) ? ( function_exists( 'wc_format_decimal' ) ? wc_format_decimal( wp_unslash( $_POST['cro_discount_amount'] ) ) : (float) $_POST['cro_discount_amount'] ) : 10 );
-		$settings->set( 'abandoned_cart', 'coupon_ttl_hours', max( 1, (int) ( $_POST['cro_coupon_ttl_hours'] ?? 48 ) ) );
-		$min_cart = isset( $_POST['cro_minimum_cart_total'] ) ? trim( (string) wp_unslash( $_POST['cro_minimum_cart_total'] ) ) : '';
+		$disc_amt_raw = isset( $_POST['cro_discount_amount'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_discount_amount'] ) ) : '10';
+		$settings->set( 'abandoned_cart', 'discount_amount', function_exists( 'wc_format_decimal' ) ? wc_format_decimal( $disc_amt_raw ) : (float) $disc_amt_raw );
+		$settings->set( 'abandoned_cart', 'coupon_ttl_hours', max( 1, absint( sanitize_text_field( wp_unslash( $_POST['cro_coupon_ttl_hours'] ?? 48 ) ) ) ) );
+		$min_cart = isset( $_POST['cro_minimum_cart_total'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['cro_minimum_cart_total'] ) ) ) : '';
 		$settings->set( 'abandoned_cart', 'minimum_cart_total', $min_cart !== '' && is_numeric( $min_cart ) ? ( function_exists( 'wc_format_decimal' ) ? wc_format_decimal( $min_cart ) : (float) $min_cart ) : '' );
 		$settings->set( 'abandoned_cart', 'exclude_sale_items', ! empty( $_POST['cro_exclude_sale_items'] ) );
 		$include_cat = isset( $_POST['cro_include_categories'] ) && is_array( $_POST['cro_include_categories'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_include_categories'] ) ) : array();
@@ -100,9 +100,13 @@ if ( isset( $_POST['cro_save_cart'] ) && $nonce_valid ) {
 		$exclude_prod = isset( $_POST['cro_exclude_products'] ) && is_array( $_POST['cro_exclude_products'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_exclude_products'] ) ) : array();
 		$settings->set( 'abandoned_cart', 'exclude_products', array_values( array_filter( $exclude_prod ) ) );
 		$per_cat = array();
-		if ( isset( $_POST['cro_per_category_discount_cat'] ) && isset( $_POST['cro_per_category_discount_amount'] ) && is_array( $_POST['cro_per_category_discount_cat'] ) && is_array( $_POST['cro_per_category_discount_amount'] ) ) {
-			$cats = array_map( 'absint', wp_unslash( $_POST['cro_per_category_discount_cat'] ) );
-			$amts = wp_unslash( $_POST['cro_per_category_discount_amount'] );
+		$post_all = filter_input_array( INPUT_POST );
+		if ( is_array( $post_all )
+			&& isset( $post_all['cro_per_category_discount_cat'], $post_all['cro_per_category_discount_amount'] )
+			&& is_array( $post_all['cro_per_category_discount_cat'] )
+			&& is_array( $post_all['cro_per_category_discount_amount'] ) ) {
+			$cats = array_map( 'absint', wp_unslash( $post_all['cro_per_category_discount_cat'] ) );
+			$amts = map_deep( wp_unslash( $post_all['cro_per_category_discount_amount'] ), 'sanitize_text_field' );
 			foreach ( $cats as $idx => $cat_id ) {
 				if ( $cat_id > 0 && isset( $amts[ $idx ] ) && is_numeric( $amts[ $idx ] ) ) {
 					$per_cat[ $cat_id ] = (float) $amts[ $idx ];
@@ -110,7 +114,7 @@ if ( isset( $_POST['cro_save_cart'] ) && $nonce_valid ) {
 			}
 		}
 		$settings->set( 'abandoned_cart', 'per_category_discount', $per_cat );
-		$settings->set( 'abandoned_cart', 'generate_coupon_for_email', max( 1, min( 3, (int) ( $_POST['cro_generate_coupon_for_email'] ?? 1 ) ) ) );
+		$settings->set( 'abandoned_cart', 'generate_coupon_for_email', max( 1, min( 3, absint( sanitize_text_field( wp_unslash( $_POST['cro_generate_coupon_for_email'] ?? 1 ) ) ) ) ) );
 	}
 
 	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Cart settings saved!', 'meyvora-convert' ) . '</p></div>';
@@ -159,7 +163,7 @@ $cart_settings = wp_parse_args(
 		<!-- Trust Message Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Trust Message', 'meyvora-convert' ); ?>
 			</h2>
@@ -189,7 +193,7 @@ $cart_settings = wp_parse_args(
 		<!-- Urgency Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Urgency Messaging', 'meyvora-convert' ); ?>
 			</h2>
@@ -237,7 +241,7 @@ $cart_settings = wp_parse_args(
 		<!-- Benefits List Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Benefits List', 'meyvora-convert' ); ?>
 			</h2>
@@ -267,7 +271,7 @@ $cart_settings = wp_parse_args(
 		<!-- Checkout Button Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Checkout Button', 'meyvora-convert' ); ?>
 			</h2>
@@ -299,7 +303,7 @@ $cart_settings = wp_parse_args(
 		<!-- Exit-intent nudge (cart/checkout, once per session, mobile-safe) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'door-open', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'door-open', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Exit-intent nudge', 'meyvora-convert' ); ?>
 			</h2>
@@ -346,7 +350,7 @@ $cart_settings = wp_parse_args(
 		<!-- Banner frequency cap (shipping bar, trust, urgency, offer) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'eye', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Banner frequency cap', 'meyvora-convert' ); ?>
 			</h2>
@@ -393,7 +397,7 @@ $cart_settings = wp_parse_args(
 		<!-- Abandoned cart reminders -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'mail', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'mail', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Abandoned cart reminders', 'meyvora-convert' ); ?>
 			</h2>
@@ -604,7 +608,7 @@ $cart_settings = wp_parse_args(
 		<!-- Upsells on Cart Page -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'trending-up', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Upsells on Cart Page', 'meyvora-convert' ); ?>
 			</h2>
@@ -640,7 +644,7 @@ $cart_settings = wp_parse_args(
 		<!-- Cross-Sells on Cart Page -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'shuffle', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'shuffle', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Cross-Sells on Cart Page', 'meyvora-convert' ); ?>
 			</h2>
@@ -676,7 +680,7 @@ $cart_settings = wp_parse_args(
 		<!-- Offer Banner Section (classic cart/checkout) -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'tag', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'tag', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Offer Banner', 'meyvora-convert' ); ?>
 			</h2>
@@ -710,28 +714,3 @@ $cart_settings = wp_parse_args(
 		<?php submit_button( __( 'Save Cart Settings', 'meyvora-convert' ), 'primary', 'cro_save_cart' ); ?>
 
 	</form>
-
-<script>
-(function($) {
-	$('.cro-per-category-discount-list').on('click', '.cro-add-per-cat', function() {
-		var $list = $(this).closest('.cro-per-category-discount-list');
-		var $first = $list.find('.cro-per-cat-row').first();
-		if (!$first.length) return;
-		var $row = $first.clone();
-		$row.find('select').val('');
-		$row.find('input[type="number"]').val('');
-		$row.find('.cro-remove-per-cat').remove();
-		$row.append(' <button type="button" class="button cro-remove-per-cat"><?php echo esc_js( __( 'Remove', 'meyvora-convert' ) ); ?></button>');
-		$row.insertBefore($list.find('.cro-add-per-cat'));
-		if ($.fn.selectWoo) {
-			$row.find('select.cro-selectwoo').selectWoo('destroy').off('select2:unselect');
-			$list.find('.cro-per-cat-select').each(function() {
-				if (!$(this).data('selectWoo')) $(this).selectWoo({ width: 'resolve', allowClear: true, placeholder: '<?php echo esc_js( __( 'Category…', 'meyvora-convert' ) ); ?>' });
-			});
-		}
-	});
-	$('.cro-per-category-discount-list').on('click', '.cro-remove-per-cat', function() {
-		$(this).closest('.cro-per-cat-row').remove();
-	});
-})(jQuery);
-</script>

@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -15,6 +14,21 @@ if ( ! defined( 'WPINC' ) ) {
  * CRO_Offer_Attribution class.
  */
 class CRO_Offer_Attribution {
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Constructor.
@@ -135,21 +149,43 @@ class CRO_Offer_Attribution {
 	private function get_offer_ids_from_logs( $order_id ) {
 		global $wpdb;
 		$logs = $wpdb->prefix . 'cro_offer_logs';
-		if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $logs ) ) !== $logs ) {
+		$ck_t = self::read_cache_key( 'table_exists_like', array( $logs ) );
+		$f_t  = false;
+		$tbl  = wp_cache_get( $ck_t, self::DB_READ_CACHE_GROUP, false, $f_t );
+		if ( ! $f_t ) {
+			$tbl = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $logs ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+			wp_cache_set( $ck_t, $tbl, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
+		if ( $tbl !== $logs ) {
 			return array();
 		}
 
-		$col = $wpdb->get_var( "SHOW COLUMNS FROM {$logs} LIKE 'order_id'" );
+		$ck_c = self::read_cache_key( 'show_column_like', array( $logs, 'order_id' ) );
+		$f_c  = false;
+		$col  = wp_cache_get( $ck_c, self::DB_READ_CACHE_GROUP, false, $f_c );
+		if ( ! $f_c ) {
+			$col = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $logs, 'order_id' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+			wp_cache_set( $ck_c, $col, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		if ( ! $col ) {
 			return array();
 		}
 
-		$rows = $wpdb->get_col(
-			$wpdb->prepare(
-				"SELECT DISTINCT offer_id FROM {$logs} WHERE order_id = %d AND offer_id > 0",
-				$order_id
-			)
-		);
+		$ck_ids = self::read_cache_key( 'offer_ids_by_order', array( $logs, $order_id ) );
+		$rows   = wp_cache_get( $ck_ids, self::DB_READ_CACHE_GROUP );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT DISTINCT offer_id FROM %i WHERE order_id = %d AND offer_id > 0',
+					$logs,
+					$order_id
+				)
+			);
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
+			wp_cache_set( $ck_ids, $rows, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		return is_array( $rows ) ? array_map( 'absint', $rows ) : array();
 	}
 }

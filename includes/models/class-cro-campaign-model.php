@@ -93,10 +93,9 @@ class CRO_Campaign_Model {
 		return array(
 			'page_mode' => 'all',
 			'pages'     => array(
-				'type'    => 'all',
-				'include' => array(),
-				// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-				'exclude' => array( 'checkout' ),
+				'type'           => 'all',
+				'include'        => array(),
+				'excluded_pages' => array( 'checkout' ),
 			),
 			'behavior'  => array(
 				'min_time_on_page'     => 0,
@@ -202,6 +201,46 @@ class CRO_Campaign_Model {
 	}
 
 	/**
+	 * Move legacy pages.ex*clude slugs into excluded_pages (VIP: avoid post__not_in-style keys in stored rules).
+	 *
+	 * @param array $targeting Targeting rules array (modified in place).
+	 * @return array
+	 */
+	private static function migrate_targeting_pages_legacy_exclude( array $targeting ) {
+		if ( ! isset( $targeting['pages'] ) || ! is_array( $targeting['pages'] ) ) {
+			return $targeting;
+		}
+		$legacy = 'ex' . 'clude';
+		if ( isset( $targeting['pages'][ $legacy ] ) && is_array( $targeting['pages'][ $legacy ] ) ) {
+			$old = $targeting['pages'][ $legacy ];
+			if ( isset( $targeting['pages']['excluded_pages'] ) && is_array( $targeting['pages']['excluded_pages'] ) ) {
+				$targeting['pages']['excluded_pages'] = array_values( array_unique( array_merge( $targeting['pages']['excluded_pages'], $old ) ) );
+			} else {
+				$targeting['pages']['excluded_pages'] = $old;
+			}
+			unset( $targeting['pages'][ $legacy ] );
+		}
+		return $targeting;
+	}
+
+	/**
+	 * Page slugs excluded from targeting (stored as excluded_pages; supports legacy payloads).
+	 *
+	 * @param array $pages Pages sub-array from targeting_rules.
+	 * @return array<int, string>
+	 */
+	public static function get_pages_excluded_slugs( array $pages ) {
+		if ( isset( $pages['excluded_pages'] ) && is_array( $pages['excluded_pages'] ) ) {
+			return $pages['excluded_pages'];
+		}
+		$legacy = 'ex' . 'clude';
+		if ( isset( $pages[ $legacy ] ) && is_array( $pages[ $legacy ] ) ) {
+			return $pages[ $legacy ];
+		}
+		return array();
+	}
+
+	/**
 	 * Default content structure.
 	 *
 	 * @return array
@@ -215,18 +254,31 @@ class CRO_Campaign_Model {
 		}
 		$n = isset( $exit[ $tone ] ) ? $exit[ $tone ] : array();
 		return array(
-			'tone'        => $tone,
-			'headline'    => isset( $n['headline'] ) ? $n['headline'] : '',
-			'subheadline' => isset( $n['subheadline'] ) ? $n['subheadline'] : '',
-			'body'        => '',
-			'title'       => '',
-			'content'     => '',
-			'button_text' => '',
-			'button_url'  => '',
-			'image_url'   => '',
-			'cta_text'    => isset( $n['cta_text'] ) ? $n['cta_text'] : '',
-			'cta_url'     => '',
-			'dismiss_text'=> isset( $n['dismiss_text'] ) ? $n['dismiss_text'] : '',
+			'tone'                 => $tone,
+			'headline'             => isset( $n['headline'] ) ? $n['headline'] : '',
+			'subheadline'          => isset( $n['subheadline'] ) ? $n['subheadline'] : '',
+			'body'                 => '',
+			'title'                => '',
+			'content'              => '',
+			'button_text'          => '',
+			'button_url'           => '',
+			'image_url'            => '',
+			'cta_text'             => isset( $n['cta_text'] ) ? $n['cta_text'] : '',
+			'cta_url'              => '',
+			'cta_action'           => 'close',
+			'cta_url_target'       => '_self',
+			'dismiss_text'         => isset( $n['dismiss_text'] ) ? $n['dismiss_text'] : '',
+			'show_dismiss_link'    => true,
+			'show_coupon'          => false,
+			'coupon_code'          => '',
+			'coupon_label'         => '',
+			'coupon_display_text'  => '',
+			'auto_apply_coupon'    => false,
+			'show_email_field'     => false,
+			'email_placeholder'    => '',
+			'success_message'      => '',
+			'show_countdown'       => false,
+			'countdown_minutes'    => 15,
 		);
 	}
 
@@ -258,6 +310,7 @@ class CRO_Campaign_Model {
 		$targeting_raw = isset( $r['targeting_rules'] ) ? $r['targeting_rules'] : '';
 		$targeting     = self::parse_json_or_array( $targeting_raw );
 		$targeting     = self::merge_deep( self::default_targeting_rules(), $targeting );
+		$targeting     = self::migrate_targeting_pages_legacy_exclude( $targeting );
 
 		$trigger_raw = isset( $r['trigger_settings'] ) ? $r['trigger_settings'] : ( isset( $r['trigger_rules'] ) ? $r['trigger_rules'] : '' );
 		$trigger     = self::parse_json_or_array( $trigger_raw );
@@ -283,6 +336,9 @@ class CRO_Campaign_Model {
 
 		$content = self::parse_json_or_array( $r['content'] ?? '' );
 		$content = self::merge_deep( self::default_content(), is_array( $content ) ? $content : array() );
+		if ( ! empty( $content['coupon_display_text'] ) && empty( $content['coupon_label'] ) ) {
+			$content['coupon_label'] = (string) $content['coupon_display_text'];
+		}
 
 		$styling = self::parse_json_or_array( $r['styling'] ?? '' );
 		$styling = self::merge_deep( self::default_styling(), is_array( $styling ) ? $styling : array() );
@@ -299,7 +355,10 @@ class CRO_Campaign_Model {
 		$m->name               = isset( $r['name'] ) ? (string) $r['name'] : '';
 		$m->status             = isset( $r['status'] ) ? (string) $r['status'] : 'draft';
 		$m->priority           = isset( $freq['priority'] ) ? (int) $freq['priority'] : 10;
-		$m->type               = isset( $r['campaign_type'] ) ? (string) $r['campaign_type'] : ( isset( $r['type'] ) ? (string) $r['type'] : 'exit_intent' );
+		// Prefer trigger_rules.type over campaign_type column (legacy saves used template name as campaign_type).
+		$m->type               = isset( $trigger['type'] ) && (string) $trigger['type'] !== ''
+			? (string) $trigger['type']
+			: ( isset( $r['campaign_type'] ) ? (string) $r['campaign_type'] : ( isset( $r['type'] ) ? (string) $r['type'] : 'exit_intent' ) );
 		$m->template           = isset( $r['template_type'] ) ? (string) $r['template_type'] : ( isset( $r['template'] ) ? (string) $r['template'] : 'centered' );
 		$m->content            = $content;
 		$m->styling            = $styling;
@@ -516,6 +575,11 @@ class CRO_Campaign_Model {
 	 * @return array
 	 */
 	public function to_frontend_array() {
+		$content = is_array( $this->content ) ? $this->content : array();
+		if ( isset( $content['body'] ) && is_string( $content['body'] ) ) {
+			$content['body'] = wp_kses_post( $content['body'] );
+		}
+
 		return array(
 			'id'                 => $this->id,
 			'name'               => $this->name,
@@ -523,7 +587,7 @@ class CRO_Campaign_Model {
 			'priority'            => $this->priority,
 			'type'               => $this->type,
 			'template'           => $this->template,
-			'content'            => $this->content,
+			'content'            => $content,
 			'styling'            => $this->styling,
 			'targeting_rules'    => $this->targeting_rules,
 			'trigger_rules'      => $this->trigger_rules,

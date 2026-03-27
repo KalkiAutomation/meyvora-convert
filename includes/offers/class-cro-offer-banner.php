@@ -172,7 +172,7 @@ class CRO_Offer_Banner {
 		}
 		wp_enqueue_script(
 			'cro-offer-banner',
-			CRO_PLUGIN_URL . 'public/js/cro-offer-banner.js',
+			CRO_PLUGIN_URL . 'public/js/cro-offer-banner' . cro_asset_min_suffix() . '.js',
 			array( 'jquery' ),
 			CRO_VERSION,
 			true
@@ -186,7 +186,8 @@ class CRO_Offer_Banner {
 	public function ajax_apply_offer_coupon() {
 		check_ajax_referer( 'cro_apply_offer_coupon', 'nonce' );
 
-		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+		$rl_ip = class_exists( 'CRO_Security' ) ? CRO_Security::get_client_ip() : '';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ) . '_' . $rl_ip, 20, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {

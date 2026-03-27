@@ -1,13 +1,17 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 /**
  * Visual Campaign Builder
  *
  * A modern, intuitive interface for creating campaigns
  */
 
-$campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : ( isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0 );
+$campaign_id = CRO_Security::get_query_var_absint( 'campaign_id' );
+if ( ! $campaign_id ) {
+	$campaign_id = CRO_Security::get_query_var_absint( 'id' );
+}
 $campaign_data = null;
 
 if ($campaign_id && class_exists('CRO_Campaign') && class_exists('CRO_Campaign_Model')) {
@@ -31,6 +35,24 @@ if (!$campaign_data && class_exists('CRO_Campaign_Model')) {
 	);
 }
 
+$wheel_slices_json = '';
+if ( is_object( $campaign_data ) && ! empty( $campaign_data->id ) && class_exists( 'CRO_Database' ) ) {
+	global $wpdb;
+	$cid   = (int) $campaign_data->id;
+	$c_tbl = $wpdb->prefix . 'cro_campaigns';
+	if ( $cid > 0 && CRO_Database::table_exists( $c_tbl ) ) {
+		$cache_key_ws = 'meyvora_cro_' . md5( serialize( array( 'admin_campaign_builder_wheel_slices', $c_tbl, $cid ) ) );
+		$ws           = wp_cache_get( $cache_key_ws, 'meyvora_cro' );
+		if ( false === $ws ) {
+			$ws = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare( 'SELECT wheel_slices FROM %i WHERE id = %d', $c_tbl, $cid )
+			);
+			wp_cache_set( $cache_key_ws, $ws, 'meyvora_cro', 300 );
+		}
+		$wheel_slices_json = (string) $ws;
+	}
+}
+
 // Builder script/style are enqueued in CRO_Admin::enqueue_scripts when on campaign edit page.
 do_action( 'cro_campaign_builder_before', $campaign_id );
 ?>
@@ -39,7 +61,7 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
     <div class="cro-builder-header">
         <div class="cro-builder-header-left">
             <a href="<?php echo esc_url( admin_url( 'admin.php?page=cro-campaigns' ) ); ?>" class="cro-back-link">
-                <?php echo CRO_Icons::svg_kses( 'arrow-left', array( 'class' => 'cro-ico' ) ); ?>
+                <?php echo wp_kses( CRO_Icons::svg( 'arrow-left', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                 <?php esc_html_e('All Campaigns', 'meyvora-convert'); ?>
             </a>
@@ -55,17 +77,17 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
             
             <div class="cro-builder-actions">
                 <button type="button" class="button" id="preview-btn">
-                    <?php echo CRO_Icons::svg_kses( 'eye', array( 'class' => 'cro-ico' ) ); ?>
+                    <?php echo wp_kses( CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     <?php esc_html_e('Preview', 'meyvora-convert'); ?>
                 </button>
                 <button type="button" class="button" id="preview-new-tab-btn" title="<?php esc_attr_e('Open preview in a new tab', 'meyvora-convert'); ?>">
-                    <?php echo CRO_Icons::svg_kses( 'external-link', array( 'class' => 'cro-ico' ) ); ?>
+                    <?php echo wp_kses( CRO_Icons::svg( 'external-link', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     <?php esc_html_e('Preview in new tab', 'meyvora-convert'); ?>
                 </button>
                 <button type="button" class="button" id="copy-preview-link-btn" title="<?php esc_attr_e('Copy a link that opens this campaign preview (expires in 30 minutes)', 'meyvora-convert'); ?>">
-                    <?php echo CRO_Icons::svg_kses( 'link', array( 'class' => 'cro-ico' ) ); ?>
+                    <?php echo wp_kses( CRO_Icons::svg( 'link', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     <?php esc_html_e('Copy Preview Link', 'meyvora-convert'); ?>
                 </button>
@@ -85,7 +107,7 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                 </div>
                 
                 <button type="button" class="button button-primary" id="save-campaign-btn">
-                    <?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?>
+                    <?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     <?php esc_html_e('Save', 'meyvora-convert'); ?>
                 </button>
@@ -93,44 +115,49 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
         </div>
     </div>
 
+    <button type="button" class="button" id="cro-toggle-preview-split" style="margin: 0 12px 12px;">
+        <?php esc_html_e( 'Show live preview (iframe)', 'meyvora-convert' ); ?>
+    </button>
+
     <div id="cro-preview-error" class="cro-preview-error notice notice-error" style="display:none; margin: 0 0 1rem 0;">
         <p class="cro-preview-error-message"></p>
         <button type="button" class="notice-dismiss" aria-label="<?php esc_attr_e( 'Dismiss', 'meyvora-convert' ); ?>"><span class="screen-reader-text"><?php esc_html_e( 'Dismiss', 'meyvora-convert' ); ?></span></button>
     </div>
     
     <!-- Builder Main Area -->
+    <div id="cro-builder-split" class="cro-builder-split" data-mode="edit">
     <div class="cro-builder-main">
         
         <!-- Left Sidebar: Steps/Sections -->
         <div class="cro-builder-sidebar">
             <nav class="cro-builder-nav">
                 <a href="#" class="cro-nav-item active" data-section="template">
-                    <span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'palette', array( 'class' => 'cro-ico' ) ); ?></span>
+                    <span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'palette', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                     <span class="cro-nav-label"><?php esc_html_e('Template', 'meyvora-convert'); ?></span>
                 </a>
                 <a href="#" class="cro-nav-item" data-section="content">
-                    <span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'edit', array( 'class' => 'cro-ico' ) ); ?></span>
+                    <span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'edit', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                     <span class="cro-nav-label"><?php esc_html_e('Content', 'meyvora-convert'); ?></span>
                 </a>
                 <a href="#" class="cro-nav-item" data-section="design">
-<span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
+<span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-nav-label"><?php esc_html_e('Design', 'meyvora-convert'); ?></span>
                 </a>
                 <a href="#" class="cro-nav-item" data-section="trigger">
-                    <span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'zap', array( 'class' => 'cro-ico' ) ); ?></span>
+                    <span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'zap', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                     <span class="cro-nav-label"><?php esc_html_e('Trigger', 'meyvora-convert'); ?></span>
                 </a>
                 <a href="#" class="cro-nav-item" data-section="targeting">
-<span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
+<span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-nav-label"><?php esc_html_e('Targeting', 'meyvora-convert'); ?></span>
                 </a>
                 <a href="#" class="cro-nav-item" data-section="display">
-                    <span class="cro-nav-icon"><?php echo CRO_Icons::svg_kses( 'calendar', array( 'class' => 'cro-ico' ) ); ?></span>
+                    <span class="cro-nav-icon"><?php echo wp_kses( CRO_Icons::svg( 'calendar', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                     <span class="cro-nav-label"><?php esc_html_e('Display Rules', 'meyvora-convert'); ?></span>
                 </a>
@@ -189,7 +216,7 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                     if ( empty( $templates ) ) :
                         ?>
                         <div class="cro-template-empty-state">
-                            <span class="cro-template-empty-state__icon"><?php echo CRO_Icons::svg_kses( 'palette', array( 'class' => 'cro-ico' ) ); ?></span>
+                            <span class="cro-template-empty-state__icon"><?php echo wp_kses( CRO_Icons::svg( 'palette', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                             <p class="cro-template-empty-state__text"><?php esc_html_e( 'No templates available. Add templates via the cro_campaign_available_templates filter.', 'meyvora-convert' ); ?></p>
                         </div>
@@ -216,12 +243,12 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                             <h4 class="cro-template-card__title"><?php echo esc_html($template_name); ?></h4>
                             <p class="cro-template-card__desc"><?php echo esc_html($template_desc); ?></p>
                             <button type="button" class="button button-small cro-template-preview-btn" data-template="<?php echo esc_attr($template_key); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s is the template name. */ __( 'Preview %s', 'meyvora-convert' ), $template_name ) ); ?>">
-                                <?php echo CRO_Icons::svg_kses( 'eye', array( 'class' => 'cro-ico' ) ); ?>
+                                <?php echo wp_kses( CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                                 <?php esc_html_e( 'Preview', 'meyvora-convert' ); ?>
                             </button>
                         </div>
-                        <span class="cro-template-check" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
+                        <span class="cro-template-check" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
                     </div>
                     <?php endforeach; endif; ?>
@@ -242,18 +269,18 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                             <div class="cro-image-preview" id="image-preview">
                                 <?php if (!empty($campaign_data->content['image_url'])) : ?>
                                     <img src="<?php echo esc_url($campaign_data->content['image_url']); ?>" alt="" />
-                                    <button type="button" class="cro-remove-image" aria-label="<?php esc_attr_e('Remove image', 'meyvora-convert'); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+                                    <button type="button" class="cro-remove-image" aria-label="<?php esc_attr_e('Remove image', 'meyvora-convert'); ?>"><?php echo wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
                                 <?php else : ?>
                                     <span class="cro-upload-placeholder">
-                                        <?php echo CRO_Icons::svg_kses( 'upload', array( 'class' => 'cro-ico' ) ); ?>
+                                        <?php echo wp_kses( CRO_Icons::svg( 'upload', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                                         <?php esc_html_e('Click to upload', 'meyvora-convert'); ?>
                                     </span>
                                 <?php endif; ?>
                             </div>
                             <button type="button" class="button cro-select-image-btn" id="cro-select-image-btn">
-                                <?php echo CRO_Icons::svg_kses( 'image', array( 'class' => 'cro-ico' ) ); ?>
+                                <?php echo wp_kses( CRO_Icons::svg( 'image', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                                 <?php echo esc_html( ! empty( $campaign_data->content['image_url'] ) ? __( 'Change image', 'meyvora-convert' ) : __( 'Select image', 'meyvora-convert' ) ); ?>
                             </button>
@@ -335,8 +362,20 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                                 <option value="checkout" <?php selected($campaign_data->content['cta_action'] ?? '', 'checkout'); ?>>
                                     <?php esc_html_e('Go to checkout', 'meyvora-convert'); ?>
                                 </option>
+                                <option value="apply_coupon" <?php selected($campaign_data->content['cta_action'] ?? '', 'apply_coupon'); ?>>
+                                    <?php esc_html_e('Apply coupon & close', 'meyvora-convert'); ?>
+                                </option>
+                                <option value="apply_coupon_checkout" <?php selected($campaign_data->content['cta_action'] ?? '', 'apply_coupon_checkout'); ?>>
+                                    <?php esc_html_e('Apply coupon & go to checkout', 'meyvora-convert'); ?>
+                                </option>
+                                <option value="copy_coupon" <?php selected($campaign_data->content['cta_action'] ?? '', 'copy_coupon'); ?>>
+                                    <?php esc_html_e('Copy coupon code', 'meyvora-convert'); ?>
+                                </option>
                             </select>
                         </div>
+                        <p class="cro-field-hint cro-conditional-field" data-show-when="content-cta-action=apply_coupon,apply_coupon_checkout,copy_coupon" style="color:#b45309;">
+                            <?php esc_html_e('A coupon code must be set below for this action to work.', 'meyvora-convert'); ?>
+                        </p>
                         <input type="url" 
                                id="content-cta-url"
                                class="cro-conditional-field" 
@@ -364,14 +403,14 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                                            placeholder="SAVE10" />
                                 </div>
                                 <div class="cro-field-col">
-                                    <label for="content-coupon-text"><?php esc_html_e('Display Text', 'meyvora-convert'); ?></label>
+                                    <label for="content-coupon-label"><?php esc_html_e('Coupon label', 'meyvora-convert'); ?></label>
                                     <input type="text" 
-                                           id="content-coupon-text"
-                                           value="<?php echo esc_attr($campaign_data->content['coupon_display_text'] ?? ''); ?>"
+                                           id="content-coupon-label"
+                                           value="<?php echo esc_attr($campaign_data->content['coupon_label'] ?? $campaign_data->content['coupon_display_text'] ?? ''); ?>"
                                            placeholder="<?php esc_attr_e('Use code: SAVE10 for 10% off', 'meyvora-convert'); ?>" />
                                 </div>
                             </div>
-                            <label class="cro-checkbox-inline">
+                            <label class="cro-checkbox-inline cro-auto-apply-row">
                                 <input type="checkbox" 
                                        id="content-auto-apply-coupon"
                                        <?php checked(!empty($campaign_data->content['auto_apply_coupon'])); ?> />
@@ -490,21 +529,21 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                 <span><?php esc_html_e('Live Preview', 'meyvora-convert'); ?></span>
                 <div class="cro-preview-header-actions">
                     <button type="button" class="button button-small" id="preview-panel-new-tab-btn" title="<?php esc_attr_e('Open preview in a new tab', 'meyvora-convert'); ?>">
-                        <?php echo CRO_Icons::svg_kses( 'external-link', array( 'class' => 'cro-ico' ) ); ?>
+                        <?php echo wp_kses( CRO_Icons::svg( 'external-link', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                         <?php esc_html_e('Preview in new tab', 'meyvora-convert'); ?>
                     </button>
                     <div class="cro-preview-device-toggle">
                     <button type="button" data-device="desktop" title="<?php esc_attr_e( 'Desktop', 'meyvora-convert' ); ?>">
-                        <?php echo CRO_Icons::svg_kses( 'monitor', array( 'class' => 'cro-ico' ) ); ?>
+                        <?php echo wp_kses( CRO_Icons::svg( 'monitor', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     </button>
                     <button type="button" data-device="tablet" title="<?php esc_attr_e( 'Tablet', 'meyvora-convert' ); ?>">
-                        <?php echo CRO_Icons::svg_kses( 'tablet', array( 'class' => 'cro-ico' ) ); ?>
+                        <?php echo wp_kses( CRO_Icons::svg( 'tablet', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     </button>
                     <button type="button" data-device="mobile" title="<?php esc_attr_e( 'Mobile', 'meyvora-convert' ); ?>">
-                        <?php echo CRO_Icons::svg_kses( 'smartphone', array( 'class' => 'cro-ico' ) ); ?>
+                        <?php echo wp_kses( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
                     </button>
                 </div>
@@ -518,10 +557,17 @@ do_action( 'cro_campaign_builder_before', $campaign_id );
                 <div class="cro-preview-frame desktop cro-preview-frame--<?php echo esc_attr( $preview_frame_template ); ?>" id="preview-frame">
                     <!-- Live preview renders here -->
                 </div>
+                <iframe id="cro-builder-live-preview"
+                    class="cro-builder-live-preview-iframe"
+                    src="about:blank"
+                    title="<?php esc_attr_e( 'Campaign preview', 'meyvora-convert' ); ?>"
+                    sandbox="allow-scripts allow-same-origin"
+                    style="display:none;width:100%;min-height:480px;border:0;border-radius:8px;"></iframe>
             </div>
         </div>
         
     </div>
+    </div><!-- #cro-builder-split -->
     
     <!-- Hidden data -->
     <input type="hidden" id="campaign-id" value="<?php echo esc_attr($campaign_id); ?>" />

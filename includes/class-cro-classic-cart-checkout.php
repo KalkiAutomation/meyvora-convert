@@ -40,7 +40,7 @@ class CRO_Classic_Cart_Checkout {
 
 		wp_enqueue_style(
 			'cro-classic-cart-checkout',
-			CRO_PLUGIN_URL . 'public/css/cro-classic-cart-checkout.css',
+			CRO_PLUGIN_URL . 'public/css/cro-classic-cart-checkout' . cro_asset_min_suffix() . '.css',
 			array(),
 			defined( 'CRO_VERSION' ) ? CRO_VERSION : '1.0.0'
 		);

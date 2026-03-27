@@ -1,13 +1,12 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 $ab_model = new CRO_AB_Test();
 $tests = $ab_model->get_all();
 $tests = is_array( $tests ) ? $tests : array();
 
 // Admin notices for action errors and success
-$ab_error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
-$ab_msg   = isset( $_GET['message'] ) ? sanitize_text_field( wp_unslash( $_GET['message'] ) ) : '';
+$ab_error = CRO_Security::get_query_var( 'error' );
+$ab_msg   = CRO_Security::get_query_var( 'message' );
 if ( $ab_error === 'invalid_nonce' ) {
 	echo '<div class="notice notice-error"><p>' . esc_html__( 'Invalid security check. Please try again.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $ab_error === 'unauthorized' ) {
@@ -89,7 +88,7 @@ if ( $ab_error === 'invalid_nonce' ) {
                     <?php if ( ! $enough_data && ( $test->status === 'running' || $test->status === 'paused' ) ) : ?>
                         <span class="cro-result-insufficient"><?php esc_html_e( 'Not enough data', 'meyvora-convert' ); ?></span>
                     <?php elseif ( $stats && ! empty( $stats['has_winner'] ) && ! empty( $stats['winner']['variation_name'] ) ) : ?>
-                        <span class="cro-winner"><?php echo CRO_Icons::svg_kses( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php echo esc_html( $stats['winner']['variation_name'] ); ?></span>
+                        <span class="cro-winner"><?php echo wp_kses( CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?> <?php echo esc_html( $stats['winner']['variation_name'] ); ?></span>
 
                     <?php else : ?>
                         <?php echo esc_html( $result_label ); ?>

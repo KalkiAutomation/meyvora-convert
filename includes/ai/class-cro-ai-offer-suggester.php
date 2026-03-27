@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Aggregate reads for AI offer context only.
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -20,6 +19,21 @@ class CRO_AI_Offer_Suggester {
 	const SYNTHETIC_BASE   = 9000;
 	const RATE_ACTION      = 'offer_suggest';
 	const RATE_LIMIT       = 10;
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Build context, call Claude, return validated suggestion array.
@@ -190,14 +204,20 @@ class CRO_AI_Offer_Suggester {
 		}
 		global $wpdb;
 		$cut = gmdate( 'Y-m-d', strtotime( '-' . absint( $days ) . ' days' ) );
-		$n   = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE offer_id = %d AND DATE(created_at) >= %s',
-				$table,
-				$offer_id,
-				$cut
-			)
-		);
+		$ck  = $this->read_cache_key( 'offer_log_applies_count', array( $table, $offer_id, $cut ) );
+		$found = false;
+		$n   = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$n = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE offer_id = %d AND created_at >= %s',
+					$table,
+					$offer_id,
+					$cut
+				)
+			);
+			wp_cache_set( $ck, $n, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		return (int) $n;
 	}
 
@@ -218,14 +238,20 @@ class CRO_AI_Offer_Suggester {
 		}
 		global $wpdb;
 		$cut = gmdate( 'Y-m-d', strtotime( '-' . absint( $days ) . ' days' ) );
-		$n   = $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE offer_id = %d AND DATE(created_at) >= %s AND order_id IS NOT NULL AND order_id > 0',
-				$table,
-				$offer_id,
-				$cut
-			)
-		);
+		$ck  = $this->read_cache_key( 'offer_log_orders_count', array( $table, $offer_id, $cut ) );
+		$found = false;
+		$n   = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$n = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE offer_id = %d AND created_at >= %s AND order_id IS NOT NULL AND order_id > 0',
+					$table,
+					$offer_id,
+					$cut
+				)
+			);
+			wp_cache_set( $ck, $n, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		return (int) $n;
 	}
 
@@ -414,14 +440,22 @@ class CRO_AI_Offer_Suggester {
 		global $wpdb;
 		$sum = 0.0;
 		$n   = 0;
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT cart_json FROM %i WHERE status = %s AND cart_json IS NOT NULL AND cart_json != \'\' LIMIT 5000',
-				$table,
-				'active'
-			),
-			ARRAY_A
-		);
+		$ck  = $this->read_cache_key( 'abandoned_cart_json_rows', array( $table ) );
+		$rows = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT cart_json FROM %i WHERE status = %s AND cart_json IS NOT NULL AND cart_json != \'\' LIMIT 5000',
+					$table,
+					'active'
+				),
+				ARRAY_A
+			);
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
+			wp_cache_set( $ck, $rows, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		if ( ! is_array( $rows ) ) {
 			return 0.0;
 		}
@@ -490,4 +524,3 @@ class CRO_AI_Offer_Suggester {
 	}
 }
 
-// phpcs:enable

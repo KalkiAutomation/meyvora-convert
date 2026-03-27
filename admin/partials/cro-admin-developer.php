@@ -37,20 +37,9 @@ $cro_webhook_wildcards = array(
 
 <!-- Webhooks -->
 <?php if ( class_exists( 'CRO_Webhook' ) ) : ?>
-<style>
-	.cro-webhook-form-panel { display: none; margin-top: 16px; padding: 16px; background: #f6f7f7; border-radius: 6px; }
-	.cro-webhook-events-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 16px; margin: 12px 0; }
-	.cro-webhook-log-expand { display: none; margin-top: 8px; font-size: 12px; }
-	.cro-webhook-log--ok { color: #1e8e3e; }
-	.cro-webhook-log--err { color: #c5221f; }
-	.cro-webhook-logs-modal { position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 24px; }
-	.cro-webhook-logs-modal[hidden] { display: none !important; }
-	.cro-webhook-logs-modal__box { background: #fff; max-width: 900px; width: 100%; max-height: 85vh; overflow: auto; border-radius: 8px; padding: 20px; box-shadow: 0 4px 24px rgba(0,0,0,.2); }
-	.cro-webhook-logs-modal__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-</style>
 <div class="cro-card cro-developer-section">
 	<header class="cro-card__header cro-developer-section__header">
-		<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'link', array( 'class' => 'cro-ico' ) ); ?></span>
+		<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'link', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 		<h2 class="cro-card__title"><?php esc_html_e( 'Webhooks', 'meyvora-convert' ); ?></h2>
 	</header>
 	<div class="cro-card__body">
@@ -194,7 +183,7 @@ $cro_webhook_wildcards = array(
 <!-- Template overrides -->
 <div class="cro-card cro-developer-section">
 		<header class="cro-card__header cro-developer-section__header">
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'file', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'file', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<h2 class="cro-card__title"><?php esc_html_e( 'Template overrides', 'meyvora-convert' ); ?></h2>
 		</header>
@@ -218,7 +207,7 @@ $cro_webhook_wildcards = array(
 	<!-- Actions -->
 	<div class="cro-card cro-developer-section">
 		<header class="cro-card__header cro-developer-section__header">
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'zap', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'zap', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<h2 class="cro-card__title"><?php esc_html_e( 'Actions', 'meyvora-convert' ); ?></h2>
 		</header>
@@ -256,7 +245,7 @@ $cro_webhook_wildcards = array(
 	<!-- Filters -->
 	<div class="cro-card cro-developer-section">
 		<header class="cro-card__header cro-developer-section__header">
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'settings', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'settings', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<h2 class="cro-card__title"><?php esc_html_e( 'Filters', 'meyvora-convert' ); ?></h2>
 		</header>
@@ -298,7 +287,7 @@ $cro_webhook_wildcards = array(
 	<!-- Example snippets -->
 	<div class="cro-card cro-developer-section">
 		<header class="cro-card__header cro-developer-section__header">
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'edit', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'edit', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<h2 class="cro-card__title"><?php esc_html_e( 'Example snippets', 'meyvora-convert' ); ?></h2>
 		</header>

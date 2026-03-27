@@ -8,7 +8,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -34,6 +33,17 @@ class CRO_Abandoned_Cart_Tracker {
 	 * @var string
 	 */
 	private static $table_short_name = 'abandoned_carts';
+
+	/**
+	 * Invalidate Meyvora object-cache reads after writes when group flush is available.
+	 *
+	 * @return void
+	 */
+	private static function flush_meyvora_cro_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
 
 	/**
 	 * Register WooCommerce cart hooks.
@@ -93,7 +103,8 @@ class CRO_Abandoned_Cart_Tracker {
 		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_cart_email' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Security check failed. Please refresh and try again.', 'meyvora-convert' ) ) );
 		}
-		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+		$rl_ip = class_exists( 'CRO_Security' ) ? CRO_Security::get_client_ip() : '';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ) . '_' . $rl_ip, 20, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 		if ( ! function_exists( 'cro_settings' ) ) {
@@ -258,15 +269,21 @@ class CRO_Abandoned_Cart_Tracker {
 		}
 
 		global $wpdb;
-		$table = esc_sql( self::get_table_name() );
+		$table = self::get_table_name();
 
-		$existing = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT id, user_id, email, status FROM {$table} WHERE session_key = %s LIMIT 1",
-				$session_key
-			),
-			ARRAY_A
-		);
+		$cache_key_existing = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_session_snapshot', $table, $session_key ) ) );
+		$existing           = wp_cache_get( $cache_key_existing, 'meyvora_cro' );
+		if ( false === $existing ) {
+			$existing = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT id, user_id, email, status FROM %i WHERE session_key = %s LIMIT 1',
+					$table,
+					$session_key
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key_existing, $existing, 'meyvora_cro', 300 );
+		}
 
 		$data = array(
 			'session_key'       => $session_key,
@@ -289,21 +306,31 @@ class CRO_Abandoned_Cart_Tracker {
 				$data['user_id'] = $user_id;
 				$data['email']   = $email;
 			}
-			$wpdb->update(
-				$table,
+			$upd = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 				$data,
 				array( 'session_key' => $session_key ),
 				array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' ),
 				array( '%s' )
 			);
+			if ( false !== $upd ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::flush_meyvora_cro_read_cache();
+			}
 		} else {
 			$data['status'] = self::STATUS_ACTIVE;
 			$data['created_at'] = $now;
-			$wpdb->insert(
-				$table,
+			$ins = $wpdb->insert( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 				$data,
 				array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 			);
+			if ( false !== $ins ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::flush_meyvora_cro_read_cache();
+			}
 			$new_id = (int) $wpdb->insert_id;
 			if ( $new_id > 0 && function_exists( 'do_action' ) ) {
 				do_action( 'cro_abandoned_cart_created', $new_id );
@@ -346,7 +373,7 @@ class CRO_Abandoned_Cart_Tracker {
 		// Only store email when consent given. When consent false, only update email_consent flag.
 		$email_to_store = ( $consent && is_email( $email ) ) ? sanitize_email( $email ) : null;
 		global $wpdb;
-		$table = esc_sql( self::get_table_name() );
+		$table = self::get_table_name();
 		if ( ! CRO_Database::table_exists( $table ) ) {
 			return false;
 		}
@@ -359,13 +386,18 @@ class CRO_Abandoned_Cart_Tracker {
 			$data['email'] = $email_to_store;
 			$format[]      = '%s';
 		}
-		$rows = $wpdb->update(
-			$table,
+		$rows = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			$data,
 			array( 'session_key' => $session_key ),
 			$format,
 			array( '%s' )
 		);
+		if ( false !== $rows ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 		return $rows !== false;
 	}
 
@@ -389,14 +421,20 @@ class CRO_Abandoned_Cart_Tracker {
 
 		// 1) Match by session_key.
 		if ( is_string( $session_key ) && $session_key !== '' ) {
-			$row = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT * FROM {$table} WHERE session_key = %s AND status != %s LIMIT 1",
-					$session_key,
-					$recovered
-				),
-				OBJECT
-			);
+			$cache_key_sess = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_order_by_session', $table, $session_key, $recovered ) ) );
+			$row            = wp_cache_get( $cache_key_sess, 'meyvora_cro' );
+			if ( false === $row ) {
+				$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE session_key = %s AND status != %s LIMIT 1',
+						$table,
+						$session_key,
+						$recovered
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key_sess, $row, 'meyvora_cro', 300 );
+			}
 			if ( $row ) {
 				return $row;
 			}
@@ -404,14 +442,20 @@ class CRO_Abandoned_Cart_Tracker {
 
 		// 2) Match by user_id (logged-in).
 		if ( $user_id > 0 ) {
-			$row = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT * FROM {$table} WHERE user_id = %d AND status != %s ORDER BY last_activity_at DESC LIMIT 1",
-					$user_id,
-					$recovered
-				),
-				OBJECT
-			);
+			$cache_key_user = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_order_by_user', $table, $user_id, $recovered ) ) );
+			$row            = wp_cache_get( $cache_key_user, 'meyvora_cro' );
+			if ( false === $row ) {
+				$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE user_id = %d AND status != %s ORDER BY last_activity_at DESC LIMIT 1',
+						$table,
+						$user_id,
+						$recovered
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key_user, $row, 'meyvora_cro', 300 );
+			}
 			if ( $row ) {
 				return $row;
 			}
@@ -419,15 +463,22 @@ class CRO_Abandoned_Cart_Tracker {
 
 		// 3) Match by email + cart_hash.
 		if ( is_email( $email ) && $cart_hash !== '' ) {
-			$row = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT * FROM {$table} WHERE email = %s AND cart_hash = %s AND status != %s LIMIT 1",
-					sanitize_email( $email ),
-					$cart_hash,
-					$recovered
-				),
-				OBJECT
-			);
+			$email_s = sanitize_email( $email );
+			$cache_key_eh = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_order_by_email_hash', $table, $email_s, $cart_hash, $recovered ) ) );
+			$row          = wp_cache_get( $cache_key_eh, 'meyvora_cro' );
+			if ( false === $row ) {
+				$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE email = %s AND cart_hash = %s AND status != %s LIMIT 1',
+						$table,
+						$email_s,
+						$cart_hash,
+						$recovered
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key_eh, $row, 'meyvora_cro', 300 );
+			}
 			if ( $row ) {
 				return $row;
 			}
@@ -435,14 +486,21 @@ class CRO_Abandoned_Cart_Tracker {
 
 		// 3b) Match by email only if no cart_hash (e.g. cart already emptied).
 		if ( is_email( $email ) ) {
-			$row = $wpdb->get_row(
-				$wpdb->prepare(
-					"SELECT * FROM {$table} WHERE email = %s AND status != %s ORDER BY last_activity_at DESC LIMIT 1",
-					sanitize_email( $email ),
-					$recovered
-				),
-				OBJECT
-			);
+			$email_s = sanitize_email( $email );
+			$cache_key_em = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_order_by_email', $table, $email_s, $recovered ) ) );
+			$row          = wp_cache_get( $cache_key_em, 'meyvora_cro' );
+			if ( false === $row ) {
+				$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE email = %s AND status != %s ORDER BY last_activity_at DESC LIMIT 1',
+						$table,
+						$email_s,
+						$recovered
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key_em, $row, 'meyvora_cro', 300 );
+			}
 			if ( $row ) {
 				return $row;
 			}
@@ -463,8 +521,7 @@ class CRO_Abandoned_Cart_Tracker {
 		}
 		global $wpdb;
 		$table = self::get_table_name();
-		$rows  = $wpdb->update(
-			$table,
+		$rows  = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'status'       => self::STATUS_RECOVERED,
 				'recovered_at' => current_time( 'mysql' ),
@@ -474,6 +531,12 @@ class CRO_Abandoned_Cart_Tracker {
 			array( '%s', '%s', '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $rows ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 		return $rows > 0;
 	}
 
@@ -508,8 +571,7 @@ class CRO_Abandoned_Cart_Tracker {
 		}
 		global $wpdb;
 		$table = self::get_table_name();
-		$rows  = $wpdb->update(
-			$table,
+		$rows  = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'status'       => self::STATUS_RECOVERED,
 				'recovered_at' => current_time( 'mysql' ),
@@ -519,6 +581,12 @@ class CRO_Abandoned_Cart_Tracker {
 			array( '%s', '%s', '%s' ),
 			array( '%s' )
 		);
+		if ( false !== $rows ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 		return $rows > 0;
 	}
 
@@ -534,10 +602,20 @@ class CRO_Abandoned_Cart_Tracker {
 		}
 		global $wpdb;
 		$table = self::get_table_name();
-		return $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE session_key = %s LIMIT 1", $session_key ),
-			OBJECT
-		);
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_by_session', $table, $session_key ) ) );
+		$row       = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE session_key = %s LIMIT 1',
+					$table,
+					$session_key
+				),
+				OBJECT
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		}
+		return $row;
 	}
 
 	/**
@@ -555,7 +633,20 @@ class CRO_Abandoned_Cart_Tracker {
 		if ( ! class_exists( 'CRO_Database' ) || ! CRO_Database::table_exists( $table ) ) {
 			return null;
 		}
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d LIMIT 1", $id ), OBJECT );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_row_by_id', $table, $id ) ) );
+		$row       = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d LIMIT 1',
+					$table,
+					$id
+				),
+				OBJECT
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		}
+		return $row;
 	}
 
 	/**
@@ -588,49 +679,82 @@ class CRO_Abandoned_Cart_Tracker {
 			$threshold = max( 0.0, (float) cro_settings()->get( 'abandoned_cart', 'high_value_threshold', 100 ) );
 		}
 
-		$where_args = array(
-			$status_filter,
-			$status_filter, self::STATUS_ACTIVE,
-			$status_filter, self::STATUS_RECOVERED,
-			$status_filter,
-			$search_like, $search_like,
-			$segment,
-			$segment,
-			$threshold,
-			$segment,
-			$threshold,
-		);
-
-		$segment_sql = " AND ( %s = 'all'
-			OR ( %s = 'high' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) >= %f )
-			OR ( %s = 'standard' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) < %f )
-		)";
-
-		$total = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(*) FROM {$table} WHERE ( %s = 'all'
+		// SQL must be literal in prepare() for static analysis (Plugin Check / PHPCS); do not assign to a variable first.
+		$cache_key_total = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_admin_list_total', $table, $status_filter, $search_like, $segment, $threshold ) ) );
+		$total           = wp_cache_get( $cache_key_total, 'meyvora_cro' );
+		if ( false === $total ) {
+			$total = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					"SELECT COUNT(*) FROM %i WHERE ( %s = 'all'
 					OR ( %s = 'active' AND status = %s )
 					OR ( %s = 'recovered' AND status = %s )
 					OR ( %s = 'emailed' AND ( email_1_sent_at IS NOT NULL OR email_2_sent_at IS NOT NULL OR email_3_sent_at IS NOT NULL ) )
 				) AND ( %s = '' OR email LIKE %s )
-				{$segment_sql}",
-				...$where_args
-			)
-		);
+				AND ( %s = 'all'
+					OR ( %s = 'high' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) >= %f )
+					OR ( %s = 'standard' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) < %f )
+				)",
+					$table,
+					$status_filter,
+					$status_filter,
+					self::STATUS_ACTIVE,
+					$status_filter,
+					self::STATUS_RECOVERED,
+					$status_filter,
+					$search_like,
+					$search_like,
+					$segment,
+					$segment,
+					$threshold,
+					$segment,
+					$threshold
+				)
+			);
+			wp_cache_set( $cache_key_total, $total, 'meyvora_cro', 300 );
+		} else {
+			$total = (int) $total;
+		}
 
-		$items = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE ( %s = 'all'
+		$cache_key_items = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_admin_list_items', $table, $status_filter, $search_like, $segment, $threshold, $per_page, $offset ) ) );
+		$items           = wp_cache_get( $cache_key_items, 'meyvora_cro' );
+		if ( false === $items ) {
+			$items = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					"SELECT * FROM %i WHERE ( %s = 'all'
 					OR ( %s = 'active' AND status = %s )
 					OR ( %s = 'recovered' AND status = %s )
 					OR ( %s = 'emailed' AND ( email_1_sent_at IS NOT NULL OR email_2_sent_at IS NOT NULL OR email_3_sent_at IS NOT NULL ) )
 				) AND ( %s = '' OR email LIKE %s )
-				{$segment_sql}
-				ORDER BY last_activity_at DESC LIMIT %d OFFSET %d",
-				...array_merge( $where_args, array( $per_page, $offset ) )
-			),
-			OBJECT
-		);
+				AND ( %s = 'all'
+					OR ( %s = 'high' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) >= %f )
+					OR ( %s = 'standard' AND CAST(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(cart_json, '$.totals.total')),'0') AS DECIMAL(12,2)) < %f )
+				) ORDER BY last_activity_at DESC LIMIT %d OFFSET %d",
+					$table,
+					$status_filter,
+					$status_filter,
+					self::STATUS_ACTIVE,
+					$status_filter,
+					self::STATUS_RECOVERED,
+					$status_filter,
+					$search_like,
+					$search_like,
+					$segment,
+					$segment,
+					$threshold,
+					$segment,
+					$threshold,
+					$per_page,
+					$offset
+				),
+				OBJECT
+			);
+			if ( ! is_array( $items ) ) {
+				$items = array();
+			}
+			wp_cache_set( $cache_key_items, $items, 'meyvora_cro', 300 );
+		} else {
+			$items = is_array( $items ) ? $items : array();
+		}
 
 		return array( 'items' => $items ? $items : array(), 'total' => $total );
 	}
@@ -640,12 +764,16 @@ class CRO_Abandoned_Cart_Tracker {
 	 * Validates a signed token, sets cart status to 'unsubscribed', and redirects.
 	 */
 	public static function handle_unsubscribe_request() {
-		if ( empty( $_GET['cro_action'] ) || 'unsubscribe_cart' !== $_GET['cro_action'] ) {
+		$action = filter_input( INPUT_GET, 'cro_action', FILTER_UNSAFE_RAW );
+		$action = is_string( $action ) ? sanitize_key( $action ) : '';
+		if ( $action !== 'unsubscribe_cart' ) {
 			return;
 		}
 
-		$cart_id = absint( $_GET['cart_id'] ?? 0 );
-		$token   = sanitize_text_field( wp_unslash( $_GET['token'] ?? '' ) );
+		$cart_id = filter_input( INPUT_GET, 'cart_id', FILTER_VALIDATE_INT );
+		$cart_id = $cart_id ? absint( $cart_id ) : 0;
+		$token_raw = filter_input( INPUT_GET, 'token', FILTER_UNSAFE_RAW );
+		$token     = is_string( $token_raw ) ? sanitize_text_field( wp_unslash( $token_raw ) ) : '';
 
 		if ( ! $cart_id || ! $token ) {
 			return;
@@ -658,10 +786,18 @@ class CRO_Abandoned_Cart_Tracker {
 			return;
 		}
 
-		$cart = $wpdb->get_row( $wpdb->prepare(
-			"SELECT id, email FROM {$table} WHERE id = %d",
-			$cart_id
-		) );
+		$cache_key_unsub = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_unsub_lookup', $table, $cart_id ) ) );
+		$cart            = wp_cache_get( $cache_key_unsub, 'meyvora_cro' );
+		if ( false === $cart ) {
+			$cart = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT id, email FROM %i WHERE id = %d',
+					$table,
+					$cart_id
+				)
+			);
+			wp_cache_set( $cache_key_unsub, $cart, 'meyvora_cro', 300 );
+		}
 
 		if ( ! $cart ) {
 			return;
@@ -672,13 +808,18 @@ class CRO_Abandoned_Cart_Tracker {
 			return;
 		}
 
-		$wpdb->update(
-			$table,
+		$unsub = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			array( 'status' => self::STATUS_UNSUBSCRIBED, 'updated_at' => current_time( 'mysql' ) ),
 			array( 'id' => $cart_id ),
 			array( '%s', '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $unsub ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 
 		self::cancel_scheduled_reminders( $cart_id );
 
@@ -690,7 +831,8 @@ class CRO_Abandoned_Cart_Tracker {
 	 * Show a front-end confirmation banner after unsubscribing.
 	 */
 	public static function unsubscribe_notice() {
-		if ( empty( $_GET['cro_unsubscribed'] ) ) {
+		$flag = filter_input( INPUT_GET, 'cro_unsubscribed', FILTER_UNSAFE_RAW );
+		if ( ! is_string( $flag ) || sanitize_key( $flag ) !== '1' ) {
 			return;
 		}
 		echo '<div style="background:#d4edda;color:#155724;padding:12px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:14px;">'

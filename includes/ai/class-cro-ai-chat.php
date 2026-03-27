@@ -209,8 +209,7 @@ class CRO_AI_Chat {
 			$message = substr( $message, 0, 4000 );
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- JSON string; decoded and validated below.
-		$history_raw = isset( $_POST['history'] ) ? wp_unslash( $_POST['history'] ) : '[]';
+		$history_raw = isset( $_POST['history'] ) ? sanitize_textarea_field( wp_unslash( $_POST['history'] ) ) : '[]';
 		$history     = json_decode( is_string( $history_raw ) ? $history_raw : '[]', true );
 		if ( ! is_array( $history ) ) {
 			$history = array();

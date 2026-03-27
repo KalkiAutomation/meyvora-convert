@@ -36,6 +36,16 @@ if ( isset( $_POST['cro_save_checkout'] ) && $nonce_valid ) {
 	$settings->set( 'checkout_optimizer', 'show_guarantee', ! empty( $_POST['show_guarantee'] ) );
 	$settings->set( 'checkout_optimizer', 'guarantee_text', sanitize_text_field( wp_unslash( $_POST['guarantee_text'] ?? '' ) ) );
 
+	$settings->set( 'checkout_optimizer', 'prefill_from_last_order', ! empty( $_POST['prefill_from_last_order'] ) );
+	$settings->set( 'checkout_optimizer', 'show_express_checkout_prompt', ! empty( $_POST['show_express_checkout_prompt'] ) );
+	$settings->set( 'checkout_optimizer', 'express_prompt_text', sanitize_text_field( wp_unslash( $_POST['express_prompt_text'] ?? '' ) ) );
+	$settings->set( 'checkout_optimizer', 'show_progress_steps', ! empty( $_POST['show_progress_steps'] ) );
+	$settings->set( 'checkout_optimizer', 'post_purchase_enabled', ! empty( $_POST['post_purchase_enabled'] ) );
+	$settings->set( 'checkout_optimizer', 'post_purchase_product_ids', sanitize_text_field( wp_unslash( $_POST['post_purchase_product_ids'] ?? '' ) ) );
+	$settings->set( 'checkout_optimizer', 'post_purchase_discount_percent', max( 0, min( 90, (float) sanitize_text_field( wp_unslash( $_POST['post_purchase_discount_percent'] ?? '0' ) ) ) ) );
+	$settings->set( 'checkout_optimizer', 'post_purchase_headline', sanitize_text_field( wp_unslash( $_POST['post_purchase_headline'] ?? '' ) ) );
+	$settings->set( 'checkout_optimizer', 'post_purchase_subhead', sanitize_text_field( wp_unslash( $_POST['post_purchase_subhead'] ?? '' ) ) );
+
 	echo '<div class="cro-ui-notice cro-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Checkout settings saved!', 'meyvora-convert' ) . '</p></div>';
 }
 
@@ -43,7 +53,7 @@ $checkout = $settings->get_checkout_settings();
 ?>
 
 			<div class="cro-ui-card cro-impact-notice">
-				<?php echo CRO_Icons::svg_kses( 'sparkles', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'sparkles', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<p>
 					<?php esc_html_e( 'Industry data: Removing unnecessary checkout fields can increase conversions by 20-30%.', 'meyvora-convert' ); ?>
@@ -70,7 +80,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- Field Removal Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'trash', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Remove Optional Fields', 'meyvora-convert' ); ?>
 			</h2>
@@ -127,7 +137,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- UX Improvements Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'settings', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'settings', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'UX Improvements', 'meyvora-convert' ); ?>
 			</h2>
@@ -169,7 +179,7 @@ $checkout = $settings->get_checkout_settings();
 		<!-- Trust Elements Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Trust & Security Elements', 'meyvora-convert' ); ?>
 			</h2>
@@ -217,6 +227,54 @@ $checkout = $settings->get_checkout_settings();
 							placeholder="<?php esc_attr_e( '30-day money-back guarantee', 'meyvora-convert' ); ?>" />
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<div class="cro-settings-section">
+			<h2><?php esc_html_e( 'Checkout intelligence', 'meyvora-convert' ); ?></h2>
+			<p class="cro-section-description"><?php esc_html_e( 'Reduce friction and set expectations without replacing your payment gateways.', 'meyvora-convert' ); ?></p>
+			<div class="cro-fields-grid cro-fields-grid--1col">
+				<label class="cro-checkbox-card">
+					<input type="checkbox" name="prefill_from_last_order" value="1" <?php checked( ! empty( $checkout['prefill_from_last_order'] ) ); ?> />
+					<span class="cro-checkbox-content"><strong><?php esc_html_e( 'Prefill checkout from last order', 'meyvora-convert' ); ?></strong>
+						<span><?php esc_html_e( 'For logged-in customers, reuse address fields when the field is still empty.', 'meyvora-convert' ); ?></span></span>
+				</label>
+				<label class="cro-checkbox-card">
+					<input type="checkbox" name="show_express_checkout_prompt" value="1" <?php checked( ! empty( $checkout['show_express_checkout_prompt'] ) ); ?> />
+					<span class="cro-checkbox-content"><strong><?php esc_html_e( 'Express checkout prompt', 'meyvora-convert' ); ?></strong></span>
+				</label>
+				<div class="cro-field cro-col-12">
+					<textarea name="express_prompt_text" class="large-text" rows="2"><?php echo esc_textarea( (string) ( $checkout['express_prompt_text'] ?? '' ) ); ?></textarea>
+				</div>
+				<label class="cro-checkbox-card">
+					<input type="checkbox" name="show_progress_steps" value="1" <?php checked( ! empty( $checkout['show_progress_steps'] ) ); ?> />
+					<span class="cro-checkbox-content"><strong><?php esc_html_e( 'Show checkout progress steps (Cart → Details → Payment → Confirm)', 'meyvora-convert' ); ?></strong></span>
+				</label>
+			</div>
+		</div>
+
+		<div class="cro-settings-section">
+			<h2><?php esc_html_e( 'Post-purchase upsell', 'meyvora-convert' ); ?></h2>
+			<p class="cro-section-description"><?php esc_html_e( 'Thank-you page: suggest products and optional one-time coupon.', 'meyvora-convert' ); ?></p>
+			<label class="cro-checkbox-card">
+				<input type="checkbox" name="post_purchase_enabled" value="1" <?php checked( ! empty( $checkout['post_purchase_enabled'] ) ); ?> />
+				<span class="cro-checkbox-content"><strong><?php esc_html_e( 'Enable thank-you page upsell', 'meyvora-convert' ); ?></strong></span>
+			</label>
+			<div class="cro-field cro-col-12 cro-mt-2">
+				<label class="cro-field__label"><?php esc_html_e( 'Product IDs (comma-separated)', 'meyvora-convert' ); ?></label>
+				<input type="text" name="post_purchase_product_ids" class="regular-text" value="<?php echo esc_attr( (string) ( $checkout['post_purchase_product_ids'] ?? '' ) ); ?>" placeholder="123, 456" />
+			</div>
+			<div class="cro-field cro-col-12">
+				<label class="cro-field__label"><?php esc_html_e( 'Coupon discount (%)', 'meyvora-convert' ); ?></label>
+				<input type="number" name="post_purchase_discount_percent" class="small-text" min="0" max="90" step="1" value="<?php echo esc_attr( (string) ( $checkout['post_purchase_discount_percent'] ?? 0 ) ); ?>" />
+			</div>
+			<div class="cro-field cro-col-12">
+				<label class="cro-field__label"><?php esc_html_e( 'Headline', 'meyvora-convert' ); ?></label>
+				<input type="text" name="post_purchase_headline" class="large-text" value="<?php echo esc_attr( (string) ( $checkout['post_purchase_headline'] ?? '' ) ); ?>" />
+			</div>
+			<div class="cro-field cro-col-12">
+				<label class="cro-field__label"><?php esc_html_e( 'Subheading', 'meyvora-convert' ); ?></label>
+				<input type="text" name="post_purchase_subhead" class="large-text" value="<?php echo esc_attr( (string) ( $checkout['post_purchase_subhead'] ?? '' ) ); ?>" />
 			</div>
 		</div>
 

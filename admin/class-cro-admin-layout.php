@@ -188,11 +188,11 @@ class CRO_Admin_Layout {
 			} elseif ( ! empty( $primary_cta['form_id'] ) ) {
 				echo '<button type="submit" form="' . esc_attr( $primary_cta['form_id'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_cta['button_id'] ) ) {
-				$attr_str = '';
+				echo '<button type="button" id="' . esc_attr( $primary_cta['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"';
 				foreach ( $attrs as $attr_key => $attr_val ) {
-					$attr_str .= ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
+					echo ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
 				}
-				echo '<button type="button" id="' . esc_attr( $primary_cta['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . $attr_str . '>' . esc_html( $primary_cta['label'] ) . '</button>';
+				echo '>' . esc_html( $primary_cta['label'] ) . '</button>';
 			}
 			echo '</div>';
 		}

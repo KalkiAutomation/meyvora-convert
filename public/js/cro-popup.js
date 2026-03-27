@@ -1,6 +1,7 @@
 /**
  * Popup functionality – dispatches CustomEvents for developers to integrate
- * (cro:campaign_shown, cro:campaign_dismissed, cro:campaign_converted, cro:email_captured, cro:coupon_copied).
+ * (cro:campaign_shown, cro:campaign_dismissed, cro:campaign_converted, cro:email_captured,
+ * cro:coupon_copied, cro:coupon_applied).
  * Includes CROPopup class for controller-driven popups and event handlers for server-rendered popups.
  *
  * @package Meyvora_Convert
@@ -78,6 +79,24 @@ class CROPopup {
     if (this.countdownInterval) {
       clearInterval(this.countdownInterval);
       this.countdownInterval = null;
+    }
+    if (this._trapHandler && this.element) {
+      this.element.removeEventListener("keydown", this._trapHandler);
+      this._trapHandler = null;
+    }
+    if (this._copyCouponHandler && this.element) {
+      this.element.removeEventListener("click", this._copyCouponHandler);
+      this._copyCouponHandler = null;
+    }
+    if (this._previouslyFocused && this._previouslyFocused.focus) {
+      try {
+        this._previouslyFocused.focus();
+      } catch (e) {}
+      this._previouslyFocused = null;
+    }
+    if (this.escHandler) {
+      document.removeEventListener("keydown", this.escHandler);
+      this.escHandler = null;
     }
     if (this.overlay && this.overlay.parentNode) {
       this.overlay.parentNode.removeChild(this.overlay);
@@ -157,6 +176,13 @@ class CROPopup {
   }
 
   buildHTML(content, styling) {
+    const templateRaw =
+      this.campaign.template || this.campaign.template_type || "centered";
+    let tmplKey = String(templateRaw).replace(/\s+/g, "-").replace(/_/g, "-");
+    if (tmplKey === "gamified-wheel") {
+      return this.buildGamifiedWheelHTML(content, styling);
+    }
+
     let html = "";
 
     html +=
@@ -213,8 +239,16 @@ class CROPopup {
         '</span>:<span class="cro-countdown-seconds">00</span></span></div>';
     }
 
-    if (content.show_coupon && content.coupon_code) {
-      const label = content.coupon_label || "Your code";
+    const couponActions = ["apply_coupon", "apply_coupon_checkout", "copy_coupon"];
+    const ctaAction = content.cta_action || "close";
+    const showCouponBlock =
+      (content.show_coupon || couponActions.indexOf(ctaAction) !== -1) &&
+      content.coupon_code;
+    if (showCouponBlock) {
+      const label =
+        content.coupon_label ||
+        content.coupon_display_text ||
+        "Your code";
       html +=
         '<div class="cro-popup__coupon">' +
         '<span class="cro-popup__coupon-label">' +
@@ -224,7 +258,9 @@ class CROPopup {
         this.escapeHtml(content.coupon_code) +
         '">' +
         this.escapeHtml(content.coupon_code) +
-        "</code></div>";
+        "</code>" +
+        '<button type="button" class="cro-popup__coupon-copy" data-action="copy-coupon" aria-label="Copy coupon code">Copy</button>' +
+        "</div>";
     }
 
     if (content.show_email_field) {
@@ -266,6 +302,70 @@ class CROPopup {
     return html;
   }
 
+  buildGamifiedWheelHTML(content, styling) {
+    const c = content || {};
+    const id = this.campaign.id;
+    const headline = c.headline || "Try your luck!";
+    const sub = c.subheadline || "";
+    const cta = c.cta_text || "Spin now";
+    const defaultSlices = [
+      { label: "10% off", type: "win", color: "#2563eb" },
+      { label: "Try again", type: "lose", color: "#e5e7eb" },
+      { label: "5% off", type: "win", color: "#7c3aed" },
+      { label: "Try again", type: "lose", color: "#e5e7eb" },
+      { label: "Free ship", type: "win", color: "#059669" },
+      { label: "Try again", type: "lose", color: "#e5e7eb" },
+    ];
+    const slices =
+      Array.isArray(c.wheel_slices) && c.wheel_slices.length
+        ? c.wheel_slices
+        : defaultSlices;
+    const slicesJson = this.escapeHtml(JSON.stringify(slices));
+
+    let html =
+      '<button type="button" class="cro-popup__close" aria-label="Close" data-action="close">' +
+      '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+      '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>';
+    html += '<div class="cro-wheel-body">';
+    html +=
+      '<h2 class="cro-wheel-headline" id="cro-wheel-headline-' +
+      id +
+      '">' +
+      this.escapeHtml(this.processPlaceholders(headline)) +
+      "</h2>";
+    if (sub) {
+      html +=
+        '<p class="cro-wheel-sub">' +
+        this.escapeHtml(this.processPlaceholders(sub)) +
+        "</p>";
+    }
+    html += '<div class="cro-wheel-wrap" aria-hidden="true">';
+    html +=
+      '<canvas id="cro-wheel-canvas-' +
+      id +
+      '" width="300" height="300" data-slices="' +
+      slicesJson +
+      '"></canvas>';
+    html += '<div class="cro-wheel-pointer">&#9660;</div></div>';
+    html += '<div class="cro-wheel-email-step">';
+    html +=
+      '<input type="email" class="cro-wheel-email" placeholder="Enter your email to spin" aria-label="Email" />';
+    html +=
+      '<button type="button" class="cro-popup__cta cro-wheel-spin-btn" style="' +
+      this.getButtonStyles(styling) +
+      '" data-campaign-id="' +
+      id +
+      '">' +
+      this.escapeHtml(cta) +
+      "</button></div>";
+    html +=
+      '<div class="cro-wheel-result" style="display:none;" aria-live="polite">';
+    html += '<p class="cro-wheel-result-text"></p>';
+    html += '<p class="cro-wheel-coupon-code" style="display:none;"></p>';
+    html += "</div></div>";
+    return html;
+  }
+
   bindEvents() {
     const self = this;
 
@@ -296,6 +396,7 @@ class CROPopup {
       ?.addEventListener("click", function (e) {
         const content = self.campaign.content || {};
         const action = content.cta_action || "close";
+        const couponCode = content.coupon_code || "";
 
         if (self.callbacks.onConvert) {
           self.callbacks.onConvert("cta_click", { action: action });
@@ -304,17 +405,121 @@ class CROPopup {
         switch (action) {
           case "url":
             if (content.cta_url) {
-              window.location.href = content.cta_url;
+              const tgt =
+                content.cta_url_target === "_blank" ? "_blank" : "_self";
+              if (tgt === "_blank") {
+                window.open(content.cta_url, "_blank");
+              } else {
+                window.location.href = content.cta_url;
+              }
+            } else {
+              self.close("convert");
             }
             break;
           case "cart":
-            if (window.croConfig && window.croConfig.cartUrl) {
-              window.location.href = window.croConfig.cartUrl;
-            }
+            window.location.href =
+              (window.croConfig && window.croConfig.cartUrl) || "/cart";
             break;
           case "checkout":
-            if (window.croConfig && window.croConfig.checkoutUrl) {
-              window.location.href = window.croConfig.checkoutUrl;
+            window.location.href =
+              (window.croConfig && window.croConfig.checkoutUrl) ||
+              "/checkout";
+            break;
+          case "apply_coupon":
+            if (self._applyingCoupon) return;
+            if (couponCode) {
+              self._applyingCoupon = true;
+              const btn = e.currentTarget;
+              const originalText = btn.textContent;
+              btn.disabled = true;
+              btn.textContent = "Applying…";
+              self.applyCouponToCart(
+                couponCode,
+                function () {
+                  self._applyingCoupon = false;
+                  btn.textContent = "✓ Applied!";
+                  setTimeout(function () {
+                    self.close("convert");
+                  }, 1200);
+                },
+                function (errMsg, errBody) {
+                  self._applyingCoupon = false;
+                  btn.disabled = false;
+                  btn.textContent = originalText;
+                  self._showCtaError(
+                    errMsg || "Could not apply coupon.",
+                    errBody
+                  );
+                }
+              );
+            } else {
+              self.close("convert");
+            }
+            break;
+          case "apply_coupon_checkout":
+            if (self._applyingCoupon) return;
+            if (couponCode) {
+              self._applyingCoupon = true;
+              const btnCh = e.currentTarget;
+              const origCh = btnCh.textContent;
+              btnCh.disabled = true;
+              btnCh.textContent = "Applying…";
+              self.applyCouponToCart(
+                couponCode,
+                function () {
+                  self._applyingCoupon = false;
+                  window.location.href =
+                    (window.croConfig && window.croConfig.checkoutUrl) ||
+                    "/checkout";
+                },
+                function (errMsg, errBody) {
+                  self._applyingCoupon = false;
+                  btnCh.disabled = false;
+                  btnCh.textContent = origCh;
+                  self._showCtaError(
+                    errMsg || "Could not apply coupon.",
+                    errBody
+                  );
+                  setTimeout(function () {
+                    window.location.href =
+                      (window.croConfig && window.croConfig.checkoutUrl) ||
+                      "/checkout";
+                  }, 2000);
+                }
+              );
+            } else {
+              window.location.href =
+                (window.croConfig && window.croConfig.checkoutUrl) ||
+                "/checkout";
+            }
+            break;
+          case "copy_coupon":
+            if (couponCode) {
+              const btnCp = e.currentTarget;
+              const origCp = btnCp.textContent;
+              navigator.clipboard
+                .writeText(couponCode)
+                .then(function () {
+                  btnCp.textContent = "✓ Copied!";
+                  btnCp.classList.add("cro-cta--copied");
+                  document.dispatchEvent(
+                    new CustomEvent("cro:coupon_copied", {
+                      detail: {
+                        couponCode: couponCode,
+                        campaignId: self.campaign.id,
+                      },
+                    })
+                  );
+                  setTimeout(function () {
+                    btnCp.textContent = origCp;
+                    btnCp.classList.remove("cro-cta--copied");
+                    self.close("convert");
+                  }, 1500);
+                })
+                .catch(function () {
+                  self._copyFallback(couponCode);
+                  self.close("convert");
+                });
             }
             break;
           default:
@@ -322,21 +527,38 @@ class CROPopup {
         }
       });
 
-    this.element
-      .querySelector('[data-action="copy-coupon"]')
-      ?.addEventListener("click", function (e) {
-        const code = self.campaign.content && self.campaign.content.coupon_code;
-        if (code) {
-          navigator.clipboard.writeText(code).then(function () {
-            e.target.textContent = "Copied!";
-            e.target.classList.add("cro-coupon__copy--success");
-            setTimeout(function () {
-              e.target.textContent = "Copy";
-              e.target.classList.remove("cro-coupon__copy--success");
-            }, 2000);
-          });
-        }
-      });
+    this._copyCouponHandler = function (ev) {
+      const btn = ev.target.closest(
+        ".cro-popup__coupon-copy, [data-action='copy-coupon']"
+      );
+      if (!btn || !self.element.contains(btn)) return;
+      ev.preventDefault();
+      const code =
+        (self.campaign.content && self.campaign.content.coupon_code) || "";
+      if (!code) return;
+      navigator.clipboard
+        .writeText(code)
+        .then(function () {
+          btn.textContent = "Copied!";
+          btn.classList.add("cro-popup__coupon-copy--success");
+          document.dispatchEvent(
+            new CustomEvent("cro:coupon_copied", {
+              detail: {
+                couponCode: code,
+                campaignId: self.campaign.id,
+              },
+            })
+          );
+          setTimeout(function () {
+            btn.textContent = "Copy";
+            btn.classList.remove("cro-popup__coupon-copy--success");
+          }, 2000);
+        })
+        .catch(function () {
+          self._copyFallback(code);
+        });
+    };
+    this.element.addEventListener("click", this._copyCouponHandler);
 
     const form = this.element.querySelector('[data-action="email-capture"]');
     if (form) {
@@ -426,19 +648,44 @@ class CROPopup {
   }
 
   initAccessibility() {
+    const self = this;
     const headlineId = "cro-headline-" + this.campaign.id;
     this.element.setAttribute("aria-labelledby", headlineId);
-    setTimeout(
-      function () {
-        const firstFocusable = this.element.querySelector(
-          'button, input, [href], [tabindex]:not([tabindex="-1"])'
-        );
-        if (firstFocusable) {
-          firstFocusable.focus();
+
+    this._previouslyFocused = document.activeElement;
+
+    const focusableSelectors =
+      'button, input, [href], select, textarea, [tabindex]:not([tabindex="-1"])';
+    function getFocusable() {
+      return Array.from(self.element.querySelectorAll(focusableSelectors)).filter(
+        function (el) {
+          return !el.disabled && el.offsetParent !== null;
         }
-      }.bind(this),
-      100
-    );
+      );
+    }
+
+    setTimeout(function () {
+      const focusable = getFocusable();
+      if (focusable.length) {
+        focusable[0].focus();
+      }
+    }, 100);
+
+    this._trapHandler = function (e) {
+      if (e.key !== "Tab") return;
+      const focusable = getFocusable();
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    this.element.addEventListener("keydown", this._trapHandler);
   }
 
   submitEmail(email, form) {
@@ -525,14 +772,112 @@ class CROPopup {
     }
   }
 
-  applyCouponToCart(code) {
-    if (typeof jQuery !== "undefined" && window.wc_cart_params) {
-      jQuery.post(window.wc_cart_params.ajax_url, {
-        action: "woocommerce_apply_coupon",
-        security: window.wc_cart_params.apply_coupon_nonce,
-        coupon_code: code,
-      });
+  _showCtaError(message, errPayload) {
+    errPayload = errPayload || {};
+    const loginUrl =
+      (errPayload.data && errPayload.data.login_url) ||
+      (window.croConfig && window.croConfig.loginUrl);
+    const useLoginLink =
+      errPayload.code === "forbidden" &&
+      loginUrl &&
+      message &&
+      message.indexOf("Login") !== -1;
+
+    let errEl = this.element.querySelector(".cro-cta__error");
+    if (!errEl) {
+      errEl = document.createElement("p");
+      errEl.className = "cro-cta__error";
+      errEl.style.cssText =
+        "color:#dc2626;font-size:.85em;margin:.5em 0 0;";
+      const cta = this.element.querySelector('[data-action="cta"]');
+      if (cta) {
+        cta.insertAdjacentElement("afterend", errEl);
+      }
     }
+    if (useLoginLink) {
+      errEl.innerHTML = "";
+      const a = document.createElement("a");
+      a.href = loginUrl;
+      a.textContent = "Login";
+      a.rel = "noopener noreferrer";
+      errEl.appendChild(a);
+      errEl.appendChild(
+        document.createTextNode(" to your account to use this coupon.")
+      );
+    } else {
+      errEl.textContent = message;
+    }
+    errEl.style.display = "block";
+    setTimeout(function () {
+      errEl.style.display = "none";
+    }, 4000);
+  }
+
+  _copyFallback(text) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;opacity:0;pointer-events:none;";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  applyCouponToCart(code, onSuccess, onError) {
+    const restUrl =
+      window.croConfig && window.croConfig.restUrl
+        ? window.croConfig.restUrl + "cro/v1/offer/apply"
+        : null;
+
+    if (!restUrl) {
+      if (onError) {
+        onError("Configuration error: restUrl missing.");
+      }
+      return;
+    }
+
+    const self = this;
+    fetch(restUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-WP-Nonce": (window.croConfig && window.croConfig.nonce) || "",
+      },
+      body: JSON.stringify({ coupon_code: code }),
+    })
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (data) {
+        if (data && data.success) {
+          if (onSuccess) {
+            onSuccess(data);
+          }
+          document.dispatchEvent(
+            new CustomEvent("cro:coupon_applied", {
+              detail: {
+                couponCode: code,
+                cartFragments: data.cart_fragments || null,
+              },
+            })
+          );
+          if (typeof jQuery !== "undefined" && jQuery.fn.wc_cart_fragments) {
+            jQuery(document.body).trigger("wc_fragment_refresh");
+          }
+        } else if (onError) {
+          onError(
+            (data && data.message) || "Coupon could not be applied.",
+            data
+          );
+        }
+      })
+      .catch(function () {
+        if (onError) {
+          onError("Network error applying coupon.");
+        }
+      });
   }
 
   validateEmail(email) {
@@ -911,7 +1256,7 @@ window.CROPopup = CROPopup;
     // Coupon copied – dispatch cro:coupon_copied when copy button/element is used
     $(document).on(
       "click",
-      ".cro-popup .cro-copy-coupon, .cro-popup [data-cro-copy]",
+      ".cro-popup .cro-popup__coupon-copy, .cro-popup [data-action='copy-coupon']",
       function (e) {
         var $btn = $(this);
         var code = $btn.data("coupon-code") || $btn.data("cro-copy") || "";

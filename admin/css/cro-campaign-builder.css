@@ -8,7 +8,9 @@
   max-width: none;
   width: 100%;
 }
-.cro-admin-layout.cro-campaign-builder .cro-admin-layout__content-wrap .cro-admin-container {
+.cro-admin-layout.cro-campaign-builder
+  .cro-admin-layout__content-wrap
+  .cro-admin-container {
   padding-left: 0;
   padding-right: 0;
 }
@@ -213,7 +215,10 @@
   border-radius: 8px;
   padding: 0;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -497,7 +502,7 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   gap: 10px;
 }
 
-.cro-input-with-suffix input {
+.cro-input-with-suffix.cro-input-with-suffix input {
   width: 80px;
   flex-shrink: 0;
 }
@@ -506,6 +511,46 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   font-size: 13px;
   color: #666;
   white-space: nowrap;
+}
+
+/* "X times per Y hours/days" — override full-width inputs + 100% Select2 in .cro-control-group */
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row input[type="number"] {
+  width: auto !important;
+  min-width: 64px;
+  max-width: 120px;
+  flex: 0 0 auto;
+}
+
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row input#display-max-impressions {
+  min-width: 100px;
+  max-width: 140px;
+}
+
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row .cro-cap-sep {
+  flex-shrink: 0;
+  line-height: 1.45;
+}
+
+/* Select2 in this row: must not stretch to full row (see cro-admin-selectwoo-override.css) */
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row .select2-container {
+  width: auto !important;
+  min-width: 118px;
+  max-width: 200px;
+  flex: 0 0 auto;
+}
+
+.cro-builder-wrap .cro-control-group .cro-frequency-cap-row select:not(.select2-hidden-accessible) {
+  width: auto !important;
+  min-width: 118px;
+  max-width: 200px;
+  flex: 0 0 auto;
 }
 
 /* Conditional field (single input below checkbox) */
@@ -758,7 +803,9 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   border: 2px solid #ddd;
   border-radius: 6px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .cro-radio-card:hover {
@@ -854,7 +901,9 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
 }
 
 .cro-day-option:hover {
@@ -1310,8 +1359,16 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   overflow: auto;
   max-width: 100%;
   max-height: 100%;
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.05);
-  transition: width 0.25s ease, height 0.25s ease, transform 0.25s ease, border-radius 0.25s ease, border 0.25s ease, box-shadow 0.25s ease;
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition:
+    width 0.25s ease,
+    height 0.25s ease,
+    transform 0.25s ease,
+    border-radius 0.25s ease,
+    border 0.25s ease,
+    box-shadow 0.25s ease;
   transform-origin: center center;
 }
 
@@ -1333,7 +1390,8 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   height: 450px;
   border-radius: 16px;
   border: 8px solid var(--cro-black);
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.25),
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.25),
     inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   transform: scale(var(--cro-preview-scale, 1));
 }
@@ -1345,7 +1403,8 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   height: 500px;
   border-radius: 28px;
   border: 10px solid var(--cro-black);
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.3),
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.3),
     inset 0 0 0 2px rgba(255, 255, 255, 0.1);
 }
 
@@ -1684,6 +1743,15 @@ body.admin-bar .cro-builder-wrap .cro-ui-toast-container {
   .cro-builder-preview {
     min-width: 300px;
   }
+}
+
+/* Server-rendered preview in sandboxed iframe (optional split emphasis) */
+.cro-builder-split[data-mode="split"] .cro-builder-main {
+  grid-template-columns: 200px 1fr minmax(300px, 40%);
+}
+
+.cro-builder-live-preview-iframe {
+  background: #fff;
 }
 
 @media (max-width: 900px) {

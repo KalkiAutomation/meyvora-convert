@@ -45,10 +45,29 @@ class CRO_Validator {
 			$content = is_array( $data['content'] ) ? $data['content'] : json_decode( $data['content'], true );
 
 			if ( $content ) {
-				if ( ! empty( $content['coupon_code'] ) ) {
-					if ( ! self::is_valid_coupon_code( $content['coupon_code'] ) ) {
-						self::$errors['coupon_code'] = __( 'Invalid coupon code format', 'meyvora-convert' );
-					}
+				$allowed_cta_actions = array(
+					'close',
+					'url',
+					'cart',
+					'checkout',
+					'apply_coupon',
+					'apply_coupon_checkout',
+					'copy_coupon',
+				);
+				if ( isset( $content['cta_action'] ) && ! in_array( (string) $content['cta_action'], $allowed_cta_actions, true ) ) {
+					self::$errors['cta_action'] = __( 'Invalid CTA action.', 'meyvora-convert' );
+				}
+
+				if ( ( $content['cta_action'] ?? '' ) === 'url' && '' === trim( (string) ( $content['cta_url'] ?? '' ) ) ) {
+					self::$errors['cta_url'] = __( 'Enter a URL for the Go to URL action.', 'meyvora-convert' );
+				}
+
+				$coupon_cta_actions = array( 'apply_coupon', 'apply_coupon_checkout', 'copy_coupon' );
+				$code_raw             = isset( $content['coupon_code'] ) ? trim( (string) $content['coupon_code'] ) : '';
+				if ( ! empty( $content['cta_action'] ) && in_array( $content['cta_action'], $coupon_cta_actions, true ) && '' === $code_raw ) {
+					self::$errors['coupon_code'] = __( 'A coupon code is required for the selected CTA action.', 'meyvora-convert' );
+				} elseif ( '' !== $code_raw && ! self::is_valid_coupon_code( $content['coupon_code'] ) ) {
+					self::$errors['coupon_code'] = __( 'Invalid coupon code format', 'meyvora-convert' );
 				}
 
 				if ( isset( $content['countdown_minutes'] ) ) {

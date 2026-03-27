@@ -88,6 +88,9 @@ class CRO_Loader {
 
 		// Security utilities
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-security.php';
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-consent.php';
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-recommendations.php';
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-geo.php';
 
 		// Hooks reference (documentation only)
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-hooks.php';
@@ -100,6 +103,7 @@ class CRO_Loader {
 		require_once CRO_PLUGIN_DIR . 'includes/boosters/class-cro-shipping-bar.php';
 		require_once CRO_PLUGIN_DIR . 'includes/boosters/class-cro-trust-badges.php';
 		require_once CRO_PLUGIN_DIR . 'includes/boosters/class-cro-stock-urgency.php';
+		require_once CRO_PLUGIN_DIR . 'includes/boosters/class-cro-social-proof.php';
 
 		// Cart classes
 		require_once CRO_PLUGIN_DIR . 'includes/cart/class-cro-cart-optimizer.php';
@@ -114,6 +118,12 @@ class CRO_Loader {
 		// Checkout classes
 		require_once CRO_PLUGIN_DIR . 'includes/checkout/class-cro-checkout-optimizer.php';
 		require_once CRO_PLUGIN_DIR . 'includes/checkout/class-cro-checkout-fields.php';
+		require_once CRO_PLUGIN_DIR . 'includes/checkout/class-cro-post-purchase.php';
+
+		// Sequences + ESP integrations
+		require_once CRO_PLUGIN_DIR . 'includes/sequences/class-cro-sequence-engine.php';
+		require_once CRO_PLUGIN_DIR . 'includes/integrations/class-cro-klaviyo.php';
+		require_once CRO_PLUGIN_DIR . 'includes/integrations/class-cro-mailchimp.php';
 
 		// Classic cart/checkout asset loader (trust, offer banner, shipping – assets only when needed)
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-classic-cart-checkout.php';
@@ -170,12 +180,15 @@ class CRO_Loader {
 		require_once CRO_PLUGIN_DIR . 'admin/class-cro-offers-admin-ajax.php';
 
 		// AJAX (product/page search, campaigns list, campaign save)
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-onboarding.php';
+		require_once CRO_PLUGIN_DIR . 'includes/class-cro-dashboard-metrics.php';
 		require_once CRO_PLUGIN_DIR . 'includes/class-cro-ajax.php';
 
 		// Public
 		require_once CRO_PLUGIN_DIR . 'public/class-cro-public.php';
 
 		new CRO_Frontend();
+		add_action( 'init', array( 'CRO_Consent', 'init' ), 2 );
 
 		// Initialize REST API
 		new CRO_REST_API();
@@ -212,7 +225,6 @@ class CRO_Loader {
 	 */
 	private function define_public_hooks() {
 		$plugin_public = new CRO_Public();
-		add_action( 'wp_head', array( $plugin_public, 'print_brand_styles_vars' ), 5 );
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_styles' ) );
 		add_action( 'wp_enqueue_scripts', array( $plugin_public, 'enqueue_scripts' ) );
 	}
@@ -223,6 +235,7 @@ class CRO_Loader {
 	private function define_campaign_hooks() {
 		$campaign_display = new CRO_Campaign_Display();
 		$campaign_tracker = new CRO_Tracker();
+		new CRO_Sequence_Engine();
 		add_action( 'init', array( 'CRO_Shortcodes', 'init' ) );
 	}
 
@@ -234,6 +247,8 @@ class CRO_Loader {
 		$shipping_bar = new CRO_Shipping_Bar();
 		$trust_badges = new CRO_Trust_Badges();
 		$stock_urgency = new CRO_Stock_Urgency();
+		new CRO_Social_Proof();
+		new CRO_Recommendations();
 	}
 
 	/**
@@ -250,6 +265,9 @@ class CRO_Loader {
 	private function define_checkout_hooks() {
 		$checkout_optimizer = new CRO_Checkout_Optimizer();
 		$checkout_fields = new CRO_Checkout_Fields();
+		new CRO_Post_Purchase();
+		new CRO_Klaviyo();
+		new CRO_Mailchimp();
 	}
 
 	/**

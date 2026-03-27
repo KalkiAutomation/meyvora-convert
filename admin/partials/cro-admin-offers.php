@@ -9,6 +9,8 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+require_once CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ai-panel.php';
+
 $max_offers = 5;
 $option_key = 'cro_dynamic_offers';
 
@@ -291,10 +293,6 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 		<?php endif; ?>
 	</div>
 	<div id="cro-offers-conflict-notices" class="cro-offers-conflict-notices" role="region" aria-label="<?php esc_attr_e( 'Offer conflict warnings', 'meyvora-convert' ); ?>"></div>
-	<?php if ( $offers_used_count >= $max_offers ) : ?>
-	<script>document.addEventListener('DOMContentLoaded',function(){var b=document.getElementById('cro-offers-add-btn');if(b)b.disabled=true;});</script>
-	<?php endif; ?>
-
 	<?php
 	$ai_offer_suggest_ready = class_exists( 'CRO_AI_Client' ) && CRO_AI_Client::is_configured()
 		&& function_exists( 'cro_settings' ) && 'yes' === cro_settings()->get( 'ai', 'feature_offers', 'yes' )
@@ -326,7 +324,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<?php if ( $offers_used_count === 0 ) : ?>
 				<div class="cro-card__body">
 					<div class="cro-ui-empty-state">
-						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'tag', array( 'class' => 'cro-ico' ) ); ?></span>
+						<span class="cro-ui-empty-state__icon" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'tag', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 						<h2 class="cro-ui-empty-state__title"><?php esc_html_e( 'No offers yet', 'meyvora-convert' ); ?></h2>
 						<div class="cro-ui-empty-state__desc"><?php esc_html_e( 'Create your first offer to show a dynamic reward on cart and checkout.', 'meyvora-convert' ); ?></div>
@@ -415,9 +413,9 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 					</div>
 					<div class="cro-offer-card-actions">
 						<span class="cro-offer-card-move-btns">
-							<button type="button" class="button button-small cro-offer-move-up" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'chevron-up', array( 'class' => 'cro-ico' ) ); ?></button>
+							<button type="button" class="button button-small cro-offer-move-up" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move up', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
-							<button type="button" class="button button-small cro-offer-move-down" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></button>
+							<button type="button" class="button button-small cro-offer-move-down" data-cro-offer-index="<?php echo (int) $i; ?>" title="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Move down', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 						</span>
 						<form method="post" class="cro-offer-card-toggle-form">
@@ -429,13 +427,13 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 								<span class="cro-offer-card-toggle-slider"></span>
 							</label>
 						</form>
-						<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg_kses( 'pencil', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Edit', 'meyvora-convert' ); ?></button>
+						<button type="button" class="button button-small cro-offer-card-edit" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo wp_kses( CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?> <?php esc_html_e( 'Edit', 'meyvora-convert' ); ?></button>
 
 						<?php if ( $offers_used_count < $max_offers ) : ?>
-							<button type="button" class="button button-small cro-offer-card-duplicate" data-cro-offer-id="<?php echo esc_attr( (string) ( $o['id'] ?? '' ) ); ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Duplicate', 'meyvora-convert' ); ?></button>
+							<button type="button" class="button button-small cro-offer-card-duplicate" data-cro-offer-id="<?php echo esc_attr( (string) ( $o['id'] ?? '' ) ); ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo wp_kses( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?> <?php esc_html_e( 'Duplicate', 'meyvora-convert' ); ?></button>
 
 						<?php endif; ?>
-						<button type="button" class="button button-small cro-offer-card-delete" data-cro-offer-id="<?php echo esc_attr( (string) ( $o['id'] ?? '' ) ); ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo CRO_Icons::svg_kses( 'trash', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Delete', 'meyvora-convert' ); ?></button>
+						<button type="button" class="button button-small cro-offer-card-delete" data-cro-offer-id="<?php echo esc_attr( (string) ( $o['id'] ?? '' ) ); ?>" data-cro-offer-index="<?php echo (int) $i; ?>"><?php echo wp_kses( CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?> <?php esc_html_e( 'Delete', 'meyvora-convert' ); ?></button>
 
 					</div>
 				</div>
@@ -451,7 +449,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 		<div class="cro-offer-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="cro-offer-drawer-title" aria-label="<?php esc_attr_e( 'Offer form', 'meyvora-convert' ); ?>">
 			<div class="cro-offer-drawer-header">
 				<h2 class="cro-offer-drawer-title" id="cro-offer-drawer-title"><?php esc_html_e( 'Add Offer', 'meyvora-convert' ); ?></h2>
-				<button type="button" class="cro-offer-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<button type="button" class="cro-offer-drawer-close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			</div>
 			<form id="cro-offer-drawer-form" class="cro-offer-drawer-form">
@@ -477,7 +475,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-basics" data-section="basics">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-basics-body">
 						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Basics', 'meyvora-convert' ); ?></span>
-						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
+						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-basics-body" style="max-height: 400px;">
@@ -507,7 +505,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 						<div class="cro-field cro-col-6">
 							<label for="cro-drawer-priority" class="cro-field__label">
 								<span class="cro-field__label-wrap"><?php esc_html_e( 'Priority', 'meyvora-convert' ); ?>
-									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Lower number = higher priority. First matching offer wins.', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
+									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Lower number = higher priority. First matching offer wins.', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 								</span>
 							</label>
@@ -523,7 +521,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-conditions" data-section="conditions">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-conditions-body">
 						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Conditions', 'meyvora-convert' ); ?></span>
-						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
+						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-conditions-body" style="max-height: 1200px;">
@@ -678,7 +676,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-reward" data-section="reward">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-reward-body">
 						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Reward', 'meyvora-convert' ); ?></span>
-						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
+						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-reward-body">
@@ -748,7 +746,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 				<section class="cro-offer-drawer-section" id="cro-drawer-section-limits" data-section="limits">
 					<button type="button" class="cro-offer-drawer-section__header" aria-expanded="true" aria-controls="cro-drawer-section-limits-body">
 						<span class="cro-offer-drawer-section-title"><?php esc_html_e( 'Limits', 'meyvora-convert' ); ?></span>
-						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></span>
+						<span class="cro-offer-drawer-section__toggle" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					</button>
 					<div class="cro-offer-drawer-section__body" id="cro-drawer-section-limits-body" style="max-height: 200px;">
@@ -757,7 +755,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 						<div class="cro-field cro-col-6">
 							<label for="cro-drawer-rate-limit-hours" class="cro-field__label">
 								<span class="cro-field__label-wrap"><?php esc_html_e( 'Rate limit (hours)', 'meyvora-convert' ); ?>
-									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Hours before same visitor can see this offer again (default 6).', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'info', array( 'class' => 'cro-ico' ) ); ?></button>
+									<button type="button" class="cro-field-help-trigger" data-tooltip="<?php esc_attr_e( 'Hours before same visitor can see this offer again (default 6).', 'meyvora-convert' ); ?>" aria-label="<?php esc_attr_e( 'Help', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'info', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 								</span>
 							</label>
@@ -846,11 +844,12 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 		<div id="cro-offer-test-no-match" class="cro-offer-test-output cro-offer-test-no-match cro-hidden" aria-live="polite"></div>
 	</div>
 
-<script>
-window.croOffersData = <?php echo wp_json_encode( $offers_for_js ); ?>;
-window.croOffersMaxOffers = <?php echo (int) $max_offers; ?>;
-window.croOffersUsedCount = <?php echo (int) $offers_used_count; ?>;
-window.croOffersNonce = <?php echo wp_json_encode( wp_create_nonce( 'cro_offers_nonce' ) ); ?>;
-window.croOffersProductCategories = <?php echo wp_json_encode( array_values( $product_categories ) ); ?>;
-window.croOfferConflictChoices = <?php echo wp_json_encode( array_values( $cro_conflict_offer_choices ) ); ?>;
-</script>
+<?php $cro_json_hex = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT; ?>
+<script type="application/json" id="cro-offers-page-data"><?php echo wp_json_encode( array(
+	'offersData'           => $offers_for_js,
+	'maxOffers'            => (int) $max_offers,
+	'usedCount'            => (int) $offers_used_count,
+	'nonce'                => wp_create_nonce( 'cro_offers_nonce' ),
+	'productCategories'    => array_values( $product_categories ),
+	'offerConflictChoices' => array_values( $cro_conflict_offer_choices ),
+), $cro_json_hex ); ?></script>

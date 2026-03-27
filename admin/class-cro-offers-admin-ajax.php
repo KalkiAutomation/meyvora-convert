@@ -5,7 +5,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Missing
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -33,24 +32,6 @@ class CRO_Offers_Admin_Ajax {
 		add_action( 'wp_ajax_cro_offer_reorder', array( $this, 'handle_reorder' ) );
 		add_action( 'wp_ajax_cro_offer_test', array( $this, 'handle_test' ) );
 		add_action( 'wp_ajax_cro_detect_offer_conflicts', array( $this, 'handle_detect_offer_conflicts' ) );
-	}
-
-	/**
-	 * Check capability and nonce; send JSON error on failure.
-	 *
-	 * @return bool True if authorized.
-	 */
-	private function auth() {
-		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
-			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
-			return false;
-		}
-		$nonce = isset( $_REQUEST['nonce'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, self::NONCE_ACTION ) ) {
-			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
-			return false;
-		}
-		return true;
 	}
 
 	/**
@@ -343,7 +324,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: List offers. Returns display list (index, offer, rule_summary, reward_summary) sorted by priority.
 	 */
 	public function handle_list() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		wp_send_json_success( $this->get_offers_for_display() );
@@ -353,7 +339,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Create offer. POST body: offer (normalized object). Max 5 offers.
 	 */
 	public function handle_create() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$offers = $this->get_offers_raw();
@@ -366,8 +357,10 @@ class CRO_Offers_Admin_Ajax {
 			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
 			return;
 		}
-		$input = isset( $_POST['offer'] ) ? wp_unslash( $_POST['offer'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$post_in = filter_input_array( INPUT_POST );
+		$input     = ( is_array( $post_in ) && isset( $post_in['offer'] ) ) ? wp_unslash( $post_in['offer'] ) : '';
 		if ( is_string( $input ) ) {
+			// Decode raw JSON input; individual fields are sanitised by CRO_Offer_Schema::sanitize_offer() below.
 			$input = json_decode( $input, true );
 		}
 		if ( ! is_array( $input ) ) {
@@ -375,10 +368,10 @@ class CRO_Offers_Admin_Ajax {
 			return;
 		}
 		$raw_conflict = array();
-		if ( ! empty( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ) {
-			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) );
-		} elseif ( ! empty( $_POST['conflict_offer_ids'] ) && is_array( $_POST['conflict_offer_ids'] ) ) {
-			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['conflict_offer_ids'] ) );
+		if ( is_array( $post_in ) && ! empty( $post_in['cro_drawer_conflict_offer_ids'] ) && is_array( $post_in['cro_drawer_conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_conflict_offer_ids'] ) );
+		} elseif ( is_array( $post_in ) && ! empty( $post_in['conflict_offer_ids'] ) && is_array( $post_in['conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $post_in['conflict_offer_ids'] ) );
 		}
 		if ( ! empty( $raw_conflict ) ) {
 			$input['conflict_offer_ids'] = $raw_conflict;
@@ -400,7 +393,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Update offer. POST: id, offer (normalized object).
 	 */
 	public function handle_update() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
@@ -414,8 +412,10 @@ class CRO_Offers_Admin_Ajax {
 			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
-		$input = isset( $_POST['offer'] ) ? wp_unslash( $_POST['offer'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		$post_in = filter_input_array( INPUT_POST );
+		$input   = ( is_array( $post_in ) && isset( $post_in['offer'] ) ) ? wp_unslash( $post_in['offer'] ) : '';
 		if ( is_string( $input ) ) {
+			// Decode raw JSON input; individual fields are sanitised by CRO_Offer_Schema::sanitize_offer() below.
 			$input = json_decode( $input, true );
 		}
 		if ( ! is_array( $input ) ) {
@@ -423,10 +423,10 @@ class CRO_Offers_Admin_Ajax {
 			return;
 		}
 		$raw_conflict = array();
-		if ( ! empty( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ) {
-			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) );
-		} elseif ( ! empty( $_POST['conflict_offer_ids'] ) && is_array( $_POST['conflict_offer_ids'] ) ) {
-			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $_POST['conflict_offer_ids'] ) );
+		if ( is_array( $post_in ) && ! empty( $post_in['cro_drawer_conflict_offer_ids'] ) && is_array( $post_in['cro_drawer_conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_conflict_offer_ids'] ) );
+		} elseif ( is_array( $post_in ) && ! empty( $post_in['conflict_offer_ids'] ) && is_array( $post_in['conflict_offer_ids'] ) ) {
+			$raw_conflict = array_map( 'sanitize_text_field', wp_unslash( $post_in['conflict_offer_ids'] ) );
 		}
 		if ( ! empty( $raw_conflict ) ) {
 			$input['conflict_offer_ids'] = $raw_conflict;
@@ -449,7 +449,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Delete offer. POST: id.
 	 */
 	public function handle_delete() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
@@ -473,7 +478,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Duplicate offer. POST: id. Creates copy in first empty slot.
 	 */
 	public function handle_duplicate() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
@@ -519,7 +529,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Toggle offer active. POST: id.
 	 */
 	public function handle_toggle_active() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
@@ -544,10 +559,16 @@ class CRO_Offers_Admin_Ajax {
 	 * Priorities normalized to 10, 20, 30, ...
 	 */
 	public function handle_reorder() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
 			return;
 		}
-		$order = isset( $_POST['order'] ) ? wp_unslash( $_POST['order'] ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		$post_in = filter_input_array( INPUT_POST );
+		$order   = ( is_array( $post_in ) && isset( $post_in['order'] ) ) ? wp_unslash( $post_in['order'] ) : array();
 		if ( is_string( $order ) ) {
 			$order = json_decode( $order, true );
 		}
@@ -597,7 +618,12 @@ class CRO_Offers_Admin_Ajax {
 	 * Uses CRO_Offer_Engine::preview_offer for shared evaluation. Returns: match, checks, or suggestions when no match.
 	 */
 	public function handle_test() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		if ( ! class_exists( 'CRO_Offer_Engine' ) ) {
@@ -683,12 +709,23 @@ class CRO_Offers_Admin_Ajax {
 	 * @return array
 	 */
 	private function get_test_context_from_request() {
-		$cart_total   = isset( $_POST['cart_total'] ) && is_numeric( $_POST['cart_total'] ) ? (float) $_POST['cart_total'] : 0.0;
-		$items_count  = isset( $_POST['cart_items_count'] ) && is_numeric( $_POST['cart_items_count'] ) ? (int) $_POST['cart_items_count'] : 0;
-		$is_logged_in = ! empty( $_POST['is_logged_in'] );
-		$order_count  = isset( $_POST['order_count'] ) && is_numeric( $_POST['order_count'] ) ? (int) $_POST['order_count'] : 0;
-		$lifetime     = isset( $_POST['lifetime_spend'] ) && is_numeric( $_POST['lifetime_spend'] ) ? (float) $_POST['lifetime_spend'] : 0.0;
-		$user_role    = isset( $_POST['user_role'] ) ? sanitize_text_field( wp_unslash( $_POST['user_role'] ) ) : '';
+		$cart_total_raw = filter_input( INPUT_POST, 'cart_total', FILTER_UNSAFE_RAW );
+		$cart_total     = is_string( $cart_total_raw ) && is_numeric( $cart_total_raw ) ? (float) $cart_total_raw : 0.0;
+
+		$items_raw     = filter_input( INPUT_POST, 'cart_items_count', FILTER_UNSAFE_RAW );
+		$items_count   = is_string( $items_raw ) && is_numeric( $items_raw ) ? (int) $items_raw : 0;
+
+		$logged_raw    = filter_input( INPUT_POST, 'is_logged_in', FILTER_UNSAFE_RAW );
+		$is_logged_in  = ! empty( $logged_raw );
+
+		$order_raw     = filter_input( INPUT_POST, 'order_count', FILTER_UNSAFE_RAW );
+		$order_count   = is_string( $order_raw ) && is_numeric( $order_raw ) ? (int) $order_raw : 0;
+
+		$lifetime_raw  = filter_input( INPUT_POST, 'lifetime_spend', FILTER_UNSAFE_RAW );
+		$lifetime      = is_string( $lifetime_raw ) && is_numeric( $lifetime_raw ) ? (float) $lifetime_raw : 0.0;
+
+		$user_role_raw = filter_input( INPUT_POST, 'user_role', FILTER_UNSAFE_RAW );
+		$user_role     = is_string( $user_role_raw ) ? sanitize_text_field( $user_role_raw ) : '';
 		if ( ! $is_logged_in ) {
 			$user_role = '';
 		}
@@ -708,7 +745,12 @@ class CRO_Offers_Admin_Ajax {
 	 * AJAX: Detect circular conflict chains among enabled dynamic offers (option-based).
 	 */
 	public function handle_detect_offer_conflicts() {
-		if ( ! $this->auth() ) {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			$this->send_error( __( 'You do not have permission.', 'meyvora-convert' ), 403 );
+			return;
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), self::NONCE_ACTION ) ) {
+			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
 		$raw   = $this->get_offers_raw();

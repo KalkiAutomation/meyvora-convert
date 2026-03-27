@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -33,12 +32,14 @@ $nonce_ok = isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field(
 if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 	$settings->set( 'abandoned_cart', 'enable_abandoned_cart_emails', ! empty( $_POST['cro_abandoned_cart_enabled'] ) );
 	$settings->set( 'abandoned_cart', 'require_opt_in', ! empty( $_POST['cro_abandoned_cart_require_opt_in'] ) );
-	$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, (int) ( $_POST['cro_email_1_delay_hours'] ?? 1 ) ) );
-	$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, (int) ( $_POST['cro_email_2_delay_hours'] ?? 24 ) ) );
-	$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, (int) ( $_POST['cro_email_3_delay_hours'] ?? 72 ) ) );
-	$settings->set( 'abandoned_cart', 'high_value_threshold', max( 0, (float) ( $_POST['cro_high_value_threshold'] ?? 100 ) ) );
+	$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_1_delay_hours'] ?? 1 ) ) ) ) );
+	$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_2_delay_hours'] ?? 24 ) ) ) ) );
+	$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['cro_email_3_delay_hours'] ?? 72 ) ) ) ) );
+	$settings->set( 'abandoned_cart', 'high_value_threshold', max( 0, (float) sanitize_text_field( wp_unslash( $_POST['cro_high_value_threshold'] ?? '100' ) ) ) );
 	$settings->set( 'abandoned_cart', 'email_subject_template', isset( $_POST['cro_email_subject_template'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_email_subject_template'] ) ) : $opts['email_subject_template'] );
 	$settings->set( 'abandoned_cart', 'email_body_template', isset( $_POST['cro_email_body_template'] ) ? wp_kses_post( wp_unslash( $_POST['cro_email_body_template'] ) ) : '' );
+	$brand_hex = isset( $_POST['email_brand_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['email_brand_color'] ) ) : '';
+	$settings->set( 'abandoned_cart', 'email_brand_color', $brand_hex ? $brand_hex : '#2563eb' );
 	$opts = $settings->get_abandoned_cart_settings();
 	$opts = wp_parse_args( $opts, array( 'email_subject_template' => '', 'email_body_template' => '' ) );
 	$body_value = trim( (string) $opts['email_body_template'] ) !== '' ? $opts['email_body_template'] : $body_placeholder;
@@ -122,6 +123,14 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 		<div class="cro-settings-section">
 			<h2><?php esc_html_e( 'Email templates', 'meyvora-convert' ); ?></h2>
 			<div class="cro-fields-grid cro-fields-grid--1col">
+				<div class="cro-field cro-col-12">
+					<label for="cro-email-brand-color" class="cro-field__label"><?php esc_html_e( 'Email header colour', 'meyvora-convert' ); ?></label>
+					<div class="cro-field__control">
+						<input type="color" id="cro-email-brand-color" name="email_brand_color"
+							value="<?php echo esc_attr( cro_settings()->get( 'abandoned_cart', 'email_brand_color', '#2563eb' ) ); ?>" />
+						<p class="cro-help"><?php esc_html_e( 'Background colour for the email header bar.', 'meyvora-convert' ); ?></p>
+					</div>
+				</div>
 				<div class="cro-field cro-col-12">
 					<label for="cro_email_subject_template" class="cro-field__label"><?php esc_html_e( 'Subject', 'meyvora-convert' ); ?></label>
 					<div class="cro-field__control">
@@ -229,170 +238,3 @@ if ( isset( $_POST['cro_save_abandoned_cart'] ) && $nonce_ok ) {
 			<iframe id="cro_preview_iframe" class="cro-preview-iframe" title="<?php esc_attr_e( 'Email body preview', 'meyvora-convert' ); ?>"></iframe>
 		</div>
 	</div>
-
-<style>
-.cro-abandoned-cart-emails .cro-email-preview-wrapper { margin-top:12px; border:1px solid #c3c4c7; border-radius:4px; background:#fff; }
-.cro-abandoned-cart-emails .cro-preview-subject { padding:10px 12px; border-bottom:1px solid #c3c4c7; font-weight:600; }
-.cro-abandoned-cart-emails .cro-preview-iframe { width:100%; min-height:320px; max-height:480px; border:0; display:block; }
-.cro-abandoned-cart-emails .cro-inline-message { font-style:italic; }
-.cro-abandoned-cart-emails .cro-preview-section { margin-top:24px; }
-.cro-abandoned-cart-emails .cro-email-body-editor-wrap { margin-top: 0; }
-.cro-abandoned-cart-emails .cro-email-placeholder-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-.cro-abandoned-cart-emails .cro-email-placeholder-buttons .cro-email-insert-token { font-family: Consolas, Monaco, monospace; font-size: 12px; }
-</style>
-
-<script>
-window.croAbandonedCart = {
-	ajaxUrl: <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>,
-	nonce: <?php echo wp_json_encode( wp_create_nonce( 'cro_abandoned_cart_nonce' ) ); ?>,
-	defaultBodyTemplate: <?php echo wp_json_encode( $body_placeholder ); ?>
-};
-</script>
-<script>
-(function() {
-	var form = document.getElementById('cro-abandoned-cart-form');
-	var subjectInput = document.getElementById('cro_email_subject_template');
-	var editorId = 'cro_email_body_template';
-	var previewSubject = document.getElementById('cro_preview_subject');
-	var previewIframe = document.getElementById('cro_preview_iframe');
-	var refreshBtn = document.getElementById('cro_refresh_preview');
-	var testTo = document.getElementById('cro_test_email_to');
-	var sendTestBtn = document.getElementById('cro_send_test_email');
-	var testNotice = document.getElementById('cro_test_email_notice');
-
-	function getBodyContent() {
-		if (typeof tinymce !== 'undefined') {
-			var ed = tinymce.get(editorId);
-			if (ed && !ed.isHidden()) return ed.getContent();
-		}
-		var ta = document.getElementById(editorId);
-		return ta ? ta.value : '';
-	}
-
-	function setBodyContent(html) {
-		if (typeof tinymce !== 'undefined') {
-			var ed = tinymce.get(editorId);
-			if (ed) ed.setContent(html || '');
-		}
-		var ta = document.getElementById(editorId);
-		if (ta) ta.value = html || '';
-	}
-
-	function insertTokenAtCursor(token) {
-		if (typeof tinymce !== 'undefined') {
-			var ed = tinymce.get(editorId);
-			if (ed && !ed.isHidden()) {
-				ed.insertContent(token, { format: 'html' });
-				return;
-			}
-		}
-		var ta = document.getElementById(editorId);
-		if (!ta) return;
-		var start = ta.selectionStart;
-		var end = ta.selectionEnd;
-		var text = ta.value;
-		ta.value = text.slice(0, start) + token + text.slice(end);
-		ta.selectionStart = ta.selectionEnd = start + token.length;
-		ta.focus();
-	}
-
-	function getNonce() {
-		return typeof croAbandonedCart !== 'undefined' && croAbandonedCart.nonce ? croAbandonedCart.nonce : '';
-	}
-
-	function updatePreview() {
-		var subject = subjectInput ? subjectInput.value : '';
-		var body = getBodyContent();
-		var nonce = getNonce();
-		if (!nonce) return;
-		var data = new FormData();
-		data.append('action', 'cro_abandoned_cart_preview');
-		data.append('nonce', nonce);
-		data.append('subject', subject);
-		data.append('body', body);
-
-		fetch(typeof croAbandonedCart !== 'undefined' ? croAbandonedCart.ajaxUrl : '', {
-			method: 'POST',
-			body: data,
-			credentials: 'same-origin'
-		}).then(function(r) { return r.json(); }).then(function(res) {
-			if (res.success && res.data) {
-				if (previewSubject) previewSubject.textContent = res.data.subject || '';
-				if (previewIframe && previewIframe.contentDocument) {
-					previewIframe.contentDocument.open();
-					previewIframe.contentDocument.write(res.data.body || '');
-					previewIframe.contentDocument.close();
-				}
-			}
-		}).catch(function() {});
-	}
-
-	if (refreshBtn) refreshBtn.addEventListener('click', updatePreview);
-
-	function showTestNotice(success, message) {
-		if (!testNotice) return;
-		testNotice.style.display = 'block';
-		testNotice.className = 'cro-test-email-notice notice is-dismissible ' + (success ? 'notice-success' : 'notice-error');
-		testNotice.setAttribute('role', 'alert');
-		var p = document.createElement('p');
-		p.textContent = message || '';
-		testNotice.innerHTML = '';
-		testNotice.appendChild(p);
-	}
-
-	if (sendTestBtn && testTo) {
-		sendTestBtn.addEventListener('click', function() {
-			var to = (testTo.value || '').trim();
-			if (!to) {
-				showTestNotice(false, '<?php echo esc_js( __( 'Please enter an email address.', 'meyvora-convert' ) ); ?>');
-				return;
-			}
-			if (testNotice) { testNotice.style.display = 'none'; }
-			sendTestBtn.disabled = true;
-			var data = new FormData();
-			data.append('action', 'cro_abandoned_cart_send_test');
-			data.append('nonce', getNonce());
-			data.append('to', to);
-			data.append('subject', subjectInput ? subjectInput.value : '');
-			data.append('body', getBodyContent());
-
-			fetch(typeof croAbandonedCart !== 'undefined' ? croAbandonedCart.ajaxUrl : '', {
-				method: 'POST',
-				body: data,
-				credentials: 'same-origin'
-			}).then(function(r) { return r.json(); }).then(function(res) {
-				sendTestBtn.disabled = false;
-				var msg = (res.data && res.data.message) ? res.data.message : (res.success ? '<?php echo esc_js( __( 'Test email sent.', 'meyvora-convert' ) ); ?>' : '<?php echo esc_js( __( 'Failed to send.', 'meyvora-convert' ) ); ?>');
-				showTestNotice(!!res.success, msg);
-			}).catch(function() {
-				sendTestBtn.disabled = false;
-				showTestNotice(false, '<?php echo esc_js( __( 'Request failed. Please try again.', 'meyvora-convert' ) ); ?>');
-			});
-		});
-	}
-
-	// Placeholder buttons: insert token at cursor
-	document.querySelectorAll('.cro-email-insert-token').forEach(function(btn) {
-		btn.addEventListener('click', function() {
-			var token = btn.getAttribute('data-token');
-			if (token) insertTokenAtCursor(token);
-		});
-	});
-
-	// Reset to default template
-	var resetBtn = document.getElementById('cro_reset_body_template');
-	if (resetBtn && typeof croAbandonedCart !== 'undefined' && croAbandonedCart.defaultBodyTemplate !== undefined) {
-		resetBtn.addEventListener('click', function() {
-			if (confirm('<?php echo esc_js( __( 'Replace the current body with the default template?', 'meyvora-convert' ) ); ?>')) {
-				setBodyContent(croAbandonedCart.defaultBodyTemplate);
-				updatePreview();
-			}
-		});
-	}
-
-	// Initial preview on load (after TinyMCE may have initialized)
-	if (getNonce()) {
-		setTimeout(updatePreview, 300);
-	}
-})();
-</script>

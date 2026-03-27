@@ -4,9 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.WP.AlternativeFunctions.json_encode_json_encode -- wp_json_encode used.
-// phpcs:disable WordPress.Security.NonceVerification.Missing -- AJAX handlers verify nonce in ajax_auth().
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Webhooks: offer log lookups and delivery.
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -23,9 +20,24 @@ class CRO_Webhook {
 	const SCHEMA_VERSION   = '1.0';
 	const HOOK_DELIVER     = 'cro_deliver_webhook';
 
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
+
 	/** @var string[] */
 	public static function event_names() {
-		return array(
+		$defaults = array(
 			'meyvora.campaign.impression',
 			'meyvora.campaign.conversion',
 			'meyvora.campaign.dismiss',
@@ -37,6 +49,7 @@ class CRO_Webhook {
 			'meyvora.ab_test.winner_decided',
 			'meyvora.email.captured',
 		);
+		return (array) apply_filters( 'cro_webhook_event_names', $defaults );
 	}
 
 	/**
@@ -44,7 +57,7 @@ class CRO_Webhook {
 	 */
 	public static function init() {
 		add_action( 'cro_event_tracked', array( __CLASS__, 'on_event_tracked' ), 20, 1 );
-		add_action( 'cro_email_captured', array( __CLASS__, 'on_email_captured' ), 20, 2 );
+		add_action( 'cro_email_captured', array( __CLASS__, 'on_email_captured' ), 20, 3 );
 		add_action( 'cro_ab_test_winner_found', array( __CLASS__, 'on_ab_winner_found' ), 20, 2 );
 		add_action( 'cro_abandoned_cart_created', array( __CLASS__, 'on_abandoned_cart_created' ), 20, 1 );
 		add_action( 'cro_abandoned_cart_recovered', array( __CLASS__, 'on_abandoned_cart_recovered' ), 20, 2 );
@@ -253,7 +266,7 @@ class CRO_Webhook {
 
 		$sig      = hash_hmac( 'sha256', $json, $secret );
 		$start    = microtime( true );
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			$url,
 			array(
 				'timeout'     => 15,
@@ -316,7 +329,7 @@ class CRO_Webhook {
 		}
 		$sig      = hash_hmac( 'sha256', $json, $secret );
 		$start    = microtime( true );
-		$response = wp_remote_post(
+		$response = wp_safe_remote_post(
 			$url,
 			array(
 				'timeout'     => 15,
@@ -422,12 +435,20 @@ class CRO_Webhook {
 	}
 
 	/**
-	 * @param string $email Email (not forwarded to webhook).
-	 * @param array  $data  Context.
+	 * @param string     $email                Email (not forwarded to webhook).
+	 * @param int|array  $campaign_id_or_data  Campaign ID or legacy full context array.
+	 * @param array      $data                 Extra context when second arg is campaign ID.
 	 */
-	public static function on_email_captured( $email, $data ) {
-		$data = is_array( $data ) ? $data : array();
-		$campaign_id = isset( $data['campaign_id'] ) ? absint( $data['campaign_id'] ) : 0;
+	public static function on_email_captured( $email, $campaign_id_or_data = null, $data = null ) {
+		$campaign_id = 0;
+		$extra       = array();
+		if ( is_array( $campaign_id_or_data ) ) {
+			$extra       = $campaign_id_or_data;
+			$campaign_id = isset( $extra['campaign_id'] ) ? absint( $extra['campaign_id'] ) : 0;
+		} else {
+			$campaign_id = absint( $campaign_id_or_data );
+			$extra       = is_array( $data ) ? $data : array();
+		}
 		$cname       = '';
 		if ( $campaign_id && class_exists( 'CRO_Campaign' ) ) {
 			$c = CRO_Campaign::get( $campaign_id );
@@ -440,8 +461,8 @@ class CRO_Webhook {
 			array(
 				'source_campaign_id'   => $campaign_id,
 				'source_campaign_name' => $cname,
-				'page_url'             => isset( $data['page_url'] ) ? esc_url_raw( (string) $data['page_url'] ) : '',
-				'cart_value'           => isset( $data['cart_value'] ) ? (float) $data['cart_value'] : null,
+				'page_url'             => isset( $extra['page_url'] ) ? esc_url_raw( (string) $extra['page_url'] ) : '',
+				'cart_value'           => isset( $extra['cart_value'] ) ? (float) $extra['cart_value'] : null,
 				'has_email'            => true,
 			)
 		);
@@ -610,13 +631,19 @@ class CRO_Webhook {
 			global $wpdb;
 			if ( class_exists( 'CRO_Database' ) ) {
 				$logs_table = CRO_Database::get_table( 'offer_logs' );
-				$row        = $wpdb->get_row(
-					$wpdb->prepare(
-						'SELECT offer_id FROM %i WHERE coupon_code = %s ORDER BY id DESC LIMIT 1',
-						$logs_table,
-						$code
-					)
-				);
+				$ck         = self::read_cache_key( 'offer_id_by_coupon', array( $logs_table, $code ) );
+				$found      = false;
+				$row        = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+				if ( ! $found ) {
+					$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+						$wpdb->prepare(
+							'SELECT offer_id FROM %i WHERE coupon_code = %s ORDER BY id DESC LIMIT 1',
+							$logs_table,
+							$code
+						)
+					);
+					wp_cache_set( $ck, $row, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+				}
 				if ( $row && isset( $row->offer_id ) ) {
 					$offer_id = (int) $row->offer_id;
 				}
@@ -841,17 +868,6 @@ class CRO_Webhook {
 	 * @param string $nonce_action Nonce action.
 	 * @return bool
 	 */
-	private static function ajax_auth( $nonce_action ) {
-		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
-			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
-		}
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
-		if ( ! wp_verify_nonce( $nonce, $nonce_action ) ) {
-			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
-		}
-		return true;
-	}
-
 	/**
 	 * Validate webhook URL; warn on non-HTTPS.
 	 *
@@ -875,7 +891,12 @@ class CRO_Webhook {
 	}
 
 	public static function ajax_save_endpoint() {
-		self::ajax_auth( 'cro_webhooks_admin' );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'cro_webhooks_admin' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
+		}
 		$id          = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		$url_raw     = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
 		$secret      = isset( $_POST['secret'] ) ? sanitize_text_field( wp_unslash( $_POST['secret'] ) ) : '';
@@ -950,7 +971,12 @@ class CRO_Webhook {
 	}
 
 	public static function ajax_delete_endpoint() {
-		self::ajax_auth( 'cro_webhooks_admin' );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'cro_webhooks_admin' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
+		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid id.', 'meyvora-convert' ) ), 400 );
@@ -971,7 +997,12 @@ class CRO_Webhook {
 	}
 
 	public static function ajax_toggle_endpoint() {
-		self::ajax_auth( 'cro_webhooks_admin' );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'cro_webhooks_admin' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
+		}
 		$id     = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		$active = ! empty( $_POST['active'] );
 		if ( $id === '' ) {
@@ -989,7 +1020,12 @@ class CRO_Webhook {
 	}
 
 	public static function ajax_test_endpoint() {
-		self::ajax_auth( 'cro_webhooks_admin' );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'cro_webhooks_admin' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
+		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid id.', 'meyvora-convert' ) ), 400 );
@@ -1003,7 +1039,12 @@ class CRO_Webhook {
 	}
 
 	public static function ajax_get_logs() {
-		self::ajax_auth( 'cro_webhooks_admin' );
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Permission denied.', 'meyvora-convert' ) ), 403 );
+		}
+		if ( ! isset( $_POST['nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nonce'] ) ), 'cro_webhooks_admin' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid security token.', 'meyvora-convert' ) ), 403 );
+		}
 		$id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
 		if ( $id === '' ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid id.', 'meyvora-convert' ) ), 400 );
@@ -1037,4 +1078,3 @@ class CRO_Webhook {
 	}
 }
 
-// phpcs:enable

@@ -6,6 +6,57 @@
 (function() {
 	'use strict';
 
+	/**
+	 * Central debug API — console output only when General → Debug mode is on.
+	 * Uses croConfig.debugMode (wp_footer) or croPublic.debugMode (localized on cro-public).
+	 */
+	window.CRODebug = {
+		isEnabled: function() {
+			var c = window.croConfig || {};
+			if (typeof c.debugMode === 'boolean') {
+				return c.debugMode;
+			}
+			if (typeof window.croPublic !== 'undefined' && typeof window.croPublic.debugMode === 'boolean') {
+				return window.croPublic.debugMode;
+			}
+			return false;
+		},
+		_console: function() {
+			if (!this.isEnabled() || typeof console === 'undefined') {
+				return null;
+			}
+			return console;
+		},
+		log: function() {
+			var c = this._console();
+			if (!c || !c.log) {
+				return;
+			}
+			c.log.apply(c, arguments);
+		},
+		warn: function() {
+			var c = this._console();
+			if (!c || !c.warn) {
+				return;
+			}
+			c.warn.apply(c, arguments);
+		},
+		group: function(title) {
+			var c = this._console();
+			if (!c || !c.group) {
+				return;
+			}
+			c.group(title);
+		},
+		groupEnd: function() {
+			var c = this._console();
+			if (!c || !c.groupEnd) {
+				return;
+			}
+			c.groupEnd();
+		},
+	};
+
 	function reportError(error) {
 		try {
 			if (window.croConfig && window.croConfig.errorReporting && window.croConfig.ajaxUrl) {
@@ -75,24 +126,29 @@
 			this.maxScrollDepth = 0;
 			this.hasInteracted = false;
 			this.scrollDepth = 0;
+			this._scrollHandler = this.throttle(() => {
+				this.updateScrollDepth();
+			}, 100);
+			this._clickHandler = () => {
+				this.hasInteracted = true;
+			};
+			this._keyHandler = () => {
+				this.hasInteracted = true;
+			};
 
 			this.init();
 		}
 
 		init() {
-			// Track scroll depth (throttled).
-			window.addEventListener('scroll', this.throttle(() => {
-				this.updateScrollDepth();
-			}, 100), { passive: true });
+			window.addEventListener('scroll', this._scrollHandler, { passive: true });
+			document.addEventListener('click', this._clickHandler);
+			document.addEventListener('keydown', this._keyHandler);
+		}
 
-			// Track interactions.
-			document.addEventListener('click', () => {
-				this.hasInteracted = true;
-			});
-
-			document.addEventListener('keydown', () => {
-				this.hasInteracted = true;
-			});
+		destroy() {
+			window.removeEventListener('scroll', this._scrollHandler);
+			document.removeEventListener('click', this._clickHandler);
+			document.removeEventListener('keydown', this._keyHandler);
 		}
 
 		updateScrollDepth() {
@@ -190,6 +246,10 @@
 		notifyCampaignShown(campaignId) {
 			const id = String(campaignId);
 			this.shownCampaigns.add(id);
+			if (this.shownCampaigns.size > 50) {
+				const arr = [...this.shownCampaigns];
+				this.shownCampaigns = new Set(arr.slice(-50));
+			}
 
 			// Persist to sessionStorage.
 			try {
@@ -226,7 +286,9 @@
 	try {
 		initCROToolkit();
 	} catch (err) {
-		console.error('Meyvora Convert Error:', err);
+		if (window.CRODebug && window.CRODebug.isEnabled()) {
+			window.CRODebug.log('Meyvora Convert Error:', err);
+		}
 		reportError(err);
 	}
 })();

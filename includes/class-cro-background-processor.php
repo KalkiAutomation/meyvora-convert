@@ -6,7 +6,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 defined( 'ABSPATH' ) || exit;
 
@@ -14,6 +13,30 @@ class CRO_Background_Processor {
 
 	/** @var string Queue option name */
 	const QUEUE_KEY = 'cro_background_queue';
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read cache TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
+
+	/**
+	 * @return void
+	 */
+	private static function flush_meyvora_cro_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::DB_READ_CACHE_GROUP );
+		}
+	}
 
 	/**
 	 * Initialize cron hooks and schedules
@@ -152,8 +175,7 @@ class CRO_Background_Processor {
 		global $wpdb;
 		$table = $wpdb->prefix . 'cro_events';
 
-		$wpdb->insert(
-			$table,
+		$ins = $wpdb->insert( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			array(
 				'event_type'   => isset( $data['type'] ) ? sanitize_text_field( $data['type'] ) : 'impression',
 				'source_type'  => 'campaign',
@@ -166,6 +188,12 @@ class CRO_Background_Processor {
 			),
 			array( '%s', '%s', '%d', '%s', '%s', '%s', '%f', '%s' )
 		);
+		if ( false !== $ins ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 	}
 
 	/**
@@ -218,15 +246,27 @@ class CRO_Background_Processor {
 	 */
 	public static function cleanup_old_events() {
 		global $wpdb;
-		$table  = $wpdb->prefix . 'cro_events';
-		$cutoff = gmdate( 'Y-m-d', strtotime( '-90 days' ) );
+		$table = $wpdb->prefix . 'cro_events';
+		$days  = 90;
+		if ( function_exists( 'cro_settings' ) ) {
+			$days = (int) cro_settings()->get( 'analytics', 'data_retention_days', 90 );
+		}
+		$days   = max( 7, min( 730, $days ) );
+		$cutoff = gmdate( 'Y-m-d', strtotime( '-' . $days . ' days' ) );
 
-		$deleted = $wpdb->query(
+		$deleted = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			$wpdb->prepare(
-				"DELETE FROM {$table} WHERE created_at < %s LIMIT 10000",
+				'DELETE FROM %i WHERE created_at < %s LIMIT 10000',
+				$table,
 				$cutoff
 			)
 		);
+		if ( false !== $deleted ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 
 		if ( class_exists( 'CRO_Error_Handler' ) ) {
 			CRO_Error_Handler::log( 'INFO', 'Cleaned up old events', array(
@@ -248,37 +288,54 @@ class CRO_Background_Processor {
 		$events_table = $wpdb->prefix . 'cro_events';
 		$stats_table  = $wpdb->prefix . 'cro_daily_stats';
 
-		$stats_exists = $wpdb->get_var( $wpdb->prepare(
-			'SHOW TABLES LIKE %s',
-			$stats_table
-		) );
+		$cache_key    = self::read_cache_key( 'stats_table_exists', array( $stats_table ) );
+		$found        = false;
+		$stats_exists = wp_cache_get( $cache_key, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$stats_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SHOW TABLES LIKE %s',
+					$stats_table
+				)
+			);
+			wp_cache_set( $cache_key, $stats_exists, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		if ( $stats_exists !== $stats_table ) {
 			return;
 		}
 
 		$yesterday = gmdate( 'Y-m-d', strtotime( '-1 day' ) );
 
-		$wpdb->query(
+		$agg = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			$wpdb->prepare(
-				"INSERT INTO {$stats_table} (date, campaign_id, impressions, conversions, revenue, emails)
+				'INSERT INTO %i (date, campaign_id, impressions, conversions, revenue, emails)
 				SELECT 
 					DATE(created_at) AS date,
 					source_id AS campaign_id,
-					SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) AS impressions,
-					SUM(CASE WHEN event_type = 'conversion' THEN 1 ELSE 0 END) AS conversions,
-					SUM(CASE WHEN event_type = 'conversion' THEN COALESCE(order_value, 0) ELSE 0 END) AS revenue,
-					SUM(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 ELSE 0 END) AS emails
-				FROM {$events_table}
-				WHERE source_type = 'campaign' AND DATE(created_at) = %s
+					SUM(CASE WHEN event_type = \'impression\' THEN 1 ELSE 0 END) AS impressions,
+					SUM(CASE WHEN event_type = \'conversion\' THEN 1 ELSE 0 END) AS conversions,
+					SUM(CASE WHEN event_type = \'conversion\' THEN COALESCE(order_value, 0) ELSE 0 END) AS revenue,
+					SUM(CASE WHEN event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' THEN 1 ELSE 0 END) AS emails
+				FROM %i
+				WHERE source_type = \'campaign\' AND created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
 				GROUP BY DATE(created_at), source_id
 				ON DUPLICATE KEY UPDATE
 					impressions = VALUES(impressions),
 					conversions = VALUES(conversions),
 					revenue = VALUES(revenue),
-					emails = VALUES(emails)",
+					emails = VALUES(emails)',
+				$stats_table,
+				$events_table,
+				$yesterday,
 				$yesterday
 			)
 		);
+		if ( false !== $agg ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $stats_table );
+			}
+			self::flush_meyvora_cro_read_cache();
+		}
 	}
 }
 

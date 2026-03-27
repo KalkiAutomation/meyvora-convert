@@ -11,113 +11,11 @@ defined( 'ABSPATH' ) || exit;
 
 class CRO_Database {
 
-	/**
-	 * Safe query with error handling
-	 *
-	 * @param string $sql    SQL query (may contain placeholders).
-	 * @param array  $params Optional prepare parameters.
-	 * @return int|false Number of rows affected, or false on error.
-	 */
-	public static function query( $sql, $params = array() ) {
-		global $wpdb;
+	/** @var string Object cache group for DB read-through caches. */
+	private const CACHE_GROUP = 'meyvora_cro';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$prepared_sql = ! empty( $params ) ? $wpdb->prepare( $sql, ...array_values( $params ) ) : $sql;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->query( $prepared_sql );
-
-		if ( $result === false && $wpdb->last_error ) {
-			if ( class_exists( 'CRO_Error_Handler' ) ) {
-				CRO_Error_Handler::log( 'DB_ERROR', $wpdb->last_error, array(
-					'query' => $wpdb->last_query,
-				) );
-			}
-			return false;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Safe get_var
-	 *
-	 * @param string $sql    SQL query.
-	 * @param array  $params Optional prepare parameters.
-	 * @return mixed|null
-	 */
-	public static function get_var( $sql, $params = array() ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$prepared_sql = ! empty( $params ) ? $wpdb->prepare( $sql, ...array_values( $params ) ) : $sql;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->get_var( $prepared_sql );
-
-		if ( $wpdb->last_error ) {
-			if ( class_exists( 'CRO_Error_Handler' ) ) {
-				CRO_Error_Handler::log( 'DB_ERROR', $wpdb->last_error, array( 'query' => $wpdb->last_query ) );
-			}
-			return null;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Safe get_row
-	 *
-	 * @param string $sql    SQL query.
-	 * @param array  $params Optional prepare parameters.
-	 * @param string $output OBJECT, ARRAY_A, or ARRAY_N.
-	 * @return object|array|null
-	 */
-	public static function get_row( $sql, $params = array(), $output = OBJECT ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$prepared_sql = ! empty( $params ) ? $wpdb->prepare( $sql, ...array_values( $params ) ) : $sql;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->get_row( $prepared_sql, $output );
-
-		if ( $wpdb->last_error ) {
-			if ( class_exists( 'CRO_Error_Handler' ) ) {
-				CRO_Error_Handler::log( 'DB_ERROR', $wpdb->last_error, array( 'query' => $wpdb->last_query ) );
-			}
-			return null;
-		}
-
-		return $result;
-	}
-
-	/**
-	 * Safe get_results
-	 *
-	 * @param string $sql    SQL query.
-	 * @param array  $params Optional prepare parameters.
-	 * @param string $output OBJECT, ARRAY_A, or ARRAY_N.
-	 * @return array
-	 */
-	public static function get_results( $sql, $params = array(), $output = OBJECT ) {
-		global $wpdb;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
-		$prepared_sql = ! empty( $params ) ? $wpdb->prepare( $sql, ...array_values( $params ) ) : $sql;
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$result = $wpdb->get_results( $prepared_sql, $output );
-
-		if ( $wpdb->last_error ) {
-			if ( class_exists( 'CRO_Error_Handler' ) ) {
-				CRO_Error_Handler::log( 'DB_ERROR', $wpdb->last_error, array( 'query' => $wpdb->last_query ) );
-			}
-			return array();
-		}
-
-		return $result;
-	}
+	/** @var int TTL (seconds) for read-through caches (table existence, etc.). */
+	private const CACHE_TTL_READ = 300;
 
 	/**
 	 * Safe insert with validation
@@ -139,8 +37,7 @@ class CRO_Database {
 
 		$data = self::sanitize_data( $data );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Wrapper for custom table insert.
-		$result = $wpdb->insert( $table, $data, $format );
+		$result = $wpdb->insert( $table, $data, $format ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 
 		if ( $result === false ) {
 			if ( class_exists( 'CRO_Error_Handler' ) ) {
@@ -150,6 +47,12 @@ class CRO_Database {
 				) );
 			}
 			return false;
+		}
+
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		} else {
+			wp_cache_delete( self::table_exists_cache_key( $table ), self::CACHE_GROUP );
 		}
 
 		return $wpdb->insert_id;
@@ -174,14 +77,19 @@ class CRO_Database {
 
 		$data = self::sanitize_data( $data );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Wrapper for custom table update.
-		$result = $wpdb->update( $table, $data, $where, $format, $where_format );
+		$result = $wpdb->update( $table, $data, $where, $format, $where_format ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 
 		if ( $result === false ) {
 			if ( class_exists( 'CRO_Error_Handler' ) ) {
 				CRO_Error_Handler::log( 'DB_ERROR', $wpdb->last_error, array( 'table' => $table ) );
 			}
 			return false;
+		}
+
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		} else {
+			wp_cache_delete( self::table_exists_cache_key( $table ), self::CACHE_GROUP );
 		}
 
 		return $result;
@@ -202,8 +110,7 @@ class CRO_Database {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Wrapper for custom table delete.
-		$result = $wpdb->delete( $table, $where, $where_format );
+		$result = $wpdb->delete( $table, $where, $where_format ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 
 		if ( $result === false ) {
 			if ( class_exists( 'CRO_Error_Handler' ) ) {
@@ -212,7 +119,37 @@ class CRO_Database {
 			return false;
 		}
 
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		} else {
+			wp_cache_delete( self::table_exists_cache_key( $table ), self::CACHE_GROUP );
+		}
+
 		return $result;
+	}
+
+	/**
+	 * Object cache key for SHOW TABLES LIKE read-through (must match table_exists()).
+	 *
+	 * @param string $table Full table name.
+	 * @return string
+	 */
+	private static function table_exists_cache_key( $table ) {
+		return 'meyvora_cro_table_exists_' . md5( serialize( array( 'table' => (string) $table ) ) );
+	}
+
+	/**
+	 * Invalidate cached read-through for a CRO table after INSERT/UPDATE/DELETE.
+	 * Uses the same key as table_exists().
+	 *
+	 * @param string $table Full table name.
+	 * @return void
+	 */
+	public static function invalidate_table_cache_after_write( $table ) {
+		if ( ! is_string( $table ) || $table === '' ) {
+			return;
+		}
+		wp_cache_delete( self::table_exists_cache_key( $table ), self::CACHE_GROUP );
 	}
 
 	/**
@@ -224,13 +161,64 @@ class CRO_Database {
 	public static function table_exists( $table ) {
 		global $wpdb;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- No API for SHOW TABLES.
-		$result = $wpdb->get_var( $wpdb->prepare(
-			'SHOW TABLES LIKE %s',
-			$table
-		) );
+		if ( ! is_string( $table ) || $table === '' ) {
+			return false;
+		}
 
-		return $result === $table;
+		$cache_key = self::table_exists_cache_key( $table );
+
+		$cached = wp_cache_get( $cache_key, self::CACHE_GROUP );
+		if ( false !== $cached ) {
+			return (bool) $cached;
+		}
+
+		$result = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+
+		$exists = ( $result === $table );
+		wp_cache_set( $cache_key, $exists ? 1 : 0, self::CACHE_GROUP, self::CACHE_TTL_READ );
+
+		return $exists;
+	}
+
+	/**
+	 * Clear persistent DB existence cache (call after schema changes).
+	 *
+	 * @return void
+	 */
+	public static function flush_db_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		}
+	}
+
+	/**
+	 * Object cache key for arbitrary DB read-through (PHPCS DirectDatabaseQuery + NoCaching).
+	 *
+	 * @param string $descriptor Stable prefix.
+	 * @param array  $params     Serializable identifier.
+	 * @return string
+	 */
+	public static function meyvora_cache_key( $descriptor, array $params = array() ) {
+		return 'meyvora_cro_' . md5( (string) $descriptor . serialize( $params ) );
+	}
+
+	/**
+	 * @param string $descriptor Logical name.
+	 * @param array  $params     Params.
+	 * @return mixed|false
+	 */
+	public static function object_cache_get( $descriptor, array $params ) {
+		return wp_cache_get( self::meyvora_cache_key( $descriptor, $params ), self::CACHE_GROUP );
+	}
+
+	/**
+	 * @param string $descriptor Logical name.
+	 * @param array  $params     Params.
+	 * @param mixed  $value      Value to cache.
+	 * @return void
+	 */
+	public static function object_cache_set( $descriptor, array $params, $value ) {
+		wp_cache_set( self::meyvora_cache_key( $descriptor, $params ), $value, self::CACHE_GROUP, self::CACHE_TTL_READ );
 	}
 
 	/**
@@ -254,6 +242,8 @@ class CRO_Database {
 			$wpdb->prefix . 'cro_offers',
 			$wpdb->prefix . 'cro_offer_logs',
 			$wpdb->prefix . 'cro_abandoned_carts',
+			$wpdb->prefix . 'cro_campaign_sequences',
+			$wpdb->prefix . 'cro_sequence_enrollments',
 		);
 
 		return in_array( $table, $valid_tables, true );
@@ -300,9 +290,8 @@ class CRO_Database {
 	 * @param string $message Message to log.
 	 */
 	private static function debug_log_tables( $message ) {
-		if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[CRO create_tables] ' . $message );
+		if ( defined( 'WP_DEBUG' ) && WP_DEBUG && class_exists( 'CRO_Error_Handler' ) ) {
+			CRO_Error_Handler::log( 'DEBUG', '[CRO create_tables] ' . $message );
 		}
 	}
 
@@ -339,6 +328,8 @@ class CRO_Database {
 			'cro_offers'         => $wpdb->prefix . 'cro_offers',
 			'cro_offer_logs'     => $wpdb->prefix . 'cro_offer_logs',
 			'cro_abandoned_carts' => $wpdb->prefix . 'cro_abandoned_carts',
+			'cro_campaign_sequences' => $wpdb->prefix . 'cro_campaign_sequences',
+			'cro_sequence_enrollments' => $wpdb->prefix . 'cro_sequence_enrollments',
 		);
 
 		$table_campaigns = $tables['cro_campaigns'];
@@ -359,6 +350,7 @@ class CRO_Database {
 			cooldown int(11) DEFAULT 3600,
 			fallback_id bigint(20) DEFAULT 0,
 			fallback_delay_seconds int(11) DEFAULT 5,
+			wheel_slices longtext DEFAULT NULL,
 			impressions bigint(20) unsigned DEFAULT 0,
 			conversions bigint(20) unsigned DEFAULT 0,
 			revenue_attributed decimal(12,2) DEFAULT 0,
@@ -366,7 +358,8 @@ class CRO_Database {
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			KEY status (status),
-			KEY campaign_type (campaign_type)
+			KEY campaign_type (campaign_type),
+			KEY idx_priority (priority)
 		) $charset_collate;";
 		self::debug_log_tables( 'Before dbDelta (cro_campaigns): ' . $sql_campaigns );
 		$delta_result = dbDelta( $sql_campaigns );
@@ -396,11 +389,14 @@ class CRO_Database {
 			metadata longtext,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
+			KEY idx_source_id (source_id),
 			KEY source_type_id (source_type, source_id),
 			KEY event_type (event_type),
 			KEY session_id (session_id),
 			KEY created_at (created_at),
-			KEY order_id (order_id)
+			KEY order_id (order_id),
+			KEY event_type_created_at (event_type, created_at),
+			KEY source_type_created_at (source_type, source_id, created_at)
 		) $charset_collate;";
 		self::debug_log_tables( 'Before dbDelta (cro_events): ' . $sql_events );
 		$delta_result = dbDelta( $sql_events );
@@ -491,10 +487,13 @@ class CRO_Database {
 			impressions int DEFAULT 0,
 			conversions int DEFAULT 0,
 			revenue decimal(10,2) DEFAULT 0.00,
+			is_winner tinyint(1) NOT NULL DEFAULT 0,
+			winner_applied_at datetime DEFAULT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY  (id),
 			KEY test_id (test_id),
-			KEY is_control (is_control)
+			KEY is_control (is_control),
+			KEY conversions (conversions)
 		) $charset_collate;";
 		self::debug_log_tables( 'Before dbDelta (cro_ab_variations): ' . $sql_ab_variations );
 		$delta_result = dbDelta( $sql_ab_variations );
@@ -539,7 +538,7 @@ class CRO_Database {
 		self::debug_log_tables( 'After dbDelta (cro_daily_stats): ' . wp_json_encode( $delta_result ) );
 
 		$offers_table = $tables['cro_offers'];
-		// conflict_ids: JSON array of offer IDs (cannot combine with). Existing installs: CRO_Activator::maybe_upgrade_tables adds the column if missing.
+		// conflict_ids: JSON array of offer IDs (cannot combine with).
 		$sql_offers   = "CREATE TABLE $offers_table (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 			name varchar(255) NOT NULL,
@@ -575,7 +574,8 @@ class CRO_Database {
 			KEY offer_id (offer_id),
 			KEY visitor_id (visitor_id),
 			KEY order_id (order_id),
-			KEY created_at (created_at)
+			KEY created_at (created_at),
+			KEY offer_id_created_at (offer_id, created_at)
 		) $charset_collate;";
 		self::debug_log_tables( 'Before dbDelta (cro_offer_logs): ' . $sql_offer_logs );
 		$delta_result = dbDelta( $sql_offer_logs );
@@ -619,9 +619,51 @@ class CRO_Database {
 		}
 		self::debug_log_tables( 'After dbDelta (cro_abandoned_carts): ' . wp_json_encode( $delta_result ) );
 
+		$seq_table  = $tables['cro_campaign_sequences'];
+		$sql_seq    = "CREATE TABLE $seq_table (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(255) NOT NULL,
+			status varchar(20) NOT NULL DEFAULT 'draft',
+			trigger_campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			steps longtext NOT NULL,
+			created_at datetime DEFAULT CURRENT_TIMESTAMP,
+			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			KEY status (status),
+			KEY trigger_campaign_id (trigger_campaign_id)
+		) $charset_collate;";
+		self::debug_log_tables( 'Before dbDelta (cro_campaign_sequences): ' . $sql_seq );
+		$delta_result = dbDelta( $sql_seq );
+		if ( $collect_delta ) {
+			$delta_output['cro_campaign_sequences'] = $delta_result;
+		}
+
+		$seq_enroll = $tables['cro_sequence_enrollments'];
+		$sql_enroll = "CREATE TABLE $seq_enroll (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			sequence_id bigint(20) unsigned NOT NULL,
+			visitor_key varchar(64) NOT NULL,
+			step_index int(11) NOT NULL DEFAULT 0,
+			next_run_at datetime NOT NULL,
+			pending_campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+			status varchar(20) NOT NULL DEFAULT 'active',
+			created_at datetime DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY  (id),
+			UNIQUE KEY sequence_visitor (sequence_id, visitor_key),
+			KEY visitor_next (visitor_key, next_run_at),
+			KEY pending_campaign_id (pending_campaign_id)
+		) $charset_collate;";
+		self::debug_log_tables( 'Before dbDelta (cro_sequence_enrollments): ' . $sql_enroll );
+		$delta_result = dbDelta( $sql_enroll );
+		if ( $collect_delta ) {
+			$delta_output['cro_sequence_enrollments'] = $delta_result;
+		}
+
 		if ( $wpdb->last_error !== '' ) {
 			self::debug_log_tables( 'last_error: ' . $wpdb->last_error );
 		}
+
+		self::flush_db_cache();
 
 		return empty( $wpdb->last_error );
 	}
@@ -637,6 +679,7 @@ class CRO_Database {
 			'ab_tests', 'ab_variations', 'ab_assignments', 'daily_stats',
 			'offers', 'offer_logs',
 			'abandoned_carts',
+			'campaign_sequences', 'sequence_enrollments',
 		);
 	}
 
@@ -670,9 +713,8 @@ class CRO_Database {
 		$ok = self::create_tables();
 		set_transient( $transient_key, (string) time(), 12 * HOUR_IN_SECONDS );
 
-		if ( ! $ok && defined( 'WP_DEBUG' ) && WP_DEBUG && $wpdb->last_error ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-			error_log( '[CRO self-heal] create_tables failed: ' . $wpdb->last_error );
+		if ( ! $ok && defined( 'WP_DEBUG' ) && WP_DEBUG && $wpdb->last_error && class_exists( 'CRO_Error_Handler' ) ) {
+			CRO_Error_Handler::log( 'ERROR', '[CRO self-heal] create_tables failed: ' . $wpdb->last_error );
 		}
 		return $ok;
 	}
@@ -682,8 +724,8 @@ class CRO_Database {
 	 */
 	public static function begin_transaction() {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control, no alternative API.
-		$wpdb->query( 'START TRANSACTION' );
+		$wpdb->query( 'START TRANSACTION' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+		wp_cache_delete( 'meyvora_cro_txn_' . md5( 'begin' ), self::CACHE_GROUP );
 	}
 
 	/**
@@ -691,8 +733,12 @@ class CRO_Database {
 	 */
 	public static function commit() {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control, no alternative API.
-		$wpdb->query( 'COMMIT' );
+		$wpdb->query( 'COMMIT' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		} else {
+			wp_cache_delete( 'meyvora_cro_txn_' . md5( 'commit' ), self::CACHE_GROUP );
+		}
 	}
 
 	/**
@@ -700,7 +746,10 @@ class CRO_Database {
 	 */
 	public static function rollback() {
 		global $wpdb;
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transaction control, no alternative API.
-		$wpdb->query( 'ROLLBACK' );
+		$wpdb->query( 'ROLLBACK' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+		wp_cache_delete( 'meyvora_cro_txn_' . md5( 'rollback' ), self::CACHE_GROUP );
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( self::CACHE_GROUP );
+		}
 	}
 }

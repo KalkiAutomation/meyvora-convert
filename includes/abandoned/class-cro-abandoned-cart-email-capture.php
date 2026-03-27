@@ -112,7 +112,7 @@ class CRO_Abandoned_Cart_Email_Capture {
 		}
 		wp_enqueue_script(
 			'cro-abandoned-cart-capture',
-			CRO_PLUGIN_URL . 'public/js/cro-abandoned-cart-capture.js',
+			CRO_PLUGIN_URL . 'public/js/cro-abandoned-cart-capture' . cro_asset_min_suffix() . '.js',
 			array( 'jquery' ),
 			defined( 'CRO_VERSION' ) ? CRO_VERSION : '1.0.0',
 			true

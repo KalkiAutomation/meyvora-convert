@@ -64,14 +64,14 @@ class CRO_Blocks_Integration_WC implements \Automattic\WooCommerce\Blocks\Integr
 	private function register_styles() {
 		wp_register_style(
 			self::STYLE_BOOSTERS_HANDLE,
-			CRO_PLUGIN_URL . 'public/css/cro-boosters.css',
+			CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);
 
 		wp_register_style(
 			self::STYLE_CHECKOUT_HANDLE,
-			CRO_PLUGIN_URL . 'public/css/cro-checkout.css',
+			CRO_PLUGIN_URL . 'public/css/cro-checkout' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);

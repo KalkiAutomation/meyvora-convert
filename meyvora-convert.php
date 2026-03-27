@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Meyvora Convert – Conversion Rate Optimizer for WooCommerce
- * Plugin URI:
+ * Plugin URI: https://meyvora.com/convert
  * Description: Complete conversion rate optimization for WooCommerce — exit intent popups, abandoned cart recovery, sticky cart, shipping bar, trust badges, dynamic offers, A/B testing, and analytics. Built for Meyvora stores and beyond.
  * Version: 1.0.0
  * Author: Kalki Automations
@@ -13,7 +13,7 @@
  * Requires PHP: 7.4
  * Requires Plugins: woocommerce
  * WC requires at least: 5.0
- * WC tested up to: 9.4
+ * WC tested up to: 10.6
  */
 
 // If this file is called directly, abort.
@@ -35,10 +35,22 @@ define( 'CRO_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'CRO_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
 define( 'MEYVORA_CONVERT_VERSION', CRO_VERSION );
 
+if ( ! function_exists( 'cro_asset_min_suffix' ) ) {
+	/**
+	 * Empty string when SCRIPT_DEBUG is true; '.min' otherwise (for .min.js / .min.css).
+	 *
+	 * @return string
+	 */
+	function cro_asset_min_suffix() {
+		return ( defined( 'SCRIPT_DEBUG' ) && SCRIPT_DEBUG ) ? '' : '.min';
+	}
+}
+
 // Error handler (load early so plugin errors are caught)
 require_once CRO_PLUGIN_DIR . 'includes/class-cro-error-handler.php';
 
-// Models
+// Models (security first: context uses CRO_Security::get_query_var for UTM GET params).
+require_once CRO_PLUGIN_DIR . 'includes/class-cro-security.php';
 require_once CRO_PLUGIN_DIR . 'includes/models/class-cro-visitor-state.php';
 require_once CRO_PLUGIN_DIR . 'includes/models/class-cro-context.php';
 require_once CRO_PLUGIN_DIR . 'includes/models/class-cro-campaign-model.php';
@@ -54,15 +66,24 @@ require_once CRO_PLUGIN_DIR . 'includes/engine/class-cro-decision-engine.php';
 require_once CRO_PLUGIN_DIR . 'includes/ab-testing/class-cro-ab-test.php';
 require_once CRO_PLUGIN_DIR . 'includes/ab-testing/class-cro-ab-statistics.php';
 
-// AI Infrastructure (loaded on all requests so AJAX handlers register correctly)
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-client.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-rate-limiter.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-copy-generator.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-email-writer.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-insights.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-offer-suggester.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-ab-hypothesis.php';
-require_once CRO_PLUGIN_DIR . 'includes/ai/class-cro-ai-chat.php';
+// AI classes: lazy-loaded on first use (reduces front-end and unrelated admin overhead).
+spl_autoload_register(
+	function ( $class ) {
+		$map = array(
+			'CRO_AI_Client'           => 'ai/class-cro-ai-client.php',
+			'CRO_AI_Rate_Limiter'     => 'ai/class-cro-ai-rate-limiter.php',
+			'CRO_AI_Copy_Generator'   => 'ai/class-cro-ai-copy-generator.php',
+			'CRO_AI_Email_Writer'     => 'ai/class-cro-ai-email-writer.php',
+			'CRO_AI_Insights'         => 'ai/class-cro-ai-insights.php',
+			'CRO_AI_Offer_Suggester'  => 'ai/class-cro-ai-offer-suggester.php',
+			'CRO_AI_AB_Hypothesis'    => 'ai/class-cro-ai-ab-hypothesis.php',
+			'CRO_AI_Chat'             => 'ai/class-cro-ai-chat.php',
+		);
+		if ( isset( $map[ $class ] ) ) {
+			require_once CRO_PLUGIN_DIR . 'includes/' . $map[ $class ];
+		}
+	}
+);
 
 add_action( 'plugins_loaded', function() {
 	CRO_Visitor_State::get_instance();

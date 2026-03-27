@@ -22,7 +22,7 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 				<input type="radio" name="trigger-type" value="exit_intent"
 					   <?php checked( $trigger['type'] ?? 'exit_intent', 'exit_intent' ); ?> />
 				<div class="cro-trigger-card">
-					<span class="cro-trigger-icon"><?php echo CRO_Icons::svg_kses( 'door-open', array( 'class' => 'cro-ico' ) ); ?></span>
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'door-open', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-trigger-name"><?php esc_html_e( 'Exit Intent', 'meyvora-convert' ); ?></span>
 					<span class="cro-trigger-desc"><?php esc_html_e( 'When visitor is about to leave', 'meyvora-convert' ); ?></span>
@@ -30,10 +30,21 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 			</label>
 
 			<label class="cro-trigger-option">
+				<input type="radio" name="trigger-type" value="mobile_exit"
+					   <?php checked( $trigger['type'] ?? 'exit_intent', 'mobile_exit' ); ?> />
+				<div class="cro-trigger-card">
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'pointer', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
+
+					<span class="cro-trigger-name"><?php esc_html_e( 'Mobile exit intent', 'meyvora-convert' ); ?></span>
+					<span class="cro-trigger-desc"><?php esc_html_e( 'Phones/tablets: fast scroll up, back button, tab switch', 'meyvora-convert' ); ?></span>
+				</div>
+			</label>
+
+			<label class="cro-trigger-option">
 				<input type="radio" name="trigger-type" value="scroll"
 					   <?php checked( $trigger['type'] ?? 'exit_intent', 'scroll' ); ?> />
 				<div class="cro-trigger-card">
-					<span class="cro-trigger-icon"><?php echo CRO_Icons::svg_kses( 'scroll', array( 'class' => 'cro-ico' ) ); ?></span>
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'scroll', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-trigger-name"><?php esc_html_e( 'Scroll Depth', 'meyvora-convert' ); ?></span>
 					<span class="cro-trigger-desc"><?php esc_html_e( 'When visitor scrolls to a point', 'meyvora-convert' ); ?></span>
@@ -44,7 +55,7 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 				<input type="radio" name="trigger-type" value="time"
 					   <?php checked( $trigger['type'] ?? 'exit_intent', 'time' ); ?> />
 				<div class="cro-trigger-card">
-					<span class="cro-trigger-icon"><?php echo CRO_Icons::svg_kses( 'clock', array( 'class' => 'cro-ico' ) ); ?></span>
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'clock', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-trigger-name"><?php esc_html_e( 'Time Delay', 'meyvora-convert' ); ?></span>
 					<span class="cro-trigger-desc"><?php esc_html_e( 'After X seconds on page', 'meyvora-convert' ); ?></span>
@@ -55,7 +66,7 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 				<input type="radio" name="trigger-type" value="inactivity"
 					   <?php checked( $trigger['type'] ?? 'exit_intent', 'inactivity' ); ?> />
 				<div class="cro-trigger-card">
-					<span class="cro-trigger-icon"><?php echo CRO_Icons::svg_kses( 'moon', array( 'class' => 'cro-ico' ) ); ?></span>
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'moon', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-trigger-name"><?php esc_html_e( 'Inactivity', 'meyvora-convert' ); ?></span>
 					<span class="cro-trigger-desc"><?php esc_html_e( 'When visitor stops interacting', 'meyvora-convert' ); ?></span>
@@ -66,7 +77,7 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 				<input type="radio" name="trigger-type" value="click"
 					   <?php checked( $trigger['type'] ?? 'exit_intent', 'click' ); ?> />
 				<div class="cro-trigger-card">
-					<span class="cro-trigger-icon"><?php echo CRO_Icons::svg_kses( 'pointer', array( 'class' => 'cro-ico' ) ); ?></span>
+					<span class="cro-trigger-icon"><?php echo wp_kses( CRO_Icons::svg( 'pointer', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 					<span class="cro-trigger-name"><?php esc_html_e( 'Click', 'meyvora-convert' ); ?></span>
 					<span class="cro-trigger-desc"><?php esc_html_e( 'When element is clicked', 'meyvora-convert' ); ?></span>
@@ -77,6 +88,10 @@ $intent_weights = isset( $trigger['intent_weights'] ) && is_array( $trigger['int
 	</div>
 
 	<!-- Exit Intent Options -->
+	<div class="cro-trigger-options cro-is-hidden" data-trigger="mobile_exit">
+		<p class="cro-hint"><?php esc_html_e( 'Fires only on mobile/tablet. Desktop visitors will not match this trigger.', 'meyvora-convert' ); ?></p>
+	</div>
+
 	<div class="cro-trigger-options" data-trigger="exit_intent">
 		<div class="cro-control-group">
 			<label><?php esc_html_e( 'Sensitivity', 'meyvora-convert' ); ?></label>

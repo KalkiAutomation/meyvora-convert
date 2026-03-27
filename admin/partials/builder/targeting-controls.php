@@ -11,8 +11,11 @@ $pages    = isset( $targeting['pages'] ) && is_array( $targeting['pages'] ) ? $t
 $behavior = isset( $targeting['behavior'] ) && is_array( $targeting['behavior'] ) ? $targeting['behavior'] : array();
 $visitor  = isset( $targeting['visitor'] ) && is_array( $targeting['visitor'] ) ? $targeting['visitor'] : array();
 $device   = isset( $targeting['device'] ) && is_array( $targeting['device'] ) ? $targeting['device'] : array();
+$geo_countries = isset( $targeting['geo_countries'] ) && is_array( $targeting['geo_countries'] ) ? $targeting['geo_countries'] : array();
+$wc_countries = function_exists( 'WC' ) && WC()->countries ? WC()->countries->get_countries() : array();
+$geo_countries = isset( $targeting['geo_countries'] ) && is_array( $targeting['geo_countries'] ) ? $targeting['geo_countries'] : array();
 $include_list = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
-$exclude_list = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
+$exclude_list = CRO_Campaign_Model::get_pages_excluded_slugs( is_array( $pages ) ? $pages : array() );
 $page_mode    = isset( $targeting['page_mode'] ) ? $targeting['page_mode'] : 'all';
 $audience_mode = $targeting['audience_mode'] ?? 'all';
 $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '';
@@ -44,7 +47,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Page Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'file', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'file', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Page Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -92,7 +95,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Visitor Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'user', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'user', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Visitor Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -134,7 +137,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Device Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'smartphone', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Device Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -142,29 +145,46 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 		<div class="cro-device-options">
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="desktop" <?php checked( $device['desktop'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'monitor', array( 'class' => 'cro-ico' ) ); ?></span>
+				<span class="cro-device-icon"><?php echo wp_kses( CRO_Icons::svg( 'monitor', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 				<span><?php esc_html_e( 'Desktop', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="tablet" <?php checked( $device['tablet'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'tablet', array( 'class' => 'cro-ico' ) ); ?></span>
+				<span class="cro-device-icon"><?php echo wp_kses( CRO_Icons::svg( 'tablet', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 				<span><?php esc_html_e( 'Tablet', 'meyvora-convert' ); ?></span>
 			</label>
 			<label class="cro-device-option">
 				<input type="checkbox" name="devices[]" value="mobile" <?php checked( $device['mobile'] ?? true ); ?> />
-				<span class="cro-device-icon"><?php echo CRO_Icons::svg_kses( 'smartphone', array( 'class' => 'cro-ico' ) ); ?></span>
+				<span class="cro-device-icon"><?php echo wp_kses( CRO_Icons::svg( 'smartphone', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 				<span><?php esc_html_e( 'Mobile', 'meyvora-convert' ); ?></span>
 			</label>
 		</div>
 	</div>
 
+	<!-- Geo targeting -->
+	<div class="cro-rule-section">
+		<h3>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
+			<?php esc_html_e( 'Geo targeting', 'meyvora-convert' ); ?>
+		</h3>
+		<p class="cro-hint"><?php esc_html_e( 'When set, the campaign only shows if the visitor’s country (WooCommerce geolocation or Cloudflare header) matches one of the selected countries.', 'meyvora-convert' ); ?></p>
+		<div class="cro-control-group">
+			<label for="targeting-geo-countries"><?php esc_html_e( 'Countries (leave empty for all)', 'meyvora-convert' ); ?></label>
+			<select id="targeting-geo-countries" name="targeting-geo-countries[]" multiple class="cro-selectwoo" data-placeholder="<?php esc_attr_e( 'All countries', 'meyvora-convert' ); ?>">
+				<?php foreach ( $wc_countries as $code => $label ) : ?>
+					<option value="<?php echo esc_attr( $code ); ?>" <?php echo in_array( (string) $code, array_map( 'strval', $geo_countries ), true ) ? 'selected="selected"' : ''; ?>><?php echo esc_html( $label . ' (' . $code . ')' ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</div>
+	</div>
+
 	<!-- Cart Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Cart Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -271,7 +291,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Behavioral Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Behavioral Targeting', 'meyvora-convert' ); ?>
 		</h3>
@@ -310,37 +330,63 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 	<!-- Traffic Source Targeting -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'link', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'link', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Traffic Source', 'meyvora-convert' ); ?>
 		</h3>
+		<p class="cro-hint"><?php esc_html_e( 'Show this campaign only to visitors from a specific traffic source. UTM values persist across pages in the same session after the first landing URL with utm_source.', 'meyvora-convert' ); ?></p>
 
-		<div class="cro-control-group">
-			<label><?php esc_html_e( 'Referrer contains:', 'meyvora-convert' ); ?></label>
-			<input type="text" id="targeting-referrer" placeholder="<?php esc_attr_e( 'e.g., google.com, facebook.com', 'meyvora-convert' ); ?>" value="<?php echo esc_attr( (string) ( $targeting['referrer'] ?? '' ) ); ?>" />
-			<p class="cro-hint"><?php esc_html_e( 'Show only to visitors coming from specific sites', 'meyvora-convert' ); ?></p>
-		</div>
-
-		<div class="cro-control-group">
-			<label><?php esc_html_e( 'UTM Source:', 'meyvora-convert' ); ?></label>
-			<input type="text" id="targeting-utm-source" placeholder="<?php esc_attr_e( 'e.g., newsletter, facebook', 'meyvora-convert' ); ?>" value="<?php echo esc_attr( (string) ( $targeting['utm_source'] ?? '' ) ); ?>" />
-		</div>
-
-		<div class="cro-control-group">
-			<label><?php esc_html_e( 'UTM Medium:', 'meyvora-convert' ); ?></label>
-			<input type="text" id="targeting-utm-medium" placeholder="<?php esc_attr_e( 'e.g., email, cpc, social', 'meyvora-convert' ); ?>" value="<?php echo esc_attr( (string) ( $targeting['utm_medium'] ?? '' ) ); ?>" />
-		</div>
-
-		<div class="cro-control-group">
-			<label><?php esc_html_e( 'UTM Campaign:', 'meyvora-convert' ); ?></label>
-			<input type="text" id="targeting-utm-campaign" placeholder="<?php esc_attr_e( 'e.g., summer_sale, black_friday', 'meyvora-convert' ); ?>" value="<?php echo esc_attr( (string) ( $targeting['utm_campaign'] ?? '' ) ); ?>" />
-		</div>
+		<table class="form-table cro-targeting-table" role="presentation">
+			<?php
+			$traffic_fields = array(
+				'referrer'     => array(
+					'label'       => __( 'Referrer domain (e.g. google.com)', 'meyvora-convert' ),
+					'placeholder' => 'google.com',
+				),
+				'utm_source'   => array(
+					'label'       => __( 'UTM source (e.g. google, facebook)', 'meyvora-convert' ),
+					'placeholder' => 'newsletter',
+				),
+				'utm_medium'   => array(
+					'label'       => __( 'UTM medium (e.g. cpc, email)', 'meyvora-convert' ),
+					'placeholder' => 'cpc',
+				),
+				'utm_campaign' => array(
+					'label'       => __( 'UTM campaign (e.g. summer_sale)', 'meyvora-convert' ),
+					'placeholder' => 'summer_sale',
+				),
+			);
+			foreach ( $traffic_fields as $field => $meta ) :
+				$val = isset( $targeting[ $field ] ) ? (string) $targeting[ $field ] : '';
+				$op  = isset( $targeting[ $field . '_op' ] ) ? (string) $targeting[ $field . '_op' ] : '';
+				$id  = 'targeting-' . str_replace( '_', '-', $field );
+				?>
+			<tr>
+				<th scope="row"><label for="<?php echo esc_attr( $id ); ?>"><?php echo esc_html( $meta['label'] ); ?></label></th>
+				<td>
+					<select id="<?php echo esc_attr( $id ); ?>-op" class="cro-targeting-op cro-selectwoo" data-placeholder="<?php esc_attr_e( 'Any', 'meyvora-convert' ); ?>">
+						<option value="" <?php selected( $op, '' ); ?>><?php esc_html_e( '— Any —', 'meyvora-convert' ); ?></option>
+						<option value="equals" <?php selected( $op, 'equals' ); ?>><?php esc_html_e( 'Equals', 'meyvora-convert' ); ?></option>
+						<option value="contains" <?php selected( $op, 'contains' ); ?>><?php esc_html_e( 'Contains', 'meyvora-convert' ); ?></option>
+						<option value="not_equals" <?php selected( $op, 'not_equals' ); ?>><?php esc_html_e( 'Not equals', 'meyvora-convert' ); ?></option>
+						<option value="not_contains" <?php selected( $op, 'not_contains' ); ?>><?php esc_html_e( 'Does not contain', 'meyvora-convert' ); ?></option>
+						<option value="starts_with" <?php selected( $op, 'starts_with' ); ?>><?php esc_html_e( 'Starts with', 'meyvora-convert' ); ?></option>
+						<option value="is_empty" <?php selected( $op, 'is_empty' ); ?>><?php esc_html_e( 'Is empty (organic/direct)', 'meyvora-convert' ); ?></option>
+						<option value="is_not_empty" <?php selected( $op, 'is_not_empty' ); ?>><?php esc_html_e( 'Is not empty', 'meyvora-convert' ); ?></option>
+					</select>
+					<input type="text" id="<?php echo esc_attr( $id ); ?>" class="regular-text"
+						value="<?php echo esc_attr( $val ); ?>"
+						placeholder="<?php echo esc_attr( $meta['placeholder'] ); ?>" />
+				</td>
+			</tr>
+				<?php endforeach; ?>
+		</table>
 	</div>
 
 	<!-- Advanced: Custom Rules Builder -->
 	<div class="cro-rule-section cro-advanced">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'settings', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'settings', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Advanced Rules', 'meyvora-convert' ); ?>
 		</h3>
@@ -354,7 +400,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 			</div>
 
 			<button type="button" class="button" id="add-rule-group">
-				<?php echo CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Add Rule Group (OR)', 'meyvora-convert' ); ?>
 			</button>
@@ -365,14 +411,14 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 			<div class="cro-rule-group">
 				<div class="cro-rule-group-header">
 					<span class="cro-rule-group-logic"><?php esc_html_e( 'OR', 'meyvora-convert' ); ?></span>
-					<button type="button" class="cro-remove-group" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+					<button type="button" class="cro-remove-group" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 				</div>
 				<div class="cro-rules-list">
 					<!-- Rules will be added here -->
 				</div>
 				<button type="button" class="button button-small cro-add-rule">
-					<?php echo CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ); ?>
+					<?php echo wp_kses( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 					<?php esc_html_e( 'Add Condition (AND)', 'meyvora-convert' ); ?>
 				</button>
@@ -414,7 +460,7 @@ $currency_sym  = function_exists( 'get_woocommerce_currency_symbol' ) ? get_wooc
 					<option value="not_contains"><?php esc_html_e( 'not contains', 'meyvora-convert' ); ?></option>
 				</select>
 				<input type="text" class="cro-rule-value" placeholder="<?php esc_attr_e( 'Value', 'meyvora-convert' ); ?>" />
-				<button type="button" class="cro-remove-rule" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+				<button type="button" class="cro-remove-rule" aria-label="<?php esc_attr_e( 'Remove', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			</div>
 		</template>

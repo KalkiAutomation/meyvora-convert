@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -17,6 +16,15 @@ if ( ! defined( 'WPINC' ) ) {
  * Manages all plugin settings via the cro_settings table.
  */
 class CRO_Settings {
+
+	/**
+	 * @return void
+	 */
+	private static function flush_meyvora_cro_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
 
 	/**
 	 * Singleton instance.
@@ -81,38 +89,56 @@ class CRO_Settings {
 	private function load_settings() {
 		global $wpdb;
 
-		$results = $wpdb->get_results(
-			"SELECT setting_group, setting_key, setting_value 
-			FROM {$this->table_name}",
-			OBJECT
-		);
-
-		// Self-heal: if query failed (e.g. missing table), create tables and retry once per request.
-		if ( null === $results && $wpdb->last_error && class_exists( 'CRO_Database' ) && ! self::$settings_repair_attempted ) {
-			self::$settings_repair_attempted = true;
-			CRO_Database::create_tables();
-			// Defer defaults — CRO_Activator::set_default_settings() uses CRO_Settings::get_instance()
-			// and cannot run synchronously while this constructor is still running.
-			if ( class_exists( 'CRO_Activator' ) && ! self::$repair_shutdown_scheduled ) {
-				self::$repair_shutdown_scheduled = true;
-				add_action(
-					'shutdown',
-					static function () {
-						if ( class_exists( 'CRO_Activator' ) ) {
-							CRO_Activator::set_default_settings();
-						}
-						if ( class_exists( 'CRO_Settings' ) ) {
-							CRO_Settings::get_instance()->reload();
-						}
-					},
-					1
-				);
-			}
-			$results = $wpdb->get_results(
-				"SELECT setting_group, setting_key, setting_value 
-				FROM {$this->table_name}",
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'settings_all_rows', $this->table_name ) ) );
+		$results   = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $results ) {
+			$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT setting_group, setting_key, setting_value FROM %i',
+					$this->table_name
+				),
 				OBJECT
 			);
+
+			if ( is_array( $results ) ) {
+				wp_cache_set( $cache_key, $results, 'meyvora_cro', 300 );
+			}
+
+			// Self-heal: if query failed (e.g. missing table), create tables and retry once per request.
+			if ( null === $results && $wpdb->last_error && class_exists( 'CRO_Database' ) && ! self::$settings_repair_attempted ) {
+				self::$settings_repair_attempted = true;
+				CRO_Database::create_tables();
+				// Defer defaults — CRO_Activator::set_default_settings() uses CRO_Settings::get_instance()
+				// and cannot run synchronously while this constructor is still running.
+				if ( class_exists( 'CRO_Activator' ) && ! self::$repair_shutdown_scheduled ) {
+					self::$repair_shutdown_scheduled = true;
+					add_action(
+						'shutdown',
+						static function () {
+							if ( class_exists( 'CRO_Activator' ) ) {
+								CRO_Activator::set_default_settings();
+							}
+							if ( class_exists( 'CRO_Settings' ) ) {
+								CRO_Settings::get_instance()->reload();
+							}
+						},
+						1
+					);
+				}
+				$results = wp_cache_get( $cache_key, 'meyvora_cro' );
+				if ( false === $results ) {
+					$results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+						$wpdb->prepare(
+							'SELECT setting_group, setting_key, setting_value FROM %i',
+							$this->table_name
+						),
+						OBJECT
+					);
+					if ( is_array( $results ) ) {
+						wp_cache_set( $cache_key, $results, 'meyvora_cro', 300 );
+					}
+				}
+			}
 		}
 
 		if ( null === $results || ! is_array( $results ) ) {
@@ -170,8 +196,7 @@ class CRO_Settings {
 
 		$serialized = maybe_serialize( $value );
 
-		$result = $wpdb->replace(
-			$this->table_name,
+		$result = $wpdb->replace( $this->table_name, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'setting_group'  => $group,
 				'setting_key'    => $key,
@@ -182,6 +207,7 @@ class CRO_Settings {
 		);
 
 		if ( false !== $result ) {
+			self::flush_meyvora_cro_read_cache();
 			$this->settings[ $group ][ $key ] = $value;
 			return true;
 		}
@@ -221,8 +247,7 @@ class CRO_Settings {
 	public function delete( $group, $key ) {
 		global $wpdb;
 
-		$result = $wpdb->delete(
-			$this->table_name,
+		$result = $wpdb->delete( $this->table_name, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'setting_group' => $group,
 				'setting_key'   => $key,
@@ -231,6 +256,10 @@ class CRO_Settings {
 		);
 
 		if ( false !== $result ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $this->table_name );
+			}
+			self::flush_meyvora_cro_read_cache();
 			unset( $this->settings[ $group ][ $key ] );
 			return true;
 		}
@@ -412,6 +441,15 @@ class CRO_Settings {
 			'autofocus_first_field'    => true,
 			'inline_field_validation'  => true,
 			'inline_validation'        => true,
+			'prefill_from_last_order'  => true,
+			'show_express_checkout_prompt' => true,
+			'express_prompt_text'      => __( 'Save time: use Apple Pay, Google Pay, or PayPal at the next step if your store offers them.', 'meyvora-convert' ),
+			'show_progress_steps'      => false,
+			'post_purchase_enabled'    => false,
+			'post_purchase_product_ids'=> '',
+			'post_purchase_discount_percent' => 0,
+			'post_purchase_headline'   => __( 'Complete the look — add this to your next order', 'meyvora-convert' ),
+			'post_purchase_subhead'    => '',
 		);
 	}
 
@@ -508,6 +546,7 @@ class CRO_Settings {
 			'per_product_custom_discount'   => array(),
 			'email_subject_template'        => __( 'You left something in your cart – {store_name}', 'meyvora-convert' ),
 			'email_body_template'           => '',
+			'email_brand_color'             => '#2563eb',
 			'high_value_threshold'          => 100,
 		);
 	}

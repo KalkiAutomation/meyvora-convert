@@ -151,7 +151,7 @@ class CRO_Cart_Optimizer {
 
 		wp_enqueue_script(
 			'cro-cart-exit-nudge',
-			defined( 'CRO_PLUGIN_URL' ) ? CRO_PLUGIN_URL . 'public/js/cro-cart-exit-nudge.js' : '',
+			defined( 'CRO_PLUGIN_URL' ) ? CRO_PLUGIN_URL . 'public/js/cro-cart-exit-nudge' . cro_asset_min_suffix() . '.js' : '',
 			array(),
 			defined( 'CRO_VERSION' ) ? CRO_VERSION : '1.0',
 			true

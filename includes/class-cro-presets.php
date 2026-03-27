@@ -202,7 +202,7 @@ class CRO_Presets {
 						'email_placeholder'  => __( 'Your email', 'meyvora-convert' ),
 						'show_coupon'        => true,
 						'coupon_code'        => 'SAVE10',
-						'coupon_display_text'=> __( 'Use code: SAVE10', 'meyvora-convert' ),
+						'coupon_label'       => __( 'Use code: SAVE10', 'meyvora-convert' ),
 						'cta_text'           => __( 'Send My Code', 'meyvora-convert' ),
 						'show_dismiss_link'  => true,
 						'dismiss_text'       => __( 'No thanks', 'meyvora-convert' ),
@@ -217,10 +217,9 @@ class CRO_Presets {
 					),
 					'targeting_rules' => array(
 						'pages' => array(
-							'type'    => 'specific',
-							'include' => array( 'product', 'cart' ),
-							// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-							'exclude' => array( 'checkout' ),
+							'type'           => 'specific',
+							'include'        => array( 'product', 'cart' ),
+							'excluded_pages' => array( 'checkout' ),
 						),
 					),
 					'display_rules' => array(
@@ -262,10 +261,9 @@ class CRO_Presets {
 					),
 					'targeting_rules' => array(
 						'pages' => array(
-							'type'    => 'specific',
-							'include' => array( 'cart' ),
-							// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-							'exclude' => array(),
+							'type'           => 'specific',
+							'include'        => array( 'cart' ),
+							'excluded_pages' => array(),
 						),
 					),
 					'display_rules' => array(
@@ -327,7 +325,7 @@ class CRO_Presets {
 						'show_email_field'    => true,
 						'show_coupon'         => true,
 						'coupon_code'        => 'WELCOME10',
-						'coupon_display_text'=> 'Use code: WELCOME10',
+						'coupon_label'       => 'Use code: WELCOME10',
 						'cta_text'            => __( 'Claim My Discount', 'meyvora-convert' ),
 						'show_dismiss_link'   => true,
 					),
@@ -339,16 +337,372 @@ class CRO_Presets {
 					),
 					'targeting_rules' => array(
 						'pages' => array(
-							'type'    => 'specific',
-							'include' => array( 'product', 'cart' ),
-							// phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_exclude
-							'exclude' => array( 'checkout' ),
+							'type'           => 'specific',
+							'include'        => array( 'product', 'cart' ),
+							'excluded_pages' => array( 'checkout' ),
 						),
 					),
 					'display_rules' => array( 'frequency' => 'once_per_session' ),
 				),
 				'apply_message' => __( 'Conversion stack applied. One exit-intent campaign was created – review and activate in Campaigns.', 'meyvora-convert' ),
 			),
+		);
+	}
+
+	/**
+	 * Industry / vertical packs with inline campaigns and booster keys.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function get_industry_packs() {
+		return array(
+			array(
+				'id'          => 'fashion',
+				'name'        => __( 'Fashion & Apparel', 'meyvora-convert' ),
+				'description' => __( 'Welcome discount, size-worry exit, and AOV booster for clothing stores.', 'meyvora-convert' ),
+				'boosters'    => array( 'shipping_bar', 'trust_badges', 'sticky_cart' ),
+				'campaigns'   => array(
+					array(
+						'name'            => __( 'New visitor — 10% off first order', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'centered',
+						'trigger_rules'   => array( 'type' => 'time', 'delay' => 8 ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'user.order_count', 'operator' => 'equals', 'value' => '0' ),
+							),
+						),
+						'content'         => array(
+							'headline'         => __( 'Welcome! Here\'s 10% off your first order', 'meyvora-convert' ),
+							'subheadline'      => __( 'Join thousands of happy shoppers', 'meyvora-convert' ),
+							'cta_text'         => __( 'Get my discount', 'meyvora-convert' ),
+							'show_email_field' => true,
+						),
+					),
+					array(
+						'name'            => __( 'Cart exit — free returns reassurance', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'slide-bottom',
+						'trigger_rules'   => array( 'type' => 'exit_intent' ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'page_type', 'operator' => 'equals', 'value' => 'cart' ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'Not sure about the size?', 'meyvora-convert' ),
+							'subheadline' => __( 'Free returns on all orders — no risk!', 'meyvora-convert' ),
+							'cta_text'    => __( 'Complete my order', 'meyvora-convert' ),
+						),
+					),
+				),
+			),
+			array(
+				'id'          => 'electronics',
+				'name'        => __( 'Electronics & Tech', 'meyvora-convert' ),
+				'description' => __( 'Warranty trust nudge, cart abandonment offer, and checkout reassurance.', 'meyvora-convert' ),
+				'boosters'    => array( 'shipping_bar', 'trust_badges', 'sticky_cart' ),
+				'campaigns'   => array(
+					array(
+						'name'            => __( 'Product exit — warranty reminder', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'corner',
+						'trigger_rules'   => array( 'type' => 'exit_intent' ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'page_type', 'operator' => 'equals', 'value' => 'product' ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'This item includes a 2-year warranty', 'meyvora-convert' ),
+							'subheadline' => __( 'Free support included. Buy with confidence.', 'meyvora-convert' ),
+							'cta_text'    => __( 'Add to cart', 'meyvora-convert' ),
+						),
+					),
+					array(
+						'name'            => __( 'Returning visitor — loyalty discount', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'slide-bottom',
+						'trigger_rules'   => array( 'type' => 'time', 'delay' => 15 ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'user.order_count', 'operator' => '>', 'value' => 0 ),
+							),
+						),
+						'content'         => array(
+							'headline'         => __( 'Welcome back! Here\'s 5% off your next order', 'meyvora-convert' ),
+							'subheadline'      => __( 'Thanks for being a loyal customer.', 'meyvora-convert' ),
+							'cta_text'         => __( 'Claim offer', 'meyvora-convert' ),
+							'show_email_field' => false,
+						),
+					),
+				),
+			),
+			array(
+				'id'          => 'beauty',
+				'name'        => __( 'Beauty & Skincare', 'meyvora-convert' ),
+				'description' => __( 'Ingredient trust popup, email capture for skincare tips, and free sample nudge.', 'meyvora-convert' ),
+				'boosters'    => array( 'shipping_bar', 'trust_badges' ),
+				'campaigns'   => array(
+					array(
+						'name'            => __( 'Email capture — skincare tips', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'centered-image-left',
+						'trigger_rules'   => array( 'type' => 'scroll', 'scroll_percent' => 40 ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'page_type', 'operator' => 'equals', 'value' => 'product' ),
+							),
+						),
+						'content'         => array(
+							'headline'         => __( 'Get your personalised skincare guide', 'meyvora-convert' ),
+							'subheadline'      => __( 'Free tips from our beauty experts, straight to your inbox.', 'meyvora-convert' ),
+							'cta_text'         => __( 'Send me the guide', 'meyvora-convert' ),
+							'show_email_field' => true,
+						),
+					),
+					array(
+						'name'            => __( 'Cart exit — free sample offer', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'centered',
+						'trigger_rules'   => array( 'type' => 'exit_intent' ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'page_type', 'operator' => 'equals', 'value' => 'cart' ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'Wait — get a free sample with your order', 'meyvora-convert' ),
+							'subheadline' => __( 'Add code SAMPLE at checkout.', 'meyvora-convert' ),
+							'cta_text'    => __( 'Claim my sample', 'meyvora-convert' ),
+						),
+					),
+				),
+			),
+			array(
+				'id'          => 'food',
+				'name'        => __( 'Food & Drink', 'meyvora-convert' ),
+				'description' => __( 'Subscription upsell, bundle nudge, and first-order welcome for food stores.', 'meyvora-convert' ),
+				'boosters'    => array( 'shipping_bar', 'sticky_cart' ),
+				'campaigns'   => array(
+					array(
+						'name'            => __( 'First order welcome — 15% off', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'bottom-bar',
+						'trigger_rules'   => array( 'type' => 'page_load' ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'user.order_count', 'operator' => 'equals', 'value' => '0' ),
+							),
+						),
+						'content'         => array(
+							'headline'         => __( '15% off your first order', 'meyvora-convert' ),
+							'subheadline'      => __( 'Enter your email for the code.', 'meyvora-convert' ),
+							'cta_text'         => __( 'Get my code', 'meyvora-convert' ),
+							'show_email_field' => true,
+						),
+					),
+					array(
+						'name'            => __( 'Bundle nudge — save more', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'slide-bottom',
+						'trigger_rules'   => array( 'type' => 'time', 'delay' => 20 ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'cart.item_count', 'operator' => 'equals', 'value' => '1' ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'Add one more item and save 10%', 'meyvora-convert' ),
+							'subheadline' => __( 'Mix and match any products in your cart.', 'meyvora-convert' ),
+							'cta_text'    => __( 'Keep shopping', 'meyvora-convert' ),
+						),
+					),
+				),
+			),
+			array(
+				'id'          => 'subscription',
+				'name'        => __( 'Subscription & Membership', 'meyvora-convert' ),
+				'description' => __( 'Upgrade nudge, renewal reminder, and member-only discount for subscription stores.', 'meyvora-convert' ),
+				'boosters'    => array( 'trust_badges', 'sticky_cart' ),
+				'campaigns'   => array(
+					array(
+						'name'            => __( 'Upgrade nudge — save 20% annually', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'centered',
+						'trigger_rules'   => array( 'type' => 'time', 'delay' => 10 ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'user.logged_in', 'operator' => 'equals', 'value' => true ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'Switch to annual and save 20%', 'meyvora-convert' ),
+							'subheadline' => __( 'Lock in your rate and never worry about monthly billing.', 'meyvora-convert' ),
+							'cta_text'    => __( 'Switch now', 'meyvora-convert' ),
+						),
+					),
+					array(
+						'name'            => __( 'Member-only exit offer', 'meyvora-convert' ),
+						'type'            => 'popup',
+						'template_type'   => 'slide-bottom',
+						'trigger_rules'   => array( 'type' => 'exit_intent' ),
+						'targeting_rules' => array(
+							'must' => array(
+								array( 'field' => 'page_type', 'operator' => 'in', 'value' => array( 'cart', 'checkout' ) ),
+								array( 'field' => 'user.logged_in', 'operator' => 'equals', 'value' => true ),
+							),
+						),
+						'content'         => array(
+							'headline'    => __( 'Members get an extra 10% off today', 'meyvora-convert' ),
+							'subheadline' => __( 'Logged-in members only. Applied automatically.', 'meyvora-convert' ),
+							'cta_text'    => __( 'Claim my discount', 'meyvora-convert' ),
+						),
+					),
+				),
+			),
+		);
+	}
+
+	/**
+	 * Apply an industry pack (boosters + inline campaigns).
+	 *
+	 * @param string $pack_id Pack id from get_industry_packs().
+	 * @return array{ success: bool, message: string, campaign_ids?: int[] }
+	 */
+	public static function apply_industry_pack( $pack_id ) {
+		$pack_id = sanitize_key( (string) $pack_id );
+		foreach ( self::get_industry_packs() as $pack ) {
+			if ( empty( $pack['id'] ) || $pack['id'] !== $pack_id ) {
+				continue;
+			}
+
+			$created_ids = array();
+			$messages    = array();
+
+			if ( ! empty( $pack['boosters'] ) && is_array( $pack['boosters'] ) && function_exists( 'cro_settings' ) ) {
+				$labels = array();
+				foreach ( $pack['boosters'] as $booster_key ) {
+					$key = sanitize_key( (string) $booster_key );
+					$opt = self::industry_booster_to_option( $key );
+					if ( $opt !== '' ) {
+						cro_settings()->set( 'general', $opt, true );
+						$labels[] = $key;
+					}
+				}
+				if ( ! empty( $labels ) ) {
+					$messages[] = sprintf(
+						/* translators: %s: comma-separated booster keys */
+						__( 'Enabled boosters: %s', 'meyvora-convert' ),
+						implode( ', ', $labels )
+					);
+				}
+			}
+
+			if ( ! empty( $pack['campaigns'] ) && is_array( $pack['campaigns'] ) && class_exists( 'CRO_Campaign' ) ) {
+				foreach ( $pack['campaigns'] as $campaign_data ) {
+					$row = self::industry_pack_campaign_create_data( $campaign_data );
+					if ( null === $row ) {
+						continue;
+					}
+					$new_id = CRO_Campaign::create( $row );
+					if ( $new_id ) {
+						$created_ids[] = (int) $new_id;
+					}
+				}
+				$messages[] = sprintf(
+					/* translators: %d: number of campaigns */
+					_n( 'Created %d campaign', 'Created %d campaigns', count( $created_ids ), 'meyvora-convert' ),
+					count( $created_ids )
+				);
+			}
+
+			return array(
+				'success'      => true,
+				'message'      => implode( '. ', array_filter( $messages ) ),
+				'campaign_ids' => $created_ids,
+			);
+		}
+
+		return array(
+			'success' => false,
+			'message' => __( 'Pack not found.', 'meyvora-convert' ),
+		);
+	}
+
+	/**
+	 * Map pack booster slug to general setting key.
+	 *
+	 * @param string $key Booster key.
+	 * @return string Setting key or empty.
+	 */
+	private static function industry_booster_to_option( $key ) {
+		$map = array(
+			'shipping_bar' => 'shipping_bar_enabled',
+			'trust_badges' => 'trust_badges_enabled',
+			'sticky_cart'  => 'sticky_cart_enabled',
+		);
+		return isset( $map[ $key ] ) ? $map[ $key ] : '';
+	}
+
+	/**
+	 * Build CRO_Campaign::create row from inline pack campaign definition.
+	 *
+	 * @param array $campaign_data Pack campaign.
+	 * @return array|null
+	 */
+	private static function industry_pack_campaign_create_data( array $campaign_data ) {
+		if ( empty( $campaign_data['name'] ) || ! class_exists( 'CRO_Campaign_Model' ) ) {
+			return null;
+		}
+
+		$model         = CRO_Campaign_Model::create_new();
+		$trigger_in    = isset( $campaign_data['trigger_rules'] ) && is_array( $campaign_data['trigger_rules'] ) ? $campaign_data['trigger_rules'] : array();
+		$t_type        = isset( $trigger_in['type'] ) ? (string) $trigger_in['type'] : 'exit_intent';
+		$campaign_type  = 'exit_intent';
+		$trigger_settings = is_array( $model->trigger_rules ) ? $model->trigger_rules : array();
+		$trigger_settings = array_merge( $trigger_settings, $trigger_in );
+
+		switch ( $t_type ) {
+			case 'scroll':
+				$campaign_type = 'scroll_trigger';
+				if ( isset( $trigger_in['scroll_percent'] ) ) {
+					$trigger_settings['scroll_depth_percent'] = (int) $trigger_in['scroll_percent'];
+				}
+				$trigger_settings['type'] = 'scroll';
+				break;
+			case 'time':
+				$campaign_type                   = 'time_trigger';
+				$delay                           = isset( $trigger_in['delay'] ) ? (int) $trigger_in['delay'] : 30;
+				$trigger_settings['time_delay_seconds'] = max( 0, $delay );
+				$trigger_settings['type']        = 'time';
+				break;
+			case 'page_load':
+				$campaign_type                   = 'time_trigger';
+				$trigger_settings['time_delay_seconds'] = 0;
+				$trigger_settings['type']        = 'time';
+				break;
+			case 'exit_intent':
+			default:
+				$campaign_type            = 'exit_intent';
+				$trigger_settings['type'] = 'exit_intent';
+				break;
+		}
+
+		$content = isset( $campaign_data['content'] ) && is_array( $campaign_data['content'] ) ? $campaign_data['content'] : array();
+		$content = array_merge( (array) $model->content, $content );
+
+		$targeting = isset( $campaign_data['targeting_rules'] ) && is_array( $campaign_data['targeting_rules'] ) ? $campaign_data['targeting_rules'] : array();
+
+		return array(
+			'name'             => sanitize_text_field( $campaign_data['name'] ),
+			'status'           => 'active',
+			'campaign_type'    => $campaign_type,
+			'template_type'    => sanitize_key( $campaign_data['template_type'] ?? 'centered' ),
+			'trigger_settings' => $trigger_settings,
+			'content'          => $content,
+			'targeting_rules'  => $targeting,
+			'display_rules'    => is_array( $model->frequency_rules ) ? $model->frequency_rules : array(),
 		);
 	}
 }

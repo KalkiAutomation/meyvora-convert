@@ -172,13 +172,13 @@ class CRO_Shipping_Bar {
 
 		wp_enqueue_style(
 			'cro-shipping-bar',
-			CRO_PLUGIN_URL . 'public/css/cro-boosters.css',
+			CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);
 		wp_enqueue_script(
 			'cro-shipping-bar',
-			CRO_PLUGIN_URL . 'public/js/cro-shipping-bar.js',
+			CRO_PLUGIN_URL . 'public/js/cro-shipping-bar' . cro_asset_min_suffix() . '.js',
 			array( 'jquery' ),
 			CRO_VERSION,
 			true
@@ -216,7 +216,8 @@ class CRO_Shipping_Bar {
 	public function ajax_get_cart_total() {
 		check_ajax_referer( 'cro_shipping_bar', 'nonce' );
 
-		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+		$rl_ip = class_exists( 'CRO_Security' ) ? CRO_Security::get_client_ip() : '';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ) . '_' . $rl_ip, 20, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
@@ -299,7 +300,7 @@ class CRO_Shipping_Bar {
 		?>
 		<div class="cro-shipping-bar" style="background-color: <?php echo esc_attr( $bg_color ); ?>;">
 			<div class="cro-shipping-bar-inner">
-				<span class="cro-shipping-bar-icon"><?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?></span>
+				<span class="cro-shipping-bar-icon"><?php echo wp_kses( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 				<span class="cro-shipping-bar-message"><?php echo wp_kses_post( $message ); ?></span>
 			</div>
 			<?php if ( ! $achieved ) : ?>

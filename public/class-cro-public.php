@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -105,16 +104,45 @@ class CRO_Public {
 	 * @return bool
 	 */
 	public static function is_campaign_preview_static() {
-		if ( ! isset( $_GET['cro_preview'] ) || (string) $_GET['cro_preview'] !== '1' ) {
+		if ( CRO_Security::get_query_var( 'cro_preview' ) !== '1' ) {
 			return false;
 		}
-		$preview_id = isset( $_GET['preview_id'] ) ? sanitize_text_field( wp_unslash( $_GET['preview_id'] ) ) : '';
-		$token      = isset( $_GET['cro_token'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_token'] ) ) : '';
-		$expiry     = isset( $_GET['cro_expiry'] ) ? (int) $_GET['cro_expiry'] : 0;
+		$preview_id = CRO_Security::get_query_var( 'preview_id' );
+		$token        = CRO_Security::get_query_var( 'cro_token' );
+		$expiry       = CRO_Security::get_query_var_absint( 'cro_expiry' );
 		if ( ! $preview_id || ! $token || ! $expiry ) {
 			return false;
 		}
 		return class_exists( 'CRO_Campaign_Display' ) && CRO_Campaign_Display::validate_preview_token( $preview_id, $token, $expiry );
+	}
+
+	/**
+	 * Whether any active campaign uses the gamified-wheel template.
+	 * Result is cached for the request lifetime.
+	 *
+	 * @return bool
+	 */
+	private static function has_wheel_campaign(): bool {
+		static $result = null;
+		if ( null !== $result ) {
+			return $result;
+		}
+		if ( class_exists( 'CRO_Cache' ) ) {
+			$campaigns = CRO_Cache::get_active_campaigns();
+			if ( is_array( $campaigns ) ) {
+				foreach ( $campaigns as $c ) {
+					$tpl = is_array( $c ) ? ( $c['template_type'] ?? '' ) : ( $c->template_type ?? '' );
+					if ( 'gamified-wheel' === $tpl ) {
+						$result = true;
+						return true;
+					}
+				}
+				$result = false;
+				return false;
+			}
+		}
+		$result = true;
+		return true;
 	}
 
 	/**
@@ -143,7 +171,7 @@ class CRO_Public {
 			return false;
 		}
 
-		$features = array( 'campaigns', 'sticky_cart', 'shipping_bar', 'cart_optimizer', 'checkout_optimizer', 'trust_badges', 'stock_urgency' );
+		$features = array( 'campaigns', 'sticky_cart', 'shipping_bar', 'cart_optimizer', 'checkout_optimizer', 'trust_badges', 'stock_urgency', 'recommendations' );
 		foreach ( $features as $feature ) {
 			if ( cro_settings()->is_feature_enabled( $feature ) ) {
 				return true;
@@ -163,35 +191,34 @@ class CRO_Public {
 	}
 
 	/**
-	 * Output Brand Styles CSS variables in wp_head so all CRO elements can use them.
+	 * Add brand colour/spacing CSS variables as inline style on 'cro-boosters' (must run after that handle is enqueued).
 	 */
-	public function print_brand_styles_vars() {
-		if ( ! self::should_enqueue_assets( 'global' ) || ! $this->should_load_assets() ) {
-			return;
-		}
+	private function add_brand_css_variables_inline() {
 		if ( ! function_exists( 'cro_settings' ) ) {
 			return;
 		}
-		$styles  = cro_settings()->get_styles_settings();
-		$primary = sanitize_hex_color( $styles['primary_color'] ?? '#333333' ) ?: '#333333';
+		$styles    = cro_settings()->get_styles_settings();
+		$primary   = sanitize_hex_color( $styles['primary_color'] ?? '#333333' ) ?: '#333333';
 		$secondary = sanitize_hex_color( $styles['secondary_color'] ?? '#555555' ) ?: '#555555';
-		$radius  = absint( $styles['button_radius'] ?? $styles['border_radius'] ?? 8 );
-		$spacing = absint( $styles['spacing'] ?? 8 );
-		$spacing = $spacing >= 2 && $spacing <= 32 ? $spacing : 8;
-		$scale   = (float) ( $styles['font_size_scale'] ?? 1 );
-		$scale   = $scale >= 0.5 && $scale <= 2 ? $scale : 1;
-		$radius_px = (int) $radius . 'px';
+		$radius    = absint( $styles['button_radius'] ?? $styles['border_radius'] ?? 8 );
+		$spacing   = absint( $styles['spacing'] ?? 8 );
+		$spacing   = $spacing >= 2 && $spacing <= 32 ? $spacing : 8;
+		$scale     = (float) ( $styles['font_size_scale'] ?? 1 );
+		$scale     = $scale >= 0.5 && $scale <= 2 ? $scale : 1;
+		$radius_px  = (int) $radius . 'px';
 		$spacing_px = (int) $spacing . 'px';
-		echo '<style id="cro-brand-vars">' . "\n";
-		echo ':root {' . "\n";
-		echo '  --cro-primary: ' . esc_attr( $primary ) . ";\n";
-		echo '  --cro-radius: ' . esc_attr( $radius_px ) . ";\n";
-		echo '  --cro-spacing: ' . esc_attr( $spacing_px ) . ";\n";
-		echo '  --cro-font-size-scale: ' . (float) $scale . ";\n";
-		echo '  --cro-primary-color: var(--cro-primary);' . "\n";
-		echo '  --cro-secondary-color: ' . esc_attr( $secondary ) . ";\n";
-		echo '  --cro-button-radius: var(--cro-radius);' . "\n";
-		echo "}\n</style>\n";
+
+		$css = ':root {' . "\n"
+			. '  --cro-primary: ' . esc_attr( $primary ) . ";\n"
+			. '  --cro-radius: ' . esc_attr( $radius_px ) . ";\n"
+			. '  --cro-spacing: ' . esc_attr( $spacing_px ) . ";\n"
+			. '  --cro-font-size-scale: ' . (float) $scale . ";\n"
+			. '  --cro-primary-color: var(--cro-primary);' . "\n"
+			. '  --cro-secondary-color: ' . esc_attr( $secondary ) . ";\n"
+			. '  --cro-button-radius: var(--cro-radius);' . "\n"
+			. "}\n";
+
+		wp_add_inline_style( 'cro-boosters', $css );
 	}
 
 	/**
@@ -210,11 +237,13 @@ class CRO_Public {
 
 		wp_enqueue_style(
 			'cro-boosters',
-			CRO_PLUGIN_URL . 'public/css/cro-boosters.css',
+			CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION,
 			'all'
 		);
+
+		$this->add_brand_css_variables_inline();
 
 		// Add global styles as inline CSS.
 		$styles = cro_settings()->get_styles_settings();
@@ -325,18 +354,20 @@ class CRO_Public {
 	 *
 	 * @return array
 	 */
-	public static function get_frontend_script_specs() {
+	public static function get_frontend_script_specs(): array {
+		$min = cro_asset_min_suffix();
 		return array(
-			'cro-public'       => array( 'public/js/cro-public.js', array() ),
-			'cro-core'         => array( 'public/js/cro-core.js', array( 'cro-public' ) ),
-			'cro-exit-intent'  => array( 'public/js/cro-exit-intent.js', array( 'jquery', 'cro-public' ) ),
-			'cro-ux-detector'  => array( 'public/js/cro-ux-detector.js', array() ),
-			'cro-signals'      => array( 'public/js/cro-signals.js', array() ),
-			'cro-animations'   => array( 'public/js/cro-animations.js', array() ),
-			'cro-popup'        => array( 'public/js/cro-popup.js', array( 'jquery', 'cro-public', 'cro-ux-detector', 'cro-animations' ) ),
-			'cro-controller'   => array( 'public/js/cro-controller.js', array( 'cro-popup', 'cro-signals' ) ),
-			'cro-sticky-cart'  => array( 'public/js/cro-sticky-cart.js', array( 'jquery', 'cro-public' ) ),
-			'cro-shipping-bar' => array( 'public/js/cro-shipping-bar.js', array( 'jquery', 'cro-public' ) ),
+			'cro-public'       => array( "public/js/cro-public{$min}.js", array() ),
+			'cro-core'         => array( "public/js/cro-core{$min}.js", array( 'cro-public' ) ),
+			'cro-exit-intent'  => array( "public/js/cro-exit-intent{$min}.js", array( 'jquery', 'cro-public' ) ),
+			'cro-ux-detector'  => array( "public/js/cro-ux-detector{$min}.js", array() ),
+			'cro-signals'      => array( "public/js/cro-signals{$min}.js", array() ),
+			'cro-animations'   => array( "public/js/cro-animations{$min}.js", array() ),
+			'cro-popup'        => array( "public/js/cro-popup{$min}.js", array( 'jquery', 'cro-public', 'cro-ux-detector', 'cro-animations' ) ),
+			'cro-controller'   => array( "public/js/cro-controller{$min}.js", array( 'cro-popup', 'cro-signals' ) ),
+			'cro-spin-wheel'   => array( "public/js/cro-spin-wheel{$min}.js", array( 'jquery', 'cro-controller' ) ),
+			'cro-sticky-cart'  => array( "public/js/cro-sticky-cart{$min}.js", array( 'jquery', 'cro-public' ) ),
+			'cro-shipping-bar' => array( "public/js/cro-shipping-bar{$min}.js", array( 'jquery', 'cro-public' ) ),
 		);
 	}
 
@@ -375,6 +406,9 @@ class CRO_Public {
 			'cro-popup',
 			'cro-controller',
 		);
+		if ( self::has_wheel_campaign() ) {
+			$handles[] = 'cro-spin-wheel';
+		}
 		$specs = self::get_frontend_script_specs();
 		foreach ( $handles as $handle ) {
 			if ( ! isset( $specs[ $handle ] ) ) {
@@ -390,6 +424,25 @@ class CRO_Public {
 			);
 		}
 
+		if ( in_array( 'cro-spin-wheel', $handles, true ) ) {
+			wp_localize_script(
+				'cro-spin-wheel',
+				'croSpinWheel',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( 'cro_public_actions' ),
+				)
+			);
+			wp_localize_script(
+				'cro-spin-wheel',
+				'cro_spin_i18n',
+				array(
+					'you_won'   => __( 'You won: ', 'meyvora-convert' ),
+					'try_again' => __( 'Better luck next time!', 'meyvora-convert' ),
+				)
+			);
+		}
+
 		wp_localize_script(
 			'cro-popup',
 			'croPopup',
@@ -399,12 +452,14 @@ class CRO_Public {
 			)
 		);
 
+		$can_decide_debug = current_user_can( 'manage_options' ) || current_user_can( 'manage_meyvora_convert' );
 		wp_localize_script(
 			'cro-public',
 			'croPublic',
 			array(
-				'debugMode' => cro_settings()->get( 'general', 'debug_mode', false ),
-				'isAdmin'   => current_user_can( 'manage_options' ),
+				'debugMode'   => cro_settings()->get( 'general', 'debug_mode', false ),
+				'isAdmin'     => current_user_can( 'manage_options' ),
+				'decideDebug' => $can_decide_debug && cro_settings()->get( 'general', 'debug_mode', false ),
 			)
 		);
 	}
@@ -446,6 +501,9 @@ class CRO_Public {
 			$scripts_needed[] = 'cro-animations';
 			$scripts_needed[] = 'cro-popup';
 			$scripts_needed[] = 'cro-controller';
+			if ( self::has_wheel_campaign() ) {
+				$scripts_needed[] = 'cro-spin-wheel';
+			}
 		}
 
 		// Sticky cart (product pages only; respect conditional loading filter).
@@ -480,6 +538,25 @@ class CRO_Public {
 			);
 		}
 
+		if ( in_array( 'cro-spin-wheel', is_array( $scripts_needed ) ? $scripts_needed : array(), true ) ) {
+			wp_localize_script(
+				'cro-spin-wheel',
+				'croSpinWheel',
+				array(
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+					'nonce'   => wp_create_nonce( 'cro_public_actions' ),
+				)
+			);
+			wp_localize_script(
+				'cro-spin-wheel',
+				'cro_spin_i18n',
+				array(
+					'you_won'   => __( 'You won: ', 'meyvora-convert' ),
+					'try_again' => __( 'Better luck next time!', 'meyvora-convert' ),
+				)
+			);
+		}
+
 		// Localize croPopup when popup is loaded.
 		if ( in_array( 'cro-popup', is_array( $scripts_needed ) ? $scripts_needed : array(), true ) ) {
 			wp_localize_script(
@@ -492,13 +569,15 @@ class CRO_Public {
 			);
 		}
 
-		// croConfig is printed once in CRO_Frontend::output_config() (wp_footer) to avoid overwriting REST nonce vs error-log nonce.
+		// croConfig is printed once in CRO_Frontend::enqueue_frontend_config_script() (inline before cro-public) to avoid overwriting REST nonce vs error-log nonce.
+		$can_decide_debug = current_user_can( 'manage_options' ) || current_user_can( 'manage_meyvora_convert' );
 		wp_localize_script(
 			'cro-public',
 			'croPublic',
 			array(
-				'debugMode' => cro_settings()->get( 'general', 'debug_mode', false ),
-				'isAdmin'   => current_user_can( 'manage_options' ),
+				'debugMode'   => cro_settings()->get( 'general', 'debug_mode', false ),
+				'isAdmin'     => current_user_can( 'manage_options' ),
+				'decideDebug' => $can_decide_debug && cro_settings()->get( 'general', 'debug_mode', false ),
 			)
 		);
 	}

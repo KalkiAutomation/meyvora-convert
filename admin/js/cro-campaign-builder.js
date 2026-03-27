@@ -7,6 +7,20 @@
     }
   }
 
+  if (typeof wp !== "undefined" && wp.apiFetch && typeof croCampaignBuilder !== "undefined") {
+    var wpApi = typeof window.wpApiSettings !== "undefined" ? window.wpApiSettings : null;
+    if (!wpApi || !wpApi.nonce || !wpApi.root) {
+      var restRoot = croCampaignBuilder.restRoot || "";
+      var restNonce = croCampaignBuilder.restNonce || "";
+      if (restRoot) {
+        wp.apiFetch.use(wp.apiFetch.createRootURLMiddleware(restRoot));
+      }
+      if (restNonce) {
+        wp.apiFetch.use(wp.apiFetch.createNonceMiddleware(restNonce));
+      }
+    }
+  }
+
   var CROBuilder = {
     campaignId: 0,
     campaignData: {},
@@ -156,8 +170,17 @@
 
     initContentControls: function () {
       var self = this;
+      var ctaActionLabels = {
+        close: "Got it",
+        url: "Learn more",
+        cart: "View cart",
+        checkout: "Go to checkout",
+        apply_coupon: "Apply discount",
+        apply_coupon_checkout: "Apply & checkout",
+        copy_coupon: "Copy code",
+      };
       $(
-        "#content-tone, #content-headline, #content-subheadline, #content-body, #content-image, #content-cta-text, #content-cta-url, #content-cta-action, #content-coupon-code, #content-coupon-text, #content-email-placeholder, #content-countdown-minutes, #content-dismiss-text"
+        "#content-tone, #content-headline, #content-subheadline, #content-body, #content-image, #content-cta-text, #content-cta-url, #content-cta-action, #content-coupon-code, #content-coupon-label, #content-email-placeholder, #content-countdown-minutes, #content-dismiss-text"
       ).on("input change", function () {
         self.updateContentFromFields();
         self.markChanged();
@@ -170,6 +193,22 @@
         self.markChanged();
         self.updatePreview();
       });
+      $("#content-cta-action").on("change", function () {
+        var action = $(this).val();
+        var $ctaInput = $("#content-cta-text");
+        if (!$ctaInput.val() && ctaActionLabels[action]) {
+          $ctaInput.attr("placeholder", ctaActionLabels[action]);
+        }
+        self.updateCtaActionUi();
+      });
+      (function syncCtaUi() {
+        var action = $("#content-cta-action").val();
+        var $ctaInput = $("#content-cta-text");
+        if (!$ctaInput.val() && ctaActionLabels[action]) {
+          $ctaInput.attr("placeholder", ctaActionLabels[action]);
+        }
+        self.updateCtaActionUi();
+      })();
     },
 
     updateContentFromFields: function () {
@@ -184,7 +223,7 @@
         cta_action: $("#content-cta-action").val(),
         show_coupon: $("#content-show-coupon").is(":checked"),
         coupon_code: $("#content-coupon-code").val(),
-        coupon_display_text: $("#content-coupon-text").val(),
+        coupon_label: $("#content-coupon-label").val(),
         auto_apply_coupon: $("#content-auto-apply-coupon").is(":checked"),
         show_email_field: $("#content-show-email").is(":checked"),
         email_placeholder: $("#content-email-placeholder").val(),
@@ -378,13 +417,19 @@
 
     // === TRIGGER CONTROLS ===
 
+    /** Radios for campaign trigger (scoped to builder so we never read duplicate names elsewhere). */
+    getTriggerTypeInputs: function () {
+      var $w = $(".cro-builder-wrap input[name='trigger-type']");
+      return $w.length ? $w : $('input[name="trigger-type"]');
+    },
+
     initTriggerControls: function () {
       var self = this;
 
-      $('input[name="trigger-type"]').on("change", function () {
+      this.getTriggerTypeInputs().on("change", function () {
         var type = $(this).val();
-        $(".cro-trigger-options").hide();
-        $('.cro-trigger-options[data-trigger="' + type + '"]').show();
+        $(".cro-builder-wrap .cro-trigger-options").hide();
+        $('.cro-builder-wrap .cro-trigger-options[data-trigger="' + type + '"]').show();
         self.updateTriggerFromFields();
         self.markChanged();
       });
@@ -419,18 +464,24 @@
       });
 
       // Show options for currently selected trigger type on load
-      var initialType = $('input[name="trigger-type"]:checked').val();
+      var initialType = self.getTriggerTypeInputs().filter(":checked").val();
       if (initialType) {
-        $(".cro-trigger-options").hide();
-        $('.cro-trigger-options[data-trigger="' + initialType + '"]').show();
+        $(".cro-builder-wrap .cro-trigger-options").hide();
+        $('.cro-builder-wrap .cro-trigger-options[data-trigger="' + initialType + '"]').show();
       }
     },
 
     populateTriggerFields: function () {
       var tr = this.campaignData.trigger_rules || {};
-      if (tr.type) {
-        $('input[name="trigger-type"][value="' + tr.type + '"]').prop("checked", true);
-      }
+      var t =
+        (tr.type && String(tr.type)) ||
+        (this.campaignData.type && String(this.campaignData.type)) ||
+        "exit_intent";
+      var $inputs = this.getTriggerTypeInputs();
+      $inputs.prop("checked", false);
+      $inputs.filter(function () {
+        return $(this).val() === t;
+      }).prop("checked", true);
       if (tr.time_delay_seconds !== undefined) {
         $("#trigger-time-delay").val(tr.time_delay_seconds);
       }
@@ -481,11 +532,13 @@
           }
         });
       }
-      $('input[name="trigger-type"]:checked').trigger("change");
+      this.getTriggerTypeInputs().filter(":checked").trigger("change");
     },
 
     updateTriggerFromFields: function () {
-      var triggerType = $('input[name="trigger-type"]:checked').val();
+      var triggerType =
+        this.getTriggerTypeInputs().filter(":checked").val() || "exit_intent";
+      this.campaignData.type = triggerType;
       this.campaignData.trigger_rules = {
         type: triggerType,
         sensitivity: $("#trigger-sensitivity").val(),
@@ -539,9 +592,13 @@
         "targeting-min-time",
         "targeting-min-scroll",
         "targeting-referrer",
+        "targeting-referrer-op",
         "targeting-utm-source",
+        "targeting-utm-source-op",
         "targeting-utm-medium",
+        "targeting-utm-medium-op",
         "targeting-utm-campaign",
+        "targeting-utm-campaign-op",
         "targeting-min-sessions",
         "targeting-max-sessions",
         "targeting-min-pages",
@@ -572,7 +629,7 @@
       if ($.fn.selectWoo || $.fn.select2) {
         $(document).trigger("cro-select-woo-init");
       }
-      $("#targeting-specific-pages, #targeting-cart-contains, #targeting-cart-category, #targeting-cart-exclude-product, #targeting-cart-exclude-category").on("change", function () {
+      $("#targeting-specific-pages, #targeting-cart-contains, #targeting-cart-category, #targeting-cart-exclude-product, #targeting-cart-exclude-category, #targeting-geo-countries").on("change", function () {
         self.updateTargetingFromFields();
         self.markChanged();
       });
@@ -583,6 +640,22 @@
       if (tr.page_mode) {
         $("#targeting-page-mode").val(tr.page_mode).trigger("change");
       }
+      var geo = tr.geo_countries;
+      if (Array.isArray(geo) && geo.length) {
+        $("#targeting-geo-countries").val(geo.map(String));
+      } else {
+        $("#targeting-geo-countries").val(null);
+      }
+      $("#targeting-geo-countries").trigger("change");
+
+      $("#targeting-referrer").val(tr.referrer || "");
+      $("#targeting-referrer-op").val(tr.referrer_op || "").trigger("change");
+      $("#targeting-utm-source").val(tr.utm_source || "");
+      $("#targeting-utm-source-op").val(tr.utm_source_op || "").trigger("change");
+      $("#targeting-utm-medium").val(tr.utm_medium || "");
+      $("#targeting-utm-medium-op").val(tr.utm_medium_op || "").trigger("change");
+      $("#targeting-utm-campaign").val(tr.utm_campaign || "");
+      $("#targeting-utm-campaign-op").val(tr.utm_campaign_op || "").trigger("change");
     },
 
     updateTargetingFromFields: function () {
@@ -590,7 +663,7 @@
       var rules = {
         audience_mode: $('input[name="targeting-mode"]:checked').val() || "all",
         page_mode: pageMode,
-        pages: { include: [], exclude: ["checkout"] },
+        pages: { include: [], excluded_pages: ["checkout"] },
         visitor: {
           type: $("#targeting-visitor-type").val() || "all",
           min_sessions: "",
@@ -599,9 +672,13 @@
         device: { desktop: true, tablet: true, mobile: true },
         behavior: {},
         referrer: $("#targeting-referrer").val() || "",
+        referrer_op: $("#targeting-referrer-op").val() || "",
         utm_source: $("#targeting-utm-source").val() || "",
+        utm_source_op: $("#targeting-utm-source-op").val() || "",
         utm_medium: $("#targeting-utm-medium").val() || "",
+        utm_medium_op: $("#targeting-utm-medium-op").val() || "",
         utm_campaign: $("#targeting-utm-campaign").val() || "",
+        utm_campaign_op: $("#targeting-utm-campaign-op").val() || "",
         exclude_purchased: $("#targeting-exclude-purchased").is(":checked"),
       };
 
@@ -610,10 +687,10 @@
           rules.pages.include.push($(this).val());
         });
       } else if (pageMode === "exclude") {
-        rules.pages.exclude = ["checkout"];
+        rules.pages.excluded_pages = ["checkout"];
         $('input[name="exclude-pages[]"]:checked').each(function () {
           if ($(this).val() !== "checkout") {
-            rules.pages.exclude.push($(this).val());
+            rules.pages.excluded_pages.push($(this).val());
           }
         });
       }
@@ -662,6 +739,9 @@
       rules.behavior.require_interaction = $(
         "#targeting-require-interaction"
       ).is(":checked");
+
+      var geoVal = $("#targeting-geo-countries").val();
+      rules.geo_countries = Array.isArray(geoVal) ? geoVal : geoVal ? [geoVal] : [];
 
       this.campaignData.targeting_rules = rules;
       this.campaignData.targeting_rules.page_mode = pageMode;
@@ -875,6 +955,46 @@
           (classes + " cro-preview-frame--" + template).trim()
         );
       }
+      var self = this;
+      clearTimeout(this._serverPreviewTimer);
+      this._serverPreviewTimer = setTimeout(function () {
+        if (
+          typeof croBuilderAjax === "undefined" ||
+          !croBuilderAjax.ajaxUrl ||
+          !croBuilderAjax.nonce
+        ) {
+          return;
+        }
+        $.post(croBuilderAjax.ajaxUrl, {
+          action: "cro_preview_campaign",
+          nonce: croBuilderAjax.nonce,
+          data: JSON.stringify(self.campaignData),
+        }).done(function (r) {
+          if (!r || !r.success || !r.data || !r.data.html) {
+            return;
+          }
+          var html = r.data.html;
+          var splitOn =
+            $("#cro-builder-split").attr("data-mode") === "split";
+          var iframe = document.getElementById("cro-builder-live-preview");
+          if (splitOn && iframe) {
+            var doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+          } else if ($frame.length) {
+            $frame.html(html);
+            var cl = ($frame.attr("class") || "")
+              .replace(/\bcro-preview-frame--\S+/g, "")
+              .replace(/\s+/g, " ")
+              .trim();
+            $frame.attr(
+              "class",
+              (cl + " cro-preview-frame--" + template).trim()
+            );
+          }
+        });
+      }, 300);
     },
 
     generatePreviewHtml: function () {
@@ -1171,6 +1291,17 @@
       campaignId = campaignId || "preview";
       template = template || "centered";
       var html = "";
+      var couponActs = [
+        "apply_coupon",
+        "apply_coupon_checkout",
+        "copy_coupon",
+      ];
+      var ctaAct = content.cta_action || "close";
+      var showCouponBlock =
+        (content.show_coupon || couponActs.indexOf(ctaAct) !== -1) &&
+        content.coupon_code;
+      var couponLabel =
+        content.coupon_label || content.coupon_display_text || "Your code";
 
       // --- Top Bar / Bottom Bar: span headline, inline countdown, inline coupon, CTA only ---
       if (template === "top-bar" || template === "bottom-bar") {
@@ -1189,7 +1320,7 @@
             ms +
             '</span>:<span class="cro-countdown-seconds">00</span>\n    </span>\n</div>\n        ';
         }
-        if (content.show_coupon && content.coupon_code) {
+        if (showCouponBlock) {
           html +=
             '<div class="cro-popup__coupon cro-popup__coupon--inline">' +
             '<code class="cro-popup__coupon-code" data-code="' +
@@ -1223,10 +1354,12 @@
             this.escapeHtml(content.body) +
             "</div>\n        ";
         }
-        if (content.show_coupon && content.coupon_code) {
+        if (showCouponBlock) {
           html +=
             '<div class="cro-popup__coupon">' +
-            '<span class="cro-popup__coupon-label">Your code</span>' +
+            '<span class="cro-popup__coupon-label">' +
+            this.escapeHtml(couponLabel) +
+            "</span>" +
             '<code class="cro-popup__coupon-code" data-code="' +
             this.escapeHtml(content.coupon_code) +
             '">' +
@@ -1271,10 +1404,12 @@
             this.escapeHtml(content.body) +
             "</div>\n        ";
         }
-        if (content.show_coupon && content.coupon_code) {
+        if (showCouponBlock) {
           html +=
             '<div class="cro-popup__coupon">' +
-            '<span class="cro-popup__coupon-label">Your code</span>' +
+            '<span class="cro-popup__coupon-label">' +
+            this.escapeHtml(couponLabel) +
+            "</span>" +
             '<code class="cro-popup__coupon-code" data-code="' +
             this.escapeHtml(content.coupon_code) +
             '">' +
@@ -1333,10 +1468,12 @@
             '</span>:<span class="cro-countdown-seconds">00</span>' +
             "</span></div>\n        ";
         }
-        if (content.show_coupon && content.coupon_code) {
+        if (showCouponBlock) {
           html +=
             '<div class="cro-popup__coupon">' +
-            '<span class="cro-popup__coupon-label">Your code</span>' +
+            '<span class="cro-popup__coupon-label">' +
+            this.escapeHtml(couponLabel) +
+            "</span>" +
             '<code class="cro-popup__coupon-code" data-code="' +
             this.escapeHtml(content.coupon_code) +
             '">' +
@@ -1420,10 +1557,12 @@
           '</span>:<span class="cro-countdown-seconds">00</span>' +
           "</span></div>\n        ";
       }
-      if (content.show_coupon && content.coupon_code) {
+      if (showCouponBlock) {
         html +=
           '<div class="cro-popup__coupon">' +
-          '<span class="cro-popup__coupon-label">Your code</span>' +
+          '<span class="cro-popup__coupon-label">' +
+          this.escapeHtml(couponLabel) +
+          "</span>" +
           '<code class="cro-popup__coupon-code" data-code="' +
           this.escapeHtml(content.coupon_code) +
           '">' +
@@ -1676,6 +1815,11 @@
       var self = this;
       silent = !!silent;
 
+      if (!silent && !this.validateCtaFields()) {
+        $("#save-status").text("").removeClass("unsaved");
+        return;
+      }
+
       if (!silent) {
         $("#save-status").text("Saving...").removeClass("unsaved saved");
       }
@@ -1694,6 +1838,20 @@
         this.campaignData.template = selectedTemplate;
       }
 
+      var $wheelJson = $("#cro-wheel-slices-json");
+      if ($wheelJson.length && $("#cro-wheel-slices-body .cro-wheel-slice-row").length) {
+        var wheelSlices = [];
+        $("#cro-wheel-slices-body .cro-wheel-slice-row").each(function () {
+          var $row = $(this);
+          wheelSlices.push({
+            label: $row.find(".cro-slice-label").val(),
+            type: $row.find(".cro-slice-type").val(),
+            color: $row.find(".cro-slice-color").val(),
+          });
+        });
+        $wheelJson.val(JSON.stringify(wheelSlices));
+      }
+
       var saveData = {
         action: "cro_save_campaign",
         nonce:
@@ -1702,6 +1860,10 @@
             : "",
         campaign_id: this.campaignId,
         data: JSON.stringify(this.campaignData),
+        wheel_slices: (function () {
+          var $w = $("#cro-wheel-slices-json");
+          return $w.length ? $w.val() || "" : "";
+        })(),
       };
 
       $.ajax({
@@ -1715,9 +1877,22 @@
           self.clearFieldErrors();
           if (response && response.success) {
             self.hasChanges = false;
+            var rd = response.data || {};
+            if (rd.trigger_rules && typeof rd.trigger_rules === "object") {
+              self.campaignData.trigger_rules = rd.trigger_rules;
+            }
+            if (rd.campaign_type) {
+              self.campaignData.type = rd.campaign_type;
+              if (self.campaignData.trigger_rules) {
+                self.campaignData.trigger_rules.type = rd.campaign_type;
+              }
+            } else if (self.campaignData.trigger_rules && self.campaignData.trigger_rules.type) {
+              self.campaignData.type = self.campaignData.trigger_rules.type;
+            }
+            self.syncCampaignDataToHiddenInput();
             self.campaignId =
-              response.data && response.data.id
-                ? response.data.id
+              rd.id != null && rd.id !== ""
+                ? rd.id
                 : self.campaignId;
             $("#campaign-id").val(self.campaignId);
             if (window.history.replaceState) {
@@ -1774,6 +1949,45 @@
 
     // === CONDITIONAL FIELDS ===
 
+    updateCtaActionUi: function () {
+      var couponCtaActions = ["apply_coupon", "apply_coupon_checkout"];
+      var ctaAction = $("#content-cta-action").val();
+      if (couponCtaActions.indexOf(ctaAction) !== -1) {
+        $(".cro-auto-apply-row").hide();
+      } else {
+        $(".cro-auto-apply-row").show();
+      }
+    },
+
+    validateCouponAction: function () {
+      var action = $("#content-cta-action").val();
+      var couponCode = ($("#content-coupon-code").val() || "").trim();
+      var couponActions = ["apply_coupon", "apply_coupon_checkout", "copy_coupon"];
+      if (couponActions.indexOf(action) !== -1 && !couponCode) {
+        this.showToast(
+          "A coupon code is required for the selected CTA action.",
+          "error"
+        );
+        return false;
+      }
+      return true;
+    },
+
+    validateCtaFields: function () {
+      if (!this.validateCouponAction()) {
+        return false;
+      }
+      var action = $("#content-cta-action").val();
+      if (action === "url" && !($("#content-cta-url").val() || "").trim()) {
+        this.showToast(
+          "Please enter a URL for the 'Go to URL' CTA action.",
+          "error"
+        );
+        return false;
+      }
+      return true;
+    },
+
     initConditionalFields: function () {
       var self = this;
       $("[data-show-when]").each(function () {
@@ -1786,16 +2000,26 @@
     },
 
     setupConditionalField: function ($field, condition) {
-      var self = this;
-      var parts = (condition || "").split("=");
-      var targetId = parts[0];
-      var targetValue = parts[1];
+      var eq = (condition || "").indexOf("=");
+      if (eq === -1) return;
+      var targetId = condition.slice(0, eq);
+      var targetValue = condition.slice(eq + 1);
       var $target = $("#" + targetId);
+      if (!$target.length) return;
+
+      var allowedValues =
+        targetValue.indexOf(",") !== -1
+          ? targetValue.split(",").map(function (s) {
+              return s.trim();
+            })
+          : null;
 
       function checkCondition() {
         var show = false;
         if ($target.is(":checkbox")) {
           show = $target.is(":checked");
+        } else if (allowedValues) {
+          show = allowedValues.indexOf($target.val()) !== -1;
         } else {
           show = $target.val() === targetValue;
         }
@@ -1860,5 +2084,130 @@
     if ($(".cro-builder-wrap").length) {
       CROBuilder.init();
     }
+    (function croWheelSlicesInit($) {
+      var $body = $("#cro-wheel-slices-body");
+      if (!$body.length) {
+        return;
+      }
+      var WL =
+        typeof croBuilderAjax !== "undefined" && croBuilderAjax.wheelWinLabel
+          ? croBuilderAjax.wheelWinLabel
+          : "Win";
+      var LL =
+        typeof croBuilderAjax !== "undefined" && croBuilderAjax.wheelLoseLabel
+          ? croBuilderAjax.wheelLoseLabel
+          : "Lose";
+      var DEFAULTS = [
+        { label: "10% off", type: "win", color: "#2563eb" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" },
+        { label: "5% off", type: "win", color: "#7c3aed" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" },
+        { label: "Free ship", type: "win", color: "#059669" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" },
+      ];
+      function esc(s) {
+        return $("<div>").text(s).html();
+      }
+      function renderSlices(slices) {
+        var $b = $("#cro-wheel-slices-body").empty();
+        $.each(slices, function (i, s) {
+          $b.append(
+            '<tr class="cro-wheel-slice-row">' +
+              '<td style="cursor:grab;text-align:center;font-size:16px;color:#888" class="cro-slice-handle">&#8597;</td>' +
+              '<td><input class="regular-text cro-slice-label" value="' +
+              esc(s.label) +
+              '"/></td>' +
+              '<td><select class="cro-slice-type"><option value="win"' +
+              (s.type === "win" ? " selected" : "") +
+              ">" +
+              esc(WL) +
+              '</option><option value="lose"' +
+              (s.type === "lose" ? " selected" : "") +
+              ">" +
+              esc(LL) +
+              "</option></select></td>" +
+              '<td><input type="color" class="cro-slice-color" value="' +
+              esc(s.color || "#cccccc") +
+              '"/></td>' +
+              '<td><button type="button" class="button button-small cro-slice-remove">&#10005;</button></td>' +
+              "</tr>"
+          );
+        });
+        syncJson();
+      }
+      function readSlices() {
+        var o = [];
+        $("#cro-wheel-slices-body .cro-wheel-slice-row").each(function () {
+          o.push({
+            label: $(this).find(".cro-slice-label").val(),
+            type: $(this).find(".cro-slice-type").val(),
+            color: $(this).find(".cro-slice-color").val(),
+          });
+        });
+        return o;
+      }
+      function syncJson() {
+        $("#cro-wheel-slices-json").val(JSON.stringify(readSlices()));
+      }
+      function getSelectedTemplate() {
+        var $sel = $(".cro-builder-wrap .cro-template-card.selected");
+        return ($sel.attr("data-template") || $sel.data("template") || "").toString();
+      }
+      function checkTpl() {
+        var t = getSelectedTemplate();
+        $("#cro-wheel-config-section").toggle(t === "gamified-wheel");
+      }
+      $(document).on("click", ".cro-builder-wrap .cro-template-card", function () {
+        setTimeout(checkTpl, 0);
+      });
+      $("#cro-wheel-add-slice").on("click", function () {
+        renderSlices(readSlices().concat([{ label: "New", type: "lose", color: "#e5e7eb" }]));
+      });
+      $(document).on("click", ".cro-slice-remove", function () {
+        $(this).closest("tr").remove();
+        syncJson();
+      });
+      $(document).on("change input", ".cro-slice-label,.cro-slice-type,.cro-slice-color", syncJson);
+      var tbody = document.getElementById("cro-wheel-slices-body");
+      if (tbody && typeof Sortable !== "undefined") {
+        Sortable.create(tbody, { handle: ".cro-slice-handle", animation: 120, onEnd: syncJson });
+      }
+      var saved = $("#cro-wheel-slices-json").val();
+      var slices = DEFAULTS;
+      try {
+        var p = JSON.parse(saved);
+        if (Array.isArray(p) && p.length) {
+          slices = p;
+        }
+      } catch (e) {}
+      renderSlices(slices);
+      checkTpl();
+    })(jQuery);
+    $(document).on("click", "#cro-toggle-preview-split", function () {
+      var $split = $("#cro-builder-split");
+      var on = $split.attr("data-mode") !== "split";
+      $split.attr("data-mode", on ? "split" : "edit");
+      var $iframe = $("#cro-builder-live-preview");
+      var $frame = $("#preview-frame");
+      if (on) {
+        $iframe.show();
+        $frame.hide();
+        if (typeof CROBuilder !== "undefined" && CROBuilder.updatePreview) {
+          CROBuilder.updatePreview();
+        }
+      } else {
+        $iframe.hide();
+        $frame.show();
+      }
+      var s =
+        typeof croBuilderAjax !== "undefined" && croBuilderAjax.strings
+          ? croBuilderAjax.strings
+          : {};
+      $(this).text(
+        on
+          ? s.hideIframePreview || "Hide live preview (iframe)"
+          : s.showIframePreview || "Show live preview (iframe)"
+      );
+    });
   });
 })(jQuery);

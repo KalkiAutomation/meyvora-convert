@@ -48,7 +48,7 @@ class CRO_Trust_Badges {
 
 		wp_enqueue_style(
 			'cro-boosters',
-			CRO_PLUGIN_URL . 'public/css/cro-boosters.css',
+			CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);

@@ -4,14 +4,13 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 defined( 'ABSPATH' ) || exit;
 
 $ai_prefill_campaign_id = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
 $ai_prefill             = null;
 if ( isset( $_GET['ai_variant'] ) ) {
-	$raw_b64 = isset( $_GET['ai_variant'] ) ? wp_unslash( $_GET['ai_variant'] ) : '';
+	$raw_b64 = isset( $_GET['ai_variant'] ) ? sanitize_text_field( wp_unslash( $_GET['ai_variant'] ) ) : '';
 	if ( is_string( $raw_b64 ) && $raw_b64 !== '' ) {
 		$decoded = base64_decode( $raw_b64, true );
 		if ( false !== $decoded && is_string( $decoded ) ) {
@@ -33,7 +32,7 @@ if ( isset( $_GET['ai_variant'] ) ) {
 }
 
 // Check for form submission
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'] ) ) {
+if ( isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['cro_create_ab_test'] ) ) {
 	check_admin_referer( 'cro_create_ab_test' );
 
 	if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
@@ -76,7 +75,17 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_create_ab_test'
 // Get campaigns for dropdown
 global $wpdb;
 $campaigns_table = $wpdb->prefix . 'cro_campaigns';
-$campaigns       = $wpdb->get_results( "SELECT id, name, status FROM {$campaigns_table} ORDER BY name ASC" );
+$cache_key_camp = 'meyvora_cro_' . md5( serialize( array( 'admin_ab_test_new_campaigns_dropdown', $campaigns_table ) ) );
+$campaigns      = wp_cache_get( $cache_key_camp, 'meyvora_cro' );
+if ( false === $campaigns ) {
+	$campaigns = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+		$wpdb->prepare( 'SELECT id, name, status FROM %i ORDER BY name ASC', $campaigns_table )
+	);
+	if ( ! is_array( $campaigns ) ) {
+		$campaigns = array();
+	}
+	wp_cache_set( $cache_key_camp, $campaigns, 'meyvora_cro', 300 );
+}
 $test_name_value = '';
 if ( is_array( $ai_prefill ) && ! empty( $ai_prefill['variation_name'] ) ) {
 	$test_name_value = 'AI: ' . $ai_prefill['variation_name'];
@@ -233,49 +242,3 @@ if ( is_array( $ai_prefill ) && ! empty( $ai_prefill['variation_name'] ) ) {
 			</a>
 		</p>
 	</form>
-
-<style>
-.cro-form-card {
-	background: #fff;
-	padding: 20px 25px;
-	margin-bottom: 32px;
-	border-radius: 8px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.cro-form-card h2 {
-	margin-top: 0;
-	padding-bottom: 15px;
-	border-bottom: 1px solid #eee;
-}
-
-.cro-info-card {
-	background: #f5f5f5;
-	border-left: 4px solid #333;
-}
-
-.cro-info-card h3 {
-	margin-top: 0;
-	color: #333;
-}
-
-.cro-info-card ol {
-	margin: 0;
-	padding-left: 20px;
-}
-
-.cro-info-card li {
-	margin-bottom: 8px;
-}
-
-.cro-back-link {
-	text-decoration: none;
-	color: #666;
-	font-size: 14px;
-	font-weight: normal;
-}
-
-.cro-back-link:hover {
-	color: #333;
-}
-</style>

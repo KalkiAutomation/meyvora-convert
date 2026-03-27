@@ -105,6 +105,7 @@ class CRO_Decision_Engine {
 		} else {
 			$campaigns = $this->get_active_campaigns( $context );
 		}
+		$campaigns = apply_filters( 'cro_decision_active_campaigns', $campaigns, $context, $visitor_state );
 		if ( empty( $campaigns ) ) {
 			$decision->log( 'SKIP', __( 'No active campaigns.', 'meyvora-convert' ), array( 'step' => 3 ) );
 			$decision->reason = __( 'No active campaigns.', 'meyvora-convert' );
@@ -119,9 +120,21 @@ class CRO_Decision_Engine {
 		foreach ( $campaigns as $campaign ) {
 			$rules = $this->targeting_rules_for_engine( $campaign );
 			$result = $rule_engine->evaluate( $rules, $context );
-			$decision->record_campaign_result( $campaign->id, $result['passed'], $result['details'] );
+			$detail_payload = array(
+				'details'            => $result['details'],
+				'failed_conditions'  => isset( $result['failed_conditions'] ) ? $result['failed_conditions'] : array(),
+			);
+			$decision->record_campaign_result( $campaign->id, $result['passed'], $detail_payload );
 			if ( ! $result['passed'] ) {
-				$decision->log( 'RULE', sprintf( /* translators: %d is the campaign ID. */ __( 'Campaign %d failed targeting.', 'meyvora-convert' ), $campaign->id ), array( 'campaign_id' => $campaign->id, 'details' => $result['details'] ) );
+				$decision->log(
+					'RULE',
+					sprintf( /* translators: %d is the campaign ID. */ __( 'Campaign %d failed targeting.', 'meyvora-convert' ), $campaign->id ),
+					array(
+						'campaign_id'         => $campaign->id,
+						'failed_conditions'   => isset( $result['failed_conditions'] ) ? $result['failed_conditions'] : array(),
+						'details'             => $result['details'],
+					)
+				);
 				continue;
 			}
 			$freq               = isset( $campaign->frequency_rules ) && is_array( $campaign->frequency_rules ) ? $campaign->frequency_rules : array();
@@ -167,7 +180,7 @@ class CRO_Decision_Engine {
 		// exit_intent: must skip intent scoring — the controller fires exit_intent on viewport-top mouseout,
 		// while the scorer expects exit_mouse velocity & collector state that often do not match, so scores
 		// stayed below threshold and popups never showed.
-		$trigger_only_types = array( 'exit_intent', 'time', 'scroll', 'inactivity', 'page_load', 'click' );
+		$trigger_only_types = array( 'exit_intent', 'mobile_exit', 'time', 'scroll', 'inactivity', 'page_load', 'click' );
 		$passed_intent = array();
 		if ( in_array( $trigger_type, $trigger_only_types, true ) ) {
 			// Trigger condition was already validated in filter_eligible_by_trigger; skip intent scoring
@@ -422,7 +435,16 @@ class CRO_Decision_Engine {
 			$rules = isset( $campaign->trigger_rules ) && is_array( $campaign->trigger_rules ) ? $campaign->trigger_rules : array();
 			$camp_type = (string) ( $rules['type'] ?? 'exit_intent' );
 
-			if ( $camp_type !== $effective_trigger && ( $trigger_type !== 'page_load' || $camp_type !== 'time' ) ) {
+			$trigger_matches = ( $camp_type === $effective_trigger ) || ( 'page_load' === $trigger_type && 'time' === $camp_type );
+			$device_type     = (string) $context->get( 'device_type', '' );
+			$is_handheld     = in_array( $device_type, array( 'mobile', 'tablet' ), true );
+
+			// Mobile exit-intent signal is delivered as trigger exit_intent from the controller; allow mobile_exit campaigns on handheld.
+			if ( ! $trigger_matches && 'exit_intent' === $trigger_type && 'mobile_exit' === $camp_type && $is_handheld ) {
+				$trigger_matches = true;
+			}
+
+			if ( ! $trigger_matches ) {
 				$decision->log( 'RULE', sprintf( /* translators: %1$d is the campaign ID, %2$s is the campaign trigger type, %3$s is the current page trigger type. */ __( 'Campaign %1$d skipped: trigger type %2$s does not match %3$s.', 'meyvora-convert' ), $campaign->id, $camp_type, $trigger_type ), array( 'campaign_id' => $campaign->id, 'trigger_type' => $trigger_type ) );
 				continue;
 			}
@@ -610,7 +632,7 @@ class CRO_Decision_Engine {
 		// Build from pages include/exclude (map category -> product_category for WooCommerce)
 		$pages = isset( $tr['pages'] ) && is_array( $tr['pages'] ) ? $tr['pages'] : array();
 		$include = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
-		$exclude = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
+		$exclude = CRO_Campaign_Model::get_pages_excluded_slugs( $pages );
 		$include = array_map( array( __CLASS__, 'map_page_type' ), $include );
 		$exclude = array_map( array( __CLASS__, 'map_page_type' ), $exclude );
 		// Respect saved page_mode. Do not infer from default pages.include (Bug: 'all' was forced to 'include').
@@ -638,8 +660,25 @@ class CRO_Decision_Engine {
 			$must[] = array( 'type' => 'device_type_in', 'value' => $allowed );
 		}
 
+		// Geo (ISO2 list from builder).
+		if ( class_exists( 'CRO_Geo' ) && ! empty( $tr['geo_countries'] ) && is_array( $tr['geo_countries'] ) ) {
+			$geo = CRO_Geo::normalize_countries( $tr['geo_countries'] );
+			if ( ! empty( $geo ) ) {
+				$must[] = array( 'type' => 'geo_country_in', 'value' => $geo );
+			}
+		}
+
 		// Behavior: min_time_on_page, min_scroll_depth, require_interaction
 		$behavior = isset( $tr['behavior'] ) && is_array( $tr['behavior'] ) ? $tr['behavior'] : array();
+
+		// Cart status (builder saves cart_status; must map here — was only handled in legacy CRO_Targeting).
+		$cart_status = isset( $behavior['cart_status'] ) ? sanitize_key( (string) $behavior['cart_status'] ) : 'any';
+		if ( 'has_items' === $cart_status ) {
+			$must[] = array( 'type' => 'cart_has_items', 'value' => true );
+		} elseif ( 'empty' === $cart_status ) {
+			$must[] = array( 'type' => 'cart_empty', 'value' => true );
+		}
+
 		$min_time = isset( $behavior['min_time_on_page'] ) ? (int) $behavior['min_time_on_page'] : 0;
 		if ( $min_time > 0 ) {
 			$must[] = array( 'type' => 'time_on_page_gte', 'value' => $min_time );
@@ -716,15 +755,100 @@ class CRO_Decision_Engine {
 			$must[] = array( 'type' => 'session_count_lte', 'value' => $max_sessions );
 		}
 
-		// UTM conditions
-		if ( ! empty( $tr['utm_source'] ) && is_string( $tr['utm_source'] ) ) {
-			$must[] = array( 'type' => 'utm_param_equals', 'value' => array( 'param' => 'utm_source', 'value' => $tr['utm_source'] ) );
+		// UTM (optional per-field operator: utm_*_op).
+		$utm_keys = array(
+			'utm_source'   => array( 'path' => 'request.utm_source', 'param' => 'utm_source' ),
+			'utm_medium'   => array( 'path' => 'request.utm_medium', 'param' => 'utm_medium' ),
+			'utm_campaign' => array( 'path' => 'request.utm_campaign', 'param' => 'utm_campaign' ),
+		);
+		foreach ( $utm_keys as $field => $spec ) {
+			$op  = isset( $tr[ $field . '_op' ] ) ? sanitize_key( (string) $tr[ $field . '_op' ] ) : '';
+			$val = isset( $tr[ $field ] ) ? (string) $tr[ $field ] : '';
+			if ( $op === '' && $val !== '' ) {
+				$must[] = array(
+					'type'  => 'utm_param_equals',
+					'value' => array( 'param' => $spec['param'], 'value' => $val ),
+				);
+				continue;
+			}
+			if ( $op === '' ) {
+				continue;
+			}
+			if ( 'is_empty' === $op ) {
+				$must[] = array(
+					'type'  => 'context_string_rule',
+					'value' => array(
+						'path'     => $spec['path'],
+						'operator' => 'is_empty',
+						'value'    => '',
+					),
+				);
+				continue;
+			}
+			if ( $val === '' && ! in_array( $op, array( 'is_empty', 'is_not_empty' ), true ) ) {
+				continue;
+			}
+			if ( 'is_not_empty' === $op ) {
+				$must[] = array(
+					'type'  => 'context_string_rule',
+					'value' => array(
+						'path'     => $spec['path'],
+						'operator' => 'is_not_empty',
+						'value'    => '',
+					),
+				);
+				continue;
+			}
+			$must[] = array(
+				'type'  => 'context_string_rule',
+				'value' => array(
+					'path'     => $spec['path'],
+					'operator' => $op,
+					'value'    => $val,
+				),
+			);
 		}
-		if ( ! empty( $tr['utm_medium'] ) && is_string( $tr['utm_medium'] ) ) {
-			$must[] = array( 'type' => 'utm_param_equals', 'value' => array( 'param' => 'utm_medium', 'value' => $tr['utm_medium'] ) );
-		}
-		if ( ! empty( $tr['utm_campaign'] ) && is_string( $tr['utm_campaign'] ) ) {
-			$must[] = array( 'type' => 'utm_param_equals', 'value' => array( 'param' => 'utm_campaign', 'value' => $tr['utm_campaign'] ) );
+
+		// Referrer domain (referrer_op optional; default contains when only referrer text is set).
+		$ref_op  = isset( $tr['referrer_op'] ) ? sanitize_key( (string) $tr['referrer_op'] ) : '';
+		$ref_val = isset( $tr['referrer'] ) ? sanitize_text_field( (string) $tr['referrer'] ) : '';
+		$needle  = str_replace( 'www.', '', strtolower( $ref_val ) );
+		if ( $ref_op === '' && $ref_val !== '' ) {
+			$must[] = array(
+				'type'  => 'context_string_rule',
+				'value' => array(
+					'path'     => 'request.referrer_domain',
+					'operator' => 'contains',
+					'value'    => $needle,
+				),
+			);
+		} elseif ( 'is_empty' === $ref_op ) {
+			$must[] = array(
+				'type'  => 'context_string_rule',
+				'value' => array(
+					'path'     => 'request.referrer_domain',
+					'operator' => 'is_empty',
+					'value'    => '',
+				),
+			);
+		} elseif ( 'is_not_empty' === $ref_op ) {
+			$must[] = array(
+				'type'  => 'context_string_rule',
+				'value' => array(
+					'path'     => 'request.referrer_domain',
+					'operator' => 'is_not_empty',
+					'value'    => '',
+				),
+			);
+		} elseif ( $ref_op !== '' && $ref_val !== '' && in_array( $ref_op, array( 'equals', 'not_equals', 'contains', 'not_contains', 'starts_with' ), true ) ) {
+			$must[] = array(
+				'type'  => 'context_string_rule',
+				'value' => array(
+					'path'     => 'request.referrer_domain',
+					'operator' => $ref_op,
+					'value'    => $needle,
+				),
+			);
 		}
 
 		return array( 'must' => $must, 'should' => array(), 'must_not' => $must_not );

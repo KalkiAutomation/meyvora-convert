@@ -4,14 +4,13 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : 0;
+$campaign_id = CRO_Security::get_query_var_absint( 'campaign_id' );
 $campaign = $campaign_id > 0 ? CRO_Campaign::get( $campaign_id ) : null;
 
 $other_campaigns = array();
@@ -24,7 +23,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 }
 
 // Show success notice if campaign was duplicated
-if ( isset( $_GET['duplicated'] ) && $_GET['duplicated'] == '1' ) {
+if ( CRO_Security::get_query_var( 'duplicated' ) === '1' ) {
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Campaign duplicated successfully!', 'meyvora-convert' ) . '</p></div>';
 }
 
@@ -34,13 +33,13 @@ $targeting = isset( $campaign['targeting_rules'] ) ? $campaign['targeting_rules'
 $targeting = wp_parse_args( $targeting, $default_targeting );
 
 // Handle save
-if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_verify_nonce( wp_unslash( $_POST['cro_nonce'] ), 'cro_save_campaign' ) ) {
+if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cro_nonce'] ) ), 'cro_save_campaign' ) ) {
 	$data = array(
 		'name'                   => sanitize_text_field( wp_unslash( $_POST['campaign_name'] ?? '' ) ),
 		'campaign_type'          => sanitize_text_field( wp_unslash( $_POST['campaign_type'] ?? 'exit_intent' ) ),
 		'status'                 => sanitize_text_field( wp_unslash( $_POST['campaign_status'] ?? 'draft' ) ),
 		'fallback_id'            => isset( $_POST['fallback_id'] ) ? absint( wp_unslash( $_POST['fallback_id'] ) ) : 0,
-		'fallback_delay_seconds' => isset( $_POST['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) wp_unslash( $_POST['fallback_delay_seconds'] ) ) ) : 5,
+		'fallback_delay_seconds' => isset( $_POST['fallback_delay_seconds'] ) ? min( 300, max( 0, absint( sanitize_text_field( wp_unslash( $_POST['fallback_delay_seconds'] ) ) ) ) ) : 5,
 	);
 
 	// Process targeting data.
@@ -137,7 +136,7 @@ if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_
 		<!-- Behavioral Targeting Section -->
 		<div class="cro-settings-section">
 			<h2>
-				<?php echo CRO_Icons::svg_kses( 'user', array( 'class' => 'cro-ico' ) ); ?>
+				<?php echo wp_kses( CRO_Icons::svg( 'user', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 				<?php esc_html_e( 'Behavioral Targeting', 'meyvora-convert' ); ?>
 			</h2>
@@ -289,17 +288,6 @@ if ( isset( $_POST['cro_save_campaign'] ) && isset( $_POST['cro_nonce'] ) && wp_
 				</div>
 			</div>
 		</div>
-		<script>
-		(function () {
-			var sel = document.getElementById('fallback_id');
-			var row = document.getElementById('cro-fallback-delay-row');
-			if (!sel || !row) return;
-			function toggle() {
-				row.style.display = parseInt(sel.value, 10) > 0 ? '' : 'none';
-			}
-			sel.addEventListener('change', toggle);
-		})();
-		</script>
 
 		<?php submit_button( __( 'Save Campaign', 'meyvora-convert' ), 'primary', 'cro_save_campaign' ); ?>
 	</form>

@@ -17,7 +17,6 @@
       nonce: "",
       ajaxUrl: "",
       publicNonce: "",
-      debug: false,
       visitorState: {},
       context: {},
     },
@@ -32,6 +31,14 @@
       pageviewId: null,
       lastDecidePayload: null,
       lastSignals: null,
+      /** No further /decide this page when server says e.g. no_targeting_match (see handleDecision). */
+      pageDecideStopped: false,
+      /** After HTTP 429, pause triggers until this timestamp (ms). */
+      decideBackoffUntil: 0,
+      /** Coalesce rapid /decide triggers (scroll + time + signals) into one request. */
+      decideDebounceMs: 800,
+      _decideDebounceTimer: null,
+      _pendingDecide: null,
     },
 
     // Trigger handlers
@@ -44,6 +51,9 @@
       if (this.state.initialized) return;
 
       this.config = { ...this.config, ...config };
+      if (typeof config.decideDebounceMs === "number" && config.decideDebounceMs >= 0) {
+        this.state.decideDebounceMs = config.decideDebounceMs;
+      }
 
       // Don't run on admin or if disabled
       if (this.shouldSkip()) {
@@ -66,6 +76,18 @@
       this.initManualTriggers();
 
       this.state.initialized = true;
+
+      var controller = this;
+      window.addEventListener("pagehide", function () {
+        if (controller._timeInterval) {
+          clearInterval(controller._timeInterval);
+          controller._timeInterval = null;
+        }
+        if (controller.state._decideDebounceTimer) {
+          clearTimeout(controller.state._decideDebounceTimer);
+          controller.state._decideDebounceTimer = null;
+        }
+      });
 
       // Dispatch ready event
       document.dispatchEvent(new CustomEvent("cro:ready"));
@@ -125,21 +147,28 @@
     initTriggers: function () {
       const self = this;
 
-      // Exit Intent Trigger
+      // Exit intent: desktop = mouse-out; mobile = shared cro:exit-intent signals from cro-exit-intent.js.
       this.triggers.exit_intent = {
         active: false,
         init: function () {
           if (this.active) return;
           this.active = true;
-
-          // Desktop: mouse leave from top
+          if (self.isMobileDevice && self.isMobileDevice()) {
+            if (typeof jQuery !== "undefined") {
+              jQuery(document).on("cro:exit-intent", function (ev, src) {
+                self.onTrigger("exit_intent", {
+                  type: "mobile_signal",
+                  source: src || "",
+                });
+              });
+            }
+            return;
+          }
           document.addEventListener("mouseout", function (e) {
             if (e.clientY <= 0 && !e.relatedTarget) {
               self.onTrigger("exit_intent", { type: "mouse_exit" });
             }
           });
-
-          // Mobile: handled via signals (scroll up, back button)
         },
       };
 
@@ -182,42 +211,25 @@
         },
       };
 
-      // Inactivity Trigger
+      // Inactivity Trigger — idle tracking only; checkpoints run in the same 1s loop as time (see below).
       this.triggers.inactivity = {
         active: false,
-        timeout: null,
         lastActivity: Date.now(),
-        init: function (seconds) {
+        init: function () {
           if (this.active) return;
           this.active = true;
-
-          const checkInactivity = () => {
-            const idle = (Date.now() - this.lastActivity) / 1000;
-            if (idle >= seconds) {
-              self.onTrigger("inactivity", {
-                idle_seconds: Math.floor(idle),
-              });
-            }
-            // Always reschedule — a campaign requiring longer idle may still match later.
-            if (!self.state.popupShown) {
-              this.timeout = setTimeout(checkInactivity, 5000);
-            }
-          };
-
-          // Reset on activity
+          var ia = this;
           ["mousemove", "keydown", "scroll", "click", "touchstart"].forEach(
-            (event) => {
+            function (event) {
               document.addEventListener(
                 event,
-                () => {
-                  this.lastActivity = Date.now();
+                function () {
+                  ia.lastActivity = Date.now();
                 },
                 { passive: true }
               );
             }
           );
-
-          this.timeout = setTimeout(checkInactivity, 1000);
         },
       };
 
@@ -237,7 +249,6 @@
         },
       };
 
-      // Initialize default trigger (exit intent)
       this.triggers.exit_intent.init();
 
       // Fire page_load once so campaigns set to "show on load" or time with short delay get evaluated
@@ -247,9 +258,11 @@
         }
       }, 500);
 
-      // Time trigger: repeat every 1s so checkpoints are not lost while decisionPending (e.g. slow page_load /decide).
+      // Time + inactivity: one 1s loop (fewer timers; inactivity no longer spams /decide every 5s while idle).
       self._initTime = Date.now();
-      var timeThresholds = [1, 3, 10, 30, 60];
+      self._inactivityMarksFired = {};
+      // Fewer checkpoints = fewer /decide calls; trigger_mismatch can still retry next tick.
+      var timeThresholds = [5, 45, 90];
       var timeThresholdsFired = {};
       self._timeInterval = setInterval(function () {
         if (self.state.popupShown) {
@@ -261,6 +274,7 @@
           typeof window.croBehavior !== "undefined"
             ? window.croBehavior.getTimeOnPage()
             : Math.floor((Date.now() - (self._initTime || Date.now())) / 1000);
+        var fireTimeThisTick = false;
         timeThresholds.forEach(function (threshold) {
           if (
             elapsed >= threshold &&
@@ -268,30 +282,59 @@
             !self.state.decisionPending
           ) {
             timeThresholdsFired[threshold] = true;
+            fireTimeThisTick = true;
             self.onTrigger("time", { seconds: elapsed });
           }
         });
+        // Inactivity checkpoints (max 3 /decide per page from idle; server enforces per-campaign idle_seconds).
+        // Do not fire in the same 1s tick as time — debounce would coalesce and drop one trigger type.
+        var idleRow = self.triggers.inactivity;
+        if (!fireTimeThisTick && idleRow && idleRow.active) {
+          var idleSec = (Date.now() - idleRow.lastActivity) / 1000;
+          var inactivityMarks = [30, 60, 120];
+          for (var ai = 0; ai < inactivityMarks.length; ai++) {
+            var imk = inactivityMarks[ai];
+            if (
+              idleSec >= imk &&
+              !self._inactivityMarksFired[imk] &&
+              !self.state.decisionPending
+            ) {
+              self._inactivityMarksFired[imk] = true;
+              self.onTrigger("inactivity", {
+                idle_seconds: Math.floor(idleSec),
+              });
+              break;
+            }
+          }
+        }
       }, 1000);
 
-      // Activate scroll trigger: fire when user reaches 25%, 50%, 75%, 100% so scroll-depth campaigns get evaluated
+      // Scroll depth: one /decide per throttle window even if user jumps past several marks at once.
       var scrollFired = {};
+      var scrollMarks = [50, 100];
       window.addEventListener(
         "scroll",
         self.throttle(function () {
           if (self.state.popupShown || self.state.decisionPending) return;
           var pct = self.getScrollPercent();
-          [25, 50, 75, 100].forEach(function (threshold) {
-            if (pct >= threshold && !scrollFired[threshold]) {
-              scrollFired[threshold] = true;
-              self.onTrigger("scroll", { depth: pct });
+          var deepest = -1;
+          for (var sm = 0; sm < scrollMarks.length; sm++) {
+            var st = scrollMarks[sm];
+            if (pct >= st && !scrollFired[st]) {
+              deepest = Math.max(deepest, st);
             }
-          });
+          }
+          if (deepest < 0) return;
+          for (var sx = 0; sx < scrollMarks.length; sx++) {
+            var mk = scrollMarks[sx];
+            if (pct >= mk) scrollFired[mk] = true;
+          }
+          self.onTrigger("scroll", { depth: pct });
         }, 200),
         { passive: true }
       );
 
-      // Inactivity trigger: 30s is the floor; server filter_eligible_by_trigger enforces per-campaign idle_seconds.
-      this.triggers.inactivity.init(30);
+      this.triggers.inactivity.init();
     },
 
     /**
@@ -354,6 +397,17 @@
         this.log("Trigger ignored - popup shown or decision pending");
         return;
       }
+      if (this.state.pageDecideStopped) {
+        this.log("Trigger ignored - no further /decide this page (server already returned terminal reason)");
+        return;
+      }
+      if (
+        this.state.decideBackoffUntil &&
+        Date.now() < this.state.decideBackoffUntil
+      ) {
+        this.log("Trigger ignored - rate limit backoff");
+        return;
+      }
 
       this.log("Trigger fired:", triggerType, data);
 
@@ -377,9 +431,39 @@
     },
 
     /**
-     * Request decision from server
+     * Request decision from server (debounced except exit_intent, which runs immediately).
      */
     requestDecision: function (triggerType, triggerData) {
+      // Exit intent and first paint must not wait for debounce coalescing.
+      if (triggerType === "exit_intent" || triggerType === "page_load") {
+        clearTimeout(this.state._decideDebounceTimer);
+        this.state._decideDebounceTimer = null;
+        this.state._pendingDecide = null;
+        this._executeRequestDecision(triggerType, triggerData);
+        return;
+      }
+      var self = this;
+      this.state._pendingDecide = { triggerType: triggerType, triggerData: triggerData };
+      clearTimeout(this.state._decideDebounceTimer);
+      this.state._decideDebounceTimer = setTimeout(function () {
+        var p = self.state._pendingDecide;
+        self.state._decideDebounceTimer = null;
+        self.state._pendingDecide = null;
+        if (
+          !p ||
+          self.state.popupShown ||
+          self.state.decisionPending
+        ) {
+          return;
+        }
+        self._executeRequestDecision(p.triggerType, p.triggerData);
+      }, this.state.decideDebounceMs || 800);
+    },
+
+    /**
+     * POST /cro/v1/decide (single in-flight; called after debounce).
+     */
+    _executeRequestDecision: function (triggerType, triggerData) {
       this.state.decisionPending = true;
 
       // Enrich trigger_data with live behavioral metrics from croBehavior (cro-public.js)
@@ -410,6 +494,13 @@
         pageview_id: this.state.pageviewId || undefined,
       };
 
+      if (
+        typeof croPublic !== "undefined" &&
+        croPublic.decideDebug
+      ) {
+        requestData.debug = true;
+      }
+
       this.state.lastDecidePayload = requestData;
 
       this.log("Requesting decision:", requestData);
@@ -421,13 +512,25 @@
         credentials: "same-origin",
       })
         .then(function (response) {
-          return response.json().then(function (data) {
-            return { ok: response.ok, status: response.status, data: data };
-          });
+          return response
+            .json()
+            .then(function (data) {
+              return { ok: response.ok, status: response.status, data: data };
+            })
+            .catch(function () {
+              return { ok: response.ok, status: response.status, data: {} };
+            });
         })
         .then(
           function (result) {
             this.state.decisionPending = false;
+            if (result.status === 429) {
+              this.state.decideBackoffUntil = Date.now() + 60000;
+              this.log(
+                "Decide rate limited (429); backing off 60s — reduce parallel tabs or /decide tests"
+              );
+              return;
+            }
             var decision = result.data;
             if (!result.ok) {
               this.log(
@@ -435,6 +538,9 @@
                 decision && decision.code ? decision.code : "",
                 decision && decision.message ? decision.message : ""
               );
+              if (decision && decision.code === "rate_limited") {
+                this.state.decideBackoffUntil = Date.now() + 60000;
+              }
               return;
             }
             if (
@@ -488,14 +594,30 @@
         this.state.decisionPending = false;
       } else {
         this.log("Decision: do not show -", decision.reason);
+        var code = decision.reason_code || "";
+        // Do not retry these for the rest of the pageview (saves /decide spam).
+        // trigger_mismatch = scroll/time thresholds not met yet — allow more tries.
+        var terminalStop = [
+          "no_campaigns",
+          "no_targeting_match",
+          "consent",
+          "ux_block",
+          "suppression",
+          "intent_threshold",
+          "frequency",
+          "offer_eligibility",
+        ];
+        if (terminalStop.indexOf(code) !== -1) {
+          this.state.pageDecideStopped = true;
+          this.log("Further /decide calls disabled this page (reason_code:", code + ")");
+        }
       }
 
-      // Debug mode
-      if (this.config.debug && decision.debug) {
-        console.group("CRO Decision Debug");
-        console.log("Decision:", decision);
-        console.log("Debug Log:", decision.debug);
-        console.groupEnd();
+      if (decision.debug && window.CRODebug && window.CRODebug.isEnabled()) {
+        window.CRODebug.group("CRO Decision Debug");
+        window.CRODebug.log("Decision:", decision);
+        window.CRODebug.log("Debug Log:", decision.debug);
+        window.CRODebug.groupEnd();
       }
     },
 
@@ -553,6 +675,8 @@
      * After dismiss: server records state, track event, optional delayed fallback popup.
      */
     onCampaignDismissed: function (campaignId) {
+      this.state.pageDecideStopped = false;
+
       const dispatchDismissed = () => {
         document.dispatchEvent(
           new CustomEvent("cro:campaign_dismissed", {
@@ -585,9 +709,7 @@
      */
     showCampaign: function (campaignId) {
       fetch(this.getRestUrl() + "cro/v1/campaign/" + campaignId, {
-        headers: {
-          "X-WP-Nonce": this.config.nonce,
-        },
+        credentials: "same-origin",
       })
         .then((response) => response.json())
         .then((campaign) => {
@@ -703,14 +825,24 @@
     getScrollPercent: function () {
       const h = document.documentElement;
       const b = document.body;
-      const st = "scrollTop";
-      const sh = "scrollHeight";
-      return ((h[st] || b[st]) / ((h[sh] || b[sh]) - h.clientHeight)) * 100;
+      const scrollTop = h.scrollTop || b.scrollTop || 0;
+      const scrollable = (h.scrollHeight || b.scrollHeight) - h.clientHeight;
+      if (scrollable <= 0) {
+        return 100;
+      }
+      return Math.min(100, Math.round((scrollTop / scrollable) * 100));
     },
 
     /**
      * Utility: Throttle function
      */
+    isMobileDevice: function () {
+      if (window.croSignals && typeof window.croSignals.isMobile === "function") {
+        return window.croSignals.isMobile();
+      }
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+    },
+
     throttle: function (func, limit) {
       let inThrottle;
       return function (...args) {
@@ -723,12 +855,17 @@
     },
 
     /**
-     * Utility: Log with prefix
+     * Utility: Log with [CRO] prefix when General → Debug mode is on (window.CRODebug).
      */
-    log: function (...args) {
-      if (this.config.debug) {
-        console.log("[CRO]", ...args);
+    log: function () {
+      if (!window.CRODebug || !window.CRODebug.isEnabled()) {
+        return;
       }
+      var args = ["[CRO]"];
+      for (var i = 0; i < arguments.length; i++) {
+        args.push(arguments[i]);
+      }
+      window.CRODebug.log.apply(window.CRODebug, args);
     },
   };
 

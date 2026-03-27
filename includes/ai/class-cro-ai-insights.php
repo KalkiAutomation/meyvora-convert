@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Aggregate analytics reads for AI snapshot only.
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -422,27 +421,32 @@ class CRO_AI_Insights {
 			return array();
 		}
 		$limit = max( 1, min( 20, $limit ) );
-		$rows  = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT o.id, o.name,
+		$cache_key_top_offers = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_top_offers_by_period', $offers, $logs, $date_from, $date_to, $limit ) ) );
+		$rows                 = wp_cache_get( $cache_key_top_offers, 'meyvora_cro' );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT o.id, o.name,
 			COUNT(l.id) AS applies,
 			SUM(CASE WHEN l.order_id IS NOT NULL AND l.order_id > 0 THEN 1 ELSE 0 END) AS orders
 			FROM %i o
 			INNER JOIN %i l ON l.offer_id = o.id
-			WHERE DATE(l.created_at) BETWEEN %s AND %s
+			WHERE l.created_at >= %s AND l.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
 			GROUP BY o.id, o.name
 			ORDER BY applies DESC
 			LIMIT %d',
-				$offers,
-				$logs,
-				$date_from,
-				$date_to,
-				$limit
-			),
-			ARRAY_A
-		);
+					$offers,
+					$logs,
+					$date_from,
+					$date_to,
+					$limit
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key_top_offers, $rows, 'meyvora_cro', 300 );
+		}
 		if ( ! is_array( $rows ) ) {
-			return array();
+			$rows = array();
 		}
 		$out = array();
 		foreach ( $rows as $row ) {
@@ -473,29 +477,43 @@ class CRO_AI_Insights {
 				'completed_with_winner' => array(),
 			);
 		}
-		$running = (int) $wpdb->get_var(
-			$wpdb->prepare(
-				'SELECT COUNT(*) FROM %i WHERE status = %s',
-				$tests,
-				'running'
-			)
-		);
+		$cache_key_running = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_ab_tests_running_count', $tests, 'running' ) ) );
+		$running_raw       = wp_cache_get( $cache_key_running, 'meyvora_cro' );
+		if ( false === $running_raw ) {
+			$running_raw = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COUNT(*) FROM %i WHERE status = %s',
+					$tests,
+					'running'
+				)
+			);
+			wp_cache_set( $cache_key_running, $running_raw, 'meyvora_cro', 300 );
+		}
+		$running = (int) $running_raw;
 
 		if ( CRO_Database::table_exists( $variations ) ) {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					'SELECT t.id, t.name AS test_name, t.winner_variation_id, v.name AS winner_variation_name
+			$cache_key_completed_var = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_ab_completed_with_variations', $tests, $variations, 'completed' ) ) );
+			$rows                    = wp_cache_get( $cache_key_completed_var, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT t.id, t.name AS test_name, t.winner_variation_id, v.name AS winner_variation_name
 				FROM %i t
 				LEFT JOIN %i v ON v.id = t.winner_variation_id
 				WHERE t.status = %s AND t.winner_variation_id IS NOT NULL AND t.winner_variation_id > 0
 				ORDER BY t.completed_at DESC
 				LIMIT 12',
-					$tests,
-					$variations,
-					'completed'
-				),
-				ARRAY_A
-			);
+						$tests,
+						$variations,
+						'completed'
+					),
+					ARRAY_A
+				);
+				wp_cache_set( $cache_key_completed_var, $rows, 'meyvora_cro', 300 );
+			}
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
 			if ( is_array( $rows ) ) {
 				foreach ( $rows as $row ) {
 					$completed[] = array(
@@ -507,14 +525,22 @@ class CRO_AI_Insights {
 				}
 			}
 		} else {
-			$rows = $wpdb->get_results(
-				$wpdb->prepare(
-					'SELECT id, name AS test_name, winner_variation_id FROM %i WHERE status = %s AND winner_variation_id IS NOT NULL AND winner_variation_id > 0 ORDER BY completed_at DESC LIMIT 12',
-					$tests,
-					'completed'
-				),
-				ARRAY_A
-			);
+			$cache_key_completed_only = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_ab_completed_tests_only', $tests, 'completed' ) ) );
+			$rows                     = wp_cache_get( $cache_key_completed_only, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT id, name AS test_name, winner_variation_id FROM %i WHERE status = %s AND winner_variation_id IS NOT NULL AND winner_variation_id > 0 ORDER BY completed_at DESC LIMIT 12',
+						$tests,
+						'completed'
+					),
+					ARRAY_A
+				);
+				wp_cache_set( $cache_key_completed_only, $rows, 'meyvora_cro', 300 );
+			}
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
 			if ( is_array( $rows ) ) {
 				foreach ( $rows as $row ) {
 					$completed[] = array(
@@ -551,20 +577,27 @@ class CRO_AI_Insights {
 				'avg_value'      => 0.0,
 			);
 		}
-		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT
+		$cache_key_abandoned_totals = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_abandoned_totals_period', $table, $date_from, $date_to, 'recovered' ) ) );
+		$cached_abandoned_totals    = wp_cache_get( $cache_key_abandoned_totals, 'meyvora_cro' );
+		if ( false === $cached_abandoned_totals ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT
 					COUNT(*) AS total,
 					SUM(CASE WHEN status = %s THEN 1 ELSE 0 END) AS recovered
 				FROM %i
-				WHERE DATE(created_at) BETWEEN %s AND %s',
-				'recovered',
-				$table,
-				$date_from,
-				$date_to
-			),
-			ARRAY_A
-		);
+				WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)',
+					'recovered',
+					$table,
+					$date_from,
+					$date_to
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key_abandoned_totals, $row, 'meyvora_cro', 300 );
+		} else {
+			$row = is_array( $cached_abandoned_totals ) ? $cached_abandoned_totals : null;
+		}
 		$total     = ( $row && isset( $row['total'] ) ) ? (int) $row['total'] : 0;
 		$recovered = ( $row && isset( $row['recovered'] ) ) ? (int) $row['recovered'] : 0;
 		$rate      = $total > 0 ? round( ( $recovered / $total ) * 100, 2 ) : 0.0;
@@ -590,15 +623,23 @@ class CRO_AI_Insights {
 		global $wpdb;
 		$sum = 0.0;
 		$n   = 0;
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT cart_json FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND cart_json IS NOT NULL AND cart_json != \'\' LIMIT 5000',
-				$table,
-				$date_from,
-				$date_to
-			),
-			ARRAY_A
-		);
+		$cache_key_cart_json = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_abandoned_cart_json_rows', $table, $date_from, $date_to ) ) );
+		$rows                = wp_cache_get( $cache_key_cart_json, 'meyvora_cro' );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT cart_json FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND cart_json IS NOT NULL AND cart_json != \'\' LIMIT 5000',
+					$table,
+					$date_from,
+					$date_to
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key_cart_json, $rows, 'meyvora_cro', 300 );
+		}
+		if ( ! is_array( $rows ) ) {
+			$rows = array();
+		}
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $r ) {
 				if ( empty( $r['cart_json'] ) ) {
@@ -629,9 +670,12 @@ class CRO_AI_Insights {
 		$end_ts   = strtotime( $date_to . ' 00:00:00' );
 		$start_ts = strtotime( '-13 days', $end_ts );
 		$from     = gmdate( 'Y-m-d', $start_ts );
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT date,
+		$cache_key_daily_trend = 'meyvora_cro_' . md5( serialize( array( 'ai_insights_daily_stats_trend', $stats, $from, $date_to ) ) );
+		$rows                  = wp_cache_get( $cache_key_daily_trend, 'meyvora_cro' );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT date,
 					SUM(impressions) AS impressions,
 					SUM(conversions) AS conversions,
 					SUM(revenue) AS revenue
@@ -639,14 +683,16 @@ class CRO_AI_Insights {
 				WHERE date BETWEEN %s AND %s
 				GROUP BY date
 				ORDER BY date ASC',
-				$stats,
-				$from,
-				$date_to
-			),
-			ARRAY_A
-		);
+					$stats,
+					$from,
+					$date_to
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key_daily_trend, $rows, 'meyvora_cro', 300 );
+		}
 		if ( ! is_array( $rows ) ) {
-			return array();
+			$rows = array();
 		}
 		$out = array();
 		foreach ( $rows as $row ) {
@@ -661,4 +707,3 @@ class CRO_AI_Insights {
 	}
 }
 
-// phpcs:enable

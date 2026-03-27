@@ -2,9 +2,15 @@
 /**
  * Analytics Data Model
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class CRO_Analytics {
-    
+
+    private const CACHE_GROUP = 'meyvora_cro';
+    private const CACHE_TTL   = 300;
+
     private $events_table;
     private $campaigns_table;
     
@@ -24,24 +30,37 @@ class CRO_Analytics {
     public static function get_overview_stats( $days = 30 ) {
         $date_to   = wp_date( 'Y-m-d' );
         $date_from = wp_date( 'Y-m-d', strtotime( "-{$days} days" ) );
+        $cache_key = 'meyvora_cro_' . md5( 'overview_stats_' . serialize( array( (int) $days, $date_from, $date_to ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
         $analytics = new self();
         $summary   = $analytics->get_summary( $date_from, $date_to );
 
         global $wpdb;
-        $events_table = esc_sql( $wpdb->prefix . 'cro_events' );
-        $coupons      = 0;
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        if ( $table_exists ) {
-            $coupons = (int) $wpdb->get_var(
+        $events_table = $wpdb->prefix . 'cro_events';
+        $coupons_key  = 'meyvora_cro_' . md5( 'overview_stats_coupons_' . serialize( array( $date_from, $date_to ) ) );
+        $coupons      = wp_cache_get( $coupons_key, self::CACHE_GROUP );
+        if ( false === $coupons ) {
+            $coupons = 0;
+            if ( $analytics->cache_table_exists( $events_table ) ) {
+                $coupons = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND coupon_code IS NOT NULL AND coupon_code != ''",
-                    $date_from,
-                    $date_to
-                )
-            );
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND coupon_code IS NOT NULL AND coupon_code != \'\'',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+            }
+            wp_cache_set( $coupons_key, $coupons, self::CACHE_GROUP, self::CACHE_TTL );
+        } else {
+            $coupons = (int) $coupons;
         }
 
-        return array(
+        $out = array(
             'revenue_attributed'   => $summary['revenue'],
             'total_conversions'    => $summary['conversions'],
             'total_impressions'    => $summary['impressions'],
@@ -49,6 +68,8 @@ class CRO_Analytics {
             'emails_captured'      => $summary['emails'],
             'coupons_redeemed'     => $coupons,
         );
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
+        return $out;
     }
 
     /**
@@ -89,15 +110,22 @@ class CRO_Analytics {
      * @return array
      */
     public function get_summary( $date_from = null, $date_to = null, $campaign_id = null ) {
-        global $wpdb;
+        $date_from   = $date_from ?: wp_date( 'Y-m-d', strtotime( '-30 days' ) );
+        $date_to     = $date_to ?: wp_date( 'Y-m-d' );
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
 
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $this->events_table ) );
-        if ( ! $table_exists ) {
-            return $this->empty_summary();
+        $cache_key = 'meyvora_cro_' . md5( 'get_summary_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
         }
 
-        $date_from = $date_from ?: wp_date( 'Y-m-d', strtotime( '-30 days' ) );
-        $date_to   = $date_to ?: wp_date( 'Y-m-d' );
+        if ( ! $this->cache_table_exists( $this->events_table ) ) {
+            $empty = $this->empty_summary();
+            wp_cache_set( $cache_key, $empty, self::CACHE_GROUP, self::CACHE_TTL );
+            return $empty;
+        }
+
         return $this->get_summary_internal( $date_from, $date_to, $campaign_id );
     }
 
@@ -131,6 +159,24 @@ class CRO_Analytics {
     }
 
     /**
+     * Whether a DB table exists (cached).
+     *
+     * @param string $table_name Full table name including prefix.
+     * @return bool
+     */
+    private function cache_table_exists( $table_name ) {
+        global $wpdb;
+        $cache_key = 'meyvora_cro_' . md5( 'table_exists_' . serialize( array( $table_name ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return (bool) $cached;
+        }
+        $exists = (bool) $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        wp_cache_set( $cache_key, $exists ? 1 : 0, self::CACHE_GROUP, self::CACHE_TTL );
+        return $exists;
+    }
+
+    /**
      * Internal summary with optional campaign filter.
      *
      * @param string     $date_from    Y-m-d.
@@ -141,103 +187,205 @@ class CRO_Analytics {
     private function get_summary_internal( $date_from, $date_to, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $events_table = $this->events_table;
+        $campaign_id   = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
 
-        if ( $campaign_id ) {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression' AND source_type = 'campaign' AND source_id = %d",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                )
-            );
-            $clicks = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'interaction' AND source_type = 'campaign' AND source_id = %d",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                )
-            );
-            $conversions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND source_type = 'campaign' AND source_id = %d",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                )
-            );
-            $revenue = (float) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COALESCE(SUM(order_value), 0) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND source_type = 'campaign' AND source_id = %d",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                )
-            );
-            $emails = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND email IS NOT NULL AND source_type = 'campaign' AND source_id = %d",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                )
-            );
-        } else {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression'",
-                    $date_from,
-                    $date_to
-                )
-            );
-            $clicks = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'interaction' AND source_type = 'campaign'",
-                    $date_from,
-                    $date_to
-                )
-            );
-            $conversions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion'",
-                    $date_from,
-                    $date_to
-                )
-            );
-            $revenue = (float) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COALESCE(SUM(order_value), 0) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion'",
-                    $date_from,
-                    $date_to
-                )
-            );
-            $emails = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND email IS NOT NULL",
-                    $date_from,
-                    $date_to
-                )
-            );
+        $cache_key = 'meyvora_cro_' . md5( 'get_summary_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
         }
 
-        $sticky_cart_adds = (int) $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND source_type = 'sticky_cart' AND event_type = 'interaction'",
-                $date_from,
-                $date_to
-            )
-        );
+        if ( $campaign_id ) {
+            $k_imp = 'meyvora_cro_' . md5( 'summary_imp_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+            $impressions = wp_cache_get( $k_imp, self::CACHE_GROUP );
+            if ( false === $impressions ) {
+                $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $k_imp, $impressions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $impressions = (int) $impressions;
+            }
+            $k_clk = 'meyvora_cro_' . md5( 'summary_clk_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+            $clicks = wp_cache_get( $k_clk, self::CACHE_GROUP );
+            if ( false === $clicks ) {
+                $clicks = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'interaction\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $k_clk, $clicks, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $clicks = (int) $clicks;
+            }
+            $k_conv = 'meyvora_cro_' . md5( 'summary_conv_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+            $conversions = wp_cache_get( $k_conv, self::CACHE_GROUP );
+            if ( false === $conversions ) {
+                $conversions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $k_conv, $conversions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $conversions = (int) $conversions;
+            }
+            $k_rev = 'meyvora_cro_' . md5( 'summary_rev_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+            $revenue = wp_cache_get( $k_rev, self::CACHE_GROUP );
+            if ( false === $revenue ) {
+                $revenue = (float) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COALESCE(SUM(order_value), 0) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $k_rev, $revenue, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $revenue = (float) $revenue;
+            }
+            $k_em = 'meyvora_cro_' . md5( 'summary_em_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+            $emails = wp_cache_get( $k_em, self::CACHE_GROUP );
+            if ( false === $emails ) {
+                $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $k_em, $emails, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $emails = (int) $emails;
+            }
+        } else {
+            $k_imp = 'meyvora_cro_' . md5( 'summary_imp_all_' . serialize( array( $date_from, $date_to ) ) );
+            $impressions = wp_cache_get( $k_imp, self::CACHE_GROUP );
+            if ( false === $impressions ) {
+                $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\'',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+                wp_cache_set( $k_imp, $impressions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $impressions = (int) $impressions;
+            }
+            $k_clk = 'meyvora_cro_' . md5( 'summary_clk_all_' . serialize( array( $date_from, $date_to ) ) );
+            $clicks = wp_cache_get( $k_clk, self::CACHE_GROUP );
+            if ( false === $clicks ) {
+                $clicks = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'interaction\' AND source_type = \'campaign\'',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+                wp_cache_set( $k_clk, $clicks, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $clicks = (int) $clicks;
+            }
+            $k_conv = 'meyvora_cro_' . md5( 'summary_conv_all_' . serialize( array( $date_from, $date_to ) ) );
+            $conversions = wp_cache_get( $k_conv, self::CACHE_GROUP );
+            if ( false === $conversions ) {
+                $conversions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\'',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+                wp_cache_set( $k_conv, $conversions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $conversions = (int) $conversions;
+            }
+            $k_rev = 'meyvora_cro_' . md5( 'summary_rev_all_' . serialize( array( $date_from, $date_to ) ) );
+            $revenue = wp_cache_get( $k_rev, self::CACHE_GROUP );
+            if ( false === $revenue ) {
+                $revenue = (float) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COALESCE(SUM(order_value), 0) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\'',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+                wp_cache_set( $k_rev, $revenue, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $revenue = (float) $revenue;
+            }
+            $k_em = 'meyvora_cro_' . md5( 'summary_em_all_' . serialize( array( $date_from, $date_to ) ) );
+            $emails = wp_cache_get( $k_em, self::CACHE_GROUP );
+            if ( false === $emails ) {
+                $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    )
+                );
+                wp_cache_set( $k_em, $emails, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $emails = (int) $emails;
+            }
+        }
 
-        $shipping_bar_interactions = (int) $wpdb->get_var(
+        $k_sticky = 'meyvora_cro_' . md5( 'summary_sticky_' . serialize( array( $date_from, $date_to ) ) );
+        $sticky_cart_adds = wp_cache_get( $k_sticky, self::CACHE_GROUP );
+        if ( false === $sticky_cart_adds ) {
+            $sticky_cart_adds = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
             $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND source_type = 'shipping_bar' AND event_type = 'interaction'",
-                $date_from,
-                $date_to
-            )
-        );
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = \'sticky_cart\' AND event_type = \'interaction\'',
+                    $events_table,
+                    $date_from,
+                    $date_to
+                )
+            );
+            wp_cache_set( $k_sticky, $sticky_cart_adds, self::CACHE_GROUP, self::CACHE_TTL );
+        } else {
+            $sticky_cart_adds = (int) $sticky_cart_adds;
+        }
+
+        $k_ship = 'meyvora_cro_' . md5( 'summary_ship_' . serialize( array( $date_from, $date_to ) ) );
+        $shipping_bar_interactions = wp_cache_get( $k_ship, self::CACHE_GROUP );
+        if ( false === $shipping_bar_interactions ) {
+            $shipping_bar_interactions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = \'shipping_bar\' AND event_type = \'interaction\'',
+                    $events_table,
+                    $date_from,
+                    $date_to
+                )
+            );
+            wp_cache_set( $k_ship, $shipping_bar_interactions, self::CACHE_GROUP, self::CACHE_TTL );
+        } else {
+            $shipping_bar_interactions = (int) $shipping_bar_interactions;
+        }
 
         $conversion_rate = $impressions > 0 ? ( $conversions / $impressions ) * 100 : 0;
         $ctr = $impressions > 0 ? ( $clicks / $impressions ) * 100 : 0;
@@ -247,70 +395,134 @@ class CRO_Analytics {
         $prev_from = wp_date( 'Y-m-d', strtotime( $date_from . " -{$days} days" ) );
         $prev_to   = wp_date( 'Y-m-d', strtotime( $date_from . ' -1 day' ) );
         if ( $campaign_id ) {
-            $prev_impressions = (int) $wpdb->get_var(
+            $pk_imp = 'meyvora_cro_' . md5( 'summary_prev_imp_' . serialize( array( $prev_from, $prev_to, $campaign_id ) ) );
+            $prev_impressions = wp_cache_get( $pk_imp, self::CACHE_GROUP );
+            if ( false === $prev_impressions ) {
+                $prev_impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression' AND source_type = 'campaign' AND source_id = %d",
-                    $prev_from,
-                    $prev_to,
-                    $campaign_id
-                )
-            );
-            $prev_conversions = (int) $wpdb->get_var(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $prev_from,
+                        $prev_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $pk_imp, $prev_impressions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_impressions = (int) $prev_impressions;
+            }
+            $pk_conv = 'meyvora_cro_' . md5( 'summary_prev_conv_' . serialize( array( $prev_from, $prev_to, $campaign_id ) ) );
+            $prev_conversions = wp_cache_get( $pk_conv, self::CACHE_GROUP );
+            if ( false === $prev_conversions ) {
+                $prev_conversions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND source_type = 'campaign' AND source_id = %d",
-                    $prev_from,
-                    $prev_to,
-                    $campaign_id
-                )
-            );
-            $prev_revenue = (float) $wpdb->get_var(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $prev_from,
+                        $prev_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $pk_conv, $prev_conversions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_conversions = (int) $prev_conversions;
+            }
+            $pk_rev = 'meyvora_cro_' . md5( 'summary_prev_rev_' . serialize( array( $prev_from, $prev_to, $campaign_id ) ) );
+            $prev_revenue = wp_cache_get( $pk_rev, self::CACHE_GROUP );
+            if ( false === $prev_revenue ) {
+                $prev_revenue = (float) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COALESCE(SUM(order_value), 0) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND source_type = 'campaign' AND source_id = %d",
-                    $prev_from,
-                    $prev_to,
-                    $campaign_id
-                )
-            );
-            $prev_emails = (int) $wpdb->get_var(
+                        'SELECT COALESCE(SUM(order_value), 0) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $prev_from,
+                        $prev_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $pk_rev, $prev_revenue, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_revenue = (float) $prev_revenue;
+            }
+            $pk_em = 'meyvora_cro_' . md5( 'summary_prev_em_' . serialize( array( $prev_from, $prev_to, $campaign_id ) ) );
+            $prev_emails = wp_cache_get( $pk_em, self::CACHE_GROUP );
+            if ( false === $prev_emails ) {
+                $prev_emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND email IS NOT NULL AND source_type = 'campaign' AND source_id = %d",
-                    $prev_from,
-                    $prev_to,
-                    $campaign_id
-                )
-            );
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL AND source_type = \'campaign\' AND source_id = %d',
+                        $events_table,
+                        $prev_from,
+                        $prev_to,
+                        $campaign_id
+                    )
+                );
+                wp_cache_set( $pk_em, $prev_emails, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_emails = (int) $prev_emails;
+            }
         } else {
-            $prev_impressions = (int) $wpdb->get_var(
+            $pk_imp = 'meyvora_cro_' . md5( 'summary_prev_imp_all_' . serialize( array( $prev_from, $prev_to ) ) );
+            $prev_impressions = wp_cache_get( $pk_imp, self::CACHE_GROUP );
+            if ( false === $prev_impressions ) {
+                $prev_impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression'",
-                    $prev_from,
-                    $prev_to
-                )
-            );
-            $prev_conversions = (int) $wpdb->get_var(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\'',
+                        $events_table,
+                        $prev_from,
+                        $prev_to
+                    )
+                );
+                wp_cache_set( $pk_imp, $prev_impressions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_impressions = (int) $prev_impressions;
+            }
+            $pk_conv = 'meyvora_cro_' . md5( 'summary_prev_conv_all_' . serialize( array( $prev_from, $prev_to ) ) );
+            $prev_conversions = wp_cache_get( $pk_conv, self::CACHE_GROUP );
+            if ( false === $prev_conversions ) {
+                $prev_conversions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion'",
-                    $prev_from,
-                    $prev_to
-                )
-            );
-            $prev_revenue = (float) $wpdb->get_var(
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\'',
+                        $events_table,
+                        $prev_from,
+                        $prev_to
+                    )
+                );
+                wp_cache_set( $pk_conv, $prev_conversions, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_conversions = (int) $prev_conversions;
+            }
+            $pk_rev = 'meyvora_cro_' . md5( 'summary_prev_rev_all_' . serialize( array( $prev_from, $prev_to ) ) );
+            $prev_revenue = wp_cache_get( $pk_rev, self::CACHE_GROUP );
+            if ( false === $prev_revenue ) {
+                $prev_revenue = (float) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COALESCE(SUM(order_value), 0) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion'",
-                    $prev_from,
-                    $prev_to
-                )
-            );
-            $prev_emails = (int) $wpdb->get_var(
+                        'SELECT COALESCE(SUM(order_value), 0) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\'',
+                        $events_table,
+                        $prev_from,
+                        $prev_to
+                    )
+                );
+                wp_cache_set( $pk_rev, $prev_revenue, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_revenue = (float) $prev_revenue;
+            }
+            $pk_em = 'meyvora_cro_' . md5( 'summary_prev_em_all_' . serialize( array( $prev_from, $prev_to ) ) );
+            $prev_emails = wp_cache_get( $pk_em, self::CACHE_GROUP );
+            if ( false === $prev_emails ) {
+                $prev_emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'conversion' AND email IS NOT NULL",
-                    $prev_from,
-                    $prev_to
-                )
-            );
+                        'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL',
+                        $events_table,
+                        $prev_from,
+                        $prev_to
+                    )
+                );
+                wp_cache_set( $pk_em, $prev_emails, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $prev_emails = (int) $prev_emails;
+            }
         }
 
-        return array(
+        $return = array(
             'impressions' => $impressions,
             'impressions_change' => $this->calc_change( $impressions, $prev_impressions ),
             'clicks' => $clicks,
@@ -331,6 +543,8 @@ class CRO_Analytics {
             'prev_revenue'     => $prev_revenue,
             'prev_emails'      => $prev_emails,
         );
+        wp_cache_set( $cache_key, $return, self::CACHE_GROUP, self::CACHE_TTL );
+        return $return;
     }
 
     private function calc_change( $current, $previous ) {
@@ -349,48 +563,64 @@ class CRO_Analytics {
     public function get_daily_stats( $date_from, $date_to, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        if ( ! $table_exists ) {
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $cache_key   = 'meyvora_cro_' . md5( 'daily_stats_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached      = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $events_table = $this->events_table;
+        if ( ! $this->cache_table_exists( $events_table ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
-        if ( $campaign_id ) {
-            $results = $wpdb->get_results(
+        $raw_key = 'meyvora_cro_' . md5( 'daily_stats_raw_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $results = wp_cache_get( $raw_key, self::CACHE_GROUP );
+        if ( false === $results ) {
+            if ( $campaign_id ) {
+                $results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
                 $wpdb->prepare(
-                    "SELECT 
+                        'SELECT 
                         DATE(created_at) as date,
-                        SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) as impressions,
-                        SUM(CASE WHEN event_type = 'conversion' THEN 1 ELSE 0 END) as conversions,
-                        SUM(CASE WHEN event_type = 'conversion' THEN order_value ELSE 0 END) as revenue
-                    FROM {$events_table}
-                    WHERE DATE(created_at) BETWEEN %s AND %s AND source_type = 'campaign' AND source_id = %d
+                        SUM(CASE WHEN event_type = \'impression\' THEN 1 ELSE 0 END) as impressions,
+                        SUM(CASE WHEN event_type = \'conversion\' THEN 1 ELSE 0 END) as conversions,
+                        SUM(CASE WHEN event_type = \'conversion\' THEN order_value ELSE 0 END) as revenue
+                    FROM %i
+                    WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = \'campaign\' AND source_id = %d
                     GROUP BY DATE(created_at)
-                    ORDER BY date ASC",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                ),
-                ARRAY_A
-            );
+                    ORDER BY date ASC',
+                        $events_table,
+                        $date_from,
+                        $date_to,
+                        $campaign_id
+                    ),
+                    ARRAY_A
+                );
+            } else {
+                $results = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT 
+                        DATE(created_at) as date,
+                        SUM(CASE WHEN event_type = \'impression\' THEN 1 ELSE 0 END) as impressions,
+                        SUM(CASE WHEN event_type = \'conversion\' THEN 1 ELSE 0 END) as conversions,
+                        SUM(CASE WHEN event_type = \'conversion\' THEN order_value ELSE 0 END) as revenue
+                    FROM %i
+                    WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
+                    GROUP BY DATE(created_at)
+                    ORDER BY date ASC',
+                        $events_table,
+                        $date_from,
+                        $date_to
+                    ),
+                    ARRAY_A
+                );
+            }
+            $results = is_array( $results ) ? $results : array();
+            wp_cache_set( $raw_key, $results, self::CACHE_GROUP, self::CACHE_TTL );
         } else {
-            $results = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT 
-                        DATE(created_at) as date,
-                        SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) as impressions,
-                        SUM(CASE WHEN event_type = 'conversion' THEN 1 ELSE 0 END) as conversions,
-                        SUM(CASE WHEN event_type = 'conversion' THEN order_value ELSE 0 END) as revenue
-                    FROM {$events_table}
-                    WHERE DATE(created_at) BETWEEN %s AND %s
-                    GROUP BY DATE(created_at)
-                    ORDER BY date ASC",
-                    $date_from,
-                    $date_to
-                ),
-                ARRAY_A
-            );
+            $results = is_array( $results ) ? $results : array();
         }
 
         $data_map = array();
@@ -413,6 +643,7 @@ class CRO_Analytics {
             $current->modify( '+1 day' );
         }
 
+        wp_cache_set( $cache_key, $filled, self::CACHE_GROUP, self::CACHE_TTL );
         return $filled;
     }
     
@@ -421,34 +652,46 @@ class CRO_Analytics {
      */
     public function get_campaign_performance($date_from, $date_to, $limit = 10) {
         global $wpdb;
-        $campaigns_table = esc_sql( $this->campaigns_table );
-        $events_table    = esc_sql( $this->events_table );
+        $campaigns_table = $this->campaigns_table;
+        $events_table    = $this->events_table;
+
+        $cache_key = 'meyvora_cro_' . md5( 'campaign_performance_' . serialize( array( $date_from, $date_to, (int) $limit ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
         
         // Check if tables exist
-        $events_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        $campaigns_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $campaigns_table ) );
-        
-        if (!$events_exists || !$campaigns_exists) {
+        $events_exists    = $this->cache_table_exists( $events_table );
+        $campaigns_exists = $this->cache_table_exists( $campaigns_table );
+
+        if ( ! $events_exists || ! $campaigns_exists ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
         
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT 
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+            'SELECT 
                 c.id,
                 c.name,
                 c.status,
-                COUNT(CASE WHEN e.event_type = 'impression' THEN 1 END) as impressions,
-                COUNT(CASE WHEN e.event_type = 'conversion' THEN 1 END) as conversions,
-                COALESCE(SUM(CASE WHEN e.event_type = 'conversion' THEN e.order_value END), 0) as revenue,
-                COUNT(CASE WHEN e.event_type = 'conversion' AND e.email IS NOT NULL AND e.email != '' THEN 1 END) as emails
-            FROM {$campaigns_table} c
-            LEFT JOIN {$events_table} e ON e.source_type = 'campaign' AND e.source_id = c.id 
-                AND DATE(e.created_at) BETWEEN %s AND %s
+                COUNT(CASE WHEN e.event_type = \'impression\' THEN 1 END) as impressions,
+                COUNT(CASE WHEN e.event_type = \'conversion\' THEN 1 END) as conversions,
+                COALESCE(SUM(CASE WHEN e.event_type = \'conversion\' THEN e.order_value END), 0) as revenue,
+                COUNT(CASE WHEN e.event_type = \'conversion\' AND e.email IS NOT NULL AND e.email != \'\' THEN 1 END) as emails
+            FROM %i c
+            LEFT JOIN %i e ON e.source_type = \'campaign\' AND e.source_id = c.id 
+                AND e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
             GROUP BY c.id
             ORDER BY revenue DESC
-            LIMIT %d",
+            LIMIT %d',
+            $campaigns_table,
+            $events_table,
             $date_from, $date_to, $limit
         ), ARRAY_A);
+        wp_cache_set( $cache_key, $rows, self::CACHE_GROUP, self::CACHE_TTL );
+        return $rows;
     }
     
     /**
@@ -456,25 +699,34 @@ class CRO_Analytics {
      */
     public function get_device_stats($date_from, $date_to) {
         global $wpdb;
-        $events_table = esc_sql( $this->events_table );
-        
-        // Check if table exists
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        
-        if (!$table_exists) {
-            return array();
+        $events_table = $this->events_table;
+
+        $cache_key = 'meyvora_cro_' . md5( 'device_stats_' . serialize( array( $date_from, $date_to ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
         }
         
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT 
-                COALESCE(device_type, 'unknown') as device,
-                COUNT(CASE WHEN event_type = 'impression' THEN 1 END) as impressions,
-                COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) as conversions
-            FROM {$events_table}
-            WHERE DATE(created_at) BETWEEN %s AND %s
-            GROUP BY device_type",
+        // Check if table exists
+        if ( ! $this->cache_table_exists( $events_table ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
+            return array();
+        }
+
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+            'SELECT 
+                COALESCE(device_type, \'unknown\') as device,
+                COUNT(CASE WHEN event_type = \'impression\' THEN 1 END) as impressions,
+                COUNT(CASE WHEN event_type = \'conversion\' THEN 1 END) as conversions
+            FROM %i
+            WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
+            GROUP BY device_type',
+            $events_table,
             $date_from, $date_to
         ), ARRAY_A);
+        wp_cache_set( $cache_key, $rows, self::CACHE_GROUP, self::CACHE_TTL );
+        return $rows;
     }
     
     /**
@@ -489,27 +741,34 @@ class CRO_Analytics {
     public function get_top_pages( $date_from, $date_to, $limit = 10, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        if ( ! $table_exists ) {
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $cache_key   = 'meyvora_cro_' . md5( 'top_pages_' . serialize( array( $date_from, $date_to, $limit, $campaign_id ) ) );
+        $cached      = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $events_table = $this->events_table;
+        if ( ! $this->cache_table_exists( $events_table ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
         if ( $campaign_id ) {
-            return $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT 
+            $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT 
                         page_url,
-                        COUNT(CASE WHEN event_type = 'impression' THEN 1 END) as impressions,
-                        COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) as conversions,
-                        COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue,
-                        COUNT(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 END) as emails_captured
-                    FROM {$events_table}
-                    WHERE DATE(created_at) BETWEEN %s AND %s AND source_type = 'campaign' AND source_id = %d
+                        COUNT(CASE WHEN event_type = \'impression\' THEN 1 END) as impressions,
+                        COUNT(CASE WHEN event_type = \'conversion\' THEN 1 END) as conversions,
+                        COALESCE(SUM(CASE WHEN event_type = \'conversion\' THEN order_value END), 0) as revenue,
+                        COUNT(CASE WHEN event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' THEN 1 END) as emails_captured
+                    FROM %i
+                    WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = \'campaign\' AND source_id = %d
                     GROUP BY page_url
                     ORDER BY conversions DESC
-                    LIMIT %d",
+                    LIMIT %d',
+                    $events_table,
                     $date_from,
                     $date_to,
                     $campaign_id,
@@ -517,27 +776,30 @@ class CRO_Analytics {
                 ),
                 ARRAY_A
             );
-        }
-
-        return $wpdb->get_results(
+        } else {
+            $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
             $wpdb->prepare(
-                "SELECT 
-                    page_url,
-                    COUNT(CASE WHEN event_type = 'impression' THEN 1 END) as impressions,
-                    COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) as conversions,
-                    COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) as revenue,
-                    COUNT(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 END) as emails_captured
-                FROM {$events_table}
-                WHERE DATE(created_at) BETWEEN %s AND %s
-                GROUP BY page_url
-                ORDER BY conversions DESC
-                LIMIT %d",
-                $date_from,
-                $date_to,
-                $limit
-            ),
-            ARRAY_A
-        );
+                    'SELECT 
+                        page_url,
+                        COUNT(CASE WHEN event_type = \'impression\' THEN 1 END) as impressions,
+                        COUNT(CASE WHEN event_type = \'conversion\' THEN 1 END) as conversions,
+                        COALESCE(SUM(CASE WHEN event_type = \'conversion\' THEN order_value END), 0) as revenue,
+                        COUNT(CASE WHEN event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' THEN 1 END) as emails_captured
+                    FROM %i
+                    WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
+                    GROUP BY page_url
+                    ORDER BY conversions DESC
+                    LIMIT %d',
+                    $events_table,
+                    $date_from,
+                    $date_to,
+                    $limit
+                ),
+                ARRAY_A
+            );
+        }
+        wp_cache_set( $cache_key, $rows, self::CACHE_GROUP, self::CACHE_TTL );
+        return $rows;
     }
 
     /**
@@ -547,41 +809,68 @@ class CRO_Analytics {
      */
     public function get_campaigns_list() {
         global $wpdb;
-        $campaigns_table = esc_sql( $this->campaigns_table );
-        $campaigns_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $campaigns_table ) );
-        if ( ! $campaigns_exists ) {
+
+        $cache_key = 'meyvora_cro_' . md5( 'campaigns_list_' . serialize( array( 'v1' ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $campaigns_table = $this->campaigns_table;
+        if ( ! $this->cache_table_exists( $campaigns_table ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
-        $rows = $wpdb->get_results( "SELECT id, name FROM {$campaigns_table} ORDER BY name ASC", ARRAY_A );
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+                'SELECT id, name FROM %i ORDER BY name ASC LIMIT %d',
+                $campaigns_table,
+                500
+            ),
+            ARRAY_A
+        );
         $list = array();
         foreach ( $rows as $row ) {
             $list[ (int) $row['id'] ] = $row['name'];
         }
+        wp_cache_set( $cache_key, $list, self::CACHE_GROUP, self::CACHE_TTL );
         return $list;
     }
 
     /**
-     * Export events for CSV (raw rows: created_at, event_type, source_type, source_id, session_id, user_id, page_type, page_url, metadata).
+     * Stream export rows in chunks (avoids loading all events into memory).
      *
-     * @param string   $date_from   Y-m-d.
-     * @param string   $date_to     Y-m-d.
-     * @param int|null $campaign_id Optional. Filter by campaign.
-     * @return array
+     * @param string        $date_from   Y-m-d.
+     * @param string        $date_to     Y-m-d.
+     * @param int|null      $campaign_id Optional campaign filter.
+     * @param callable      $callback    Receives one row array per event.
+     * @param int           $chunk_size  Rows per query.
+     * @return void
      */
-    public function export_events_for_csv( $date_from, $date_to, $campaign_id = null ) {
+    public function walk_export_events_rows( $date_from, $date_to, $campaign_id, $callback, $chunk_size = 1000 ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $events_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        if ( ! $events_exists ) {
-            return array();
+        if ( ! is_callable( $callback ) ) {
+            return;
+        }
+
+        $events_table = $this->events_table;
+        if ( ! $this->cache_table_exists( $events_table ) ) {
+            return;
         }
 
         $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
-        if ( $campaign_id ) {
-            return $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT 
+        $chunk_size    = max( 100, min( 5000, (int) $chunk_size ) );
+        $offset        = 0;
+
+        while ( true ) {
+            $batch_key = 'meyvora_cro_' . md5( 'export_events_batch_' . serialize( array( $date_from, $date_to, $campaign_id, $chunk_size, $offset ) ) );
+            $batch     = wp_cache_get( $batch_key, self::CACHE_GROUP );
+            if ( false === $batch ) {
+                if ( $campaign_id ) {
+                    $batch = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                    $wpdb->prepare(
+                            'SELECT 
                         e.created_at,
                         e.event_type,
                         e.source_type,
@@ -591,37 +880,81 @@ class CRO_Analytics {
                         e.page_type,
                         e.page_url,
                         e.metadata
-                    FROM {$events_table} e
-                    WHERE DATE(e.created_at) BETWEEN %s AND %s AND e.source_type = 'campaign' AND e.source_id = %d
-                    ORDER BY e.created_at ASC",
-                    $date_from,
-                    $date_to,
-                    $campaign_id
-                ),
-                ARRAY_A
-            );
-        }
+                    FROM %i e
+                        WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
+                          AND e.source_type = \'campaign\' AND e.source_id = %d
+                        ORDER BY e.created_at ASC
+                        LIMIT %d OFFSET %d',
+                            $events_table,
+                            $date_from,
+                            $date_to,
+                            $campaign_id,
+                            $chunk_size,
+                            $offset
+                        ),
+                        ARRAY_A
+                    );
+                } else {
+                    $batch = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                    $wpdb->prepare(
+                            'SELECT 
+                        e.created_at,
+                        e.event_type,
+                        e.source_type,
+                        e.source_id,
+                        e.session_id,
+                        e.user_id,
+                        e.page_type,
+                        e.page_url,
+                        e.metadata
+                    FROM %i e
+                        WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
+                        ORDER BY e.created_at ASC
+                        LIMIT %d OFFSET %d',
+                            $events_table,
+                            $date_from,
+                            $date_to,
+                            $chunk_size,
+                            $offset
+                        ),
+                        ARRAY_A
+                    );
+                }
+                wp_cache_set( $batch_key, is_array( $batch ) ? $batch : array(), self::CACHE_GROUP, self::CACHE_TTL );
+            }
 
-        return $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT 
-                    e.created_at,
-                    e.event_type,
-                    e.source_type,
-                    e.source_id,
-                    e.session_id,
-                    e.user_id,
-                    e.page_type,
-                    e.page_url,
-                    e.metadata
-                FROM {$events_table} e
-                WHERE DATE(e.created_at) BETWEEN %s AND %s
-                ORDER BY e.created_at ASC",
-                $date_from,
-                $date_to
-            ),
-            ARRAY_A
+            if ( empty( $batch ) ) {
+                break;
+            }
+            foreach ( $batch as $row ) {
+                $callback( $row );
+            }
+            if ( count( $batch ) < $chunk_size ) {
+                break;
+            }
+            $offset += $chunk_size;
+        }
+    }
+
+    /**
+     * Export events for CSV (raw rows). May use large memory on big sites; prefer walk_export_events_rows for streaming.
+     *
+     * @param string   $date_from   Y-m-d.
+     * @param string   $date_to     Y-m-d.
+     * @param int|null $campaign_id Optional. Filter by campaign.
+     * @return array
+     */
+    public function export_events_for_csv( $date_from, $date_to, $campaign_id = null ) {
+        $out = array();
+        $this->walk_export_events_rows(
+            $date_from,
+            $date_to,
+            $campaign_id,
+            function ( $row ) use ( &$out ) {
+                $out[] = $row;
+            }
         );
+        return $out;
     }
 
     /**
@@ -634,10 +967,16 @@ class CRO_Analytics {
     public function get_daily_summary_for_export( $date_from, $date_to ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $events_ok    = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) ) === $events_table;
-        $offer_logs   = esc_sql( $wpdb->prefix . 'cro_offer_logs' );
-        $logs_ok      = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $offer_logs ) ) === $offer_logs;
+        $cache_key = 'meyvora_cro_' . md5( 'daily_summary_export_' . serialize( array( $date_from, $date_to ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $events_table = $this->events_table;
+        $events_ok    = $this->cache_table_exists( $events_table );
+        $offer_logs   = $wpdb->prefix . 'cro_offer_logs';
+        $logs_ok      = $this->cache_table_exists( $offer_logs );
 
         $days = array();
         $current = new DateTime( $date_from );
@@ -655,12 +994,14 @@ class CRO_Analytics {
         }
 
         if ( $events_ok ) {
-            $imp_conv = $wpdb->get_results( $wpdb->prepare(
-                "SELECT DATE(created_at) AS d, 
-                    SUM(CASE WHEN event_type = 'impression' THEN 1 ELSE 0 END) AS impressions,
-                    SUM(CASE WHEN event_type = 'conversion' THEN 1 ELSE 0 END) AS conversions,
-                    SUM(CASE WHEN event_type = 'interaction' AND source_type = 'campaign' THEN 1 ELSE 0 END) AS campaign_clicks
-                FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s GROUP BY DATE(created_at)",
+            $imp_conv = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                'SELECT DATE(created_at) AS d, 
+                    SUM(CASE WHEN event_type = \'impression\' THEN 1 ELSE 0 END) AS impressions,
+                    SUM(CASE WHEN event_type = \'conversion\' THEN 1 ELSE 0 END) AS conversions,
+                    SUM(CASE WHEN event_type = \'interaction\' AND source_type = \'campaign\' THEN 1 ELSE 0 END) AS campaign_clicks
+                FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) GROUP BY DATE(created_at)',
+                $events_table,
                 $date_from,
                 $date_to
             ), ARRAY_A );
@@ -672,10 +1013,12 @@ class CRO_Analytics {
                     $days[ $d ]['campaign_clicks'] = (int) ( $row['campaign_clicks'] ?? 0 );
                 }
             }
-            $ab = $wpdb->get_results( $wpdb->prepare(
-                "SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM {$events_table} 
-                WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression' AND metadata IS NOT NULL AND (metadata LIKE %s OR metadata LIKE %s)
-                GROUP BY DATE(created_at)",
+            $ab = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                'SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM %i 
+                WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\' AND metadata IS NOT NULL AND (metadata LIKE %s OR metadata LIKE %s)
+                GROUP BY DATE(created_at)',
+                $events_table,
                 $date_from,
                 $date_to,
                 '%variation_id%',
@@ -690,20 +1033,29 @@ class CRO_Analytics {
         }
 
         if ( $logs_ok ) {
-            $has_action = $wpdb->get_var( "SHOW COLUMNS FROM {$offer_logs} LIKE 'action'" );
+            $has_action_key = 'meyvora_cro_' . md5( 'offer_logs_has_action_col_' . serialize( array( $offer_logs ) ) );
+            $has_action     = wp_cache_get( $has_action_key, self::CACHE_GROUP );
+            if ( false === $has_action ) {
+                $has_action = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $offer_logs, 'action' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                wp_cache_set( $has_action_key, $has_action ? 1 : 0, self::CACHE_GROUP, self::CACHE_TTL );
+            } else {
+                $has_action = (bool) $has_action;
+            }
             if ( $has_action ) {
-                $apply = $wpdb->get_results(
-                    $wpdb->prepare(
-                        "SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM {$offer_logs} WHERE DATE(created_at) BETWEEN %s AND %s AND action = 'applied' GROUP BY DATE(created_at)",
+                $apply = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND action = \'applied\' GROUP BY DATE(created_at)',
+                        $offer_logs,
                         $date_from,
                         $date_to
                     ),
                     ARRAY_A
                 );
             } else {
-                $apply = $wpdb->get_results(
-                    $wpdb->prepare(
-                        "SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM {$offer_logs} WHERE DATE(created_at) BETWEEN %s AND %s GROUP BY DATE(created_at)",
+                $apply = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT DATE(created_at) AS d, COUNT(*) AS cnt FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) GROUP BY DATE(created_at)',
+                        $offer_logs,
                         $date_from,
                         $date_to
                     ),
@@ -718,7 +1070,9 @@ class CRO_Analytics {
             }
         }
 
-        return array_values( $days );
+        $out = array_values( $days );
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
+        return $out;
     }
 
     /**
@@ -741,26 +1095,35 @@ class CRO_Analytics {
      */
     public static function get_recent_events( $limit = 10 ) {
         global $wpdb;
-        $analytics = new self();
-        $events_table = esc_sql( $analytics->events_table );
-        $campaigns_table = esc_sql( $analytics->campaigns_table );
-        $table_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $events_table ) );
-        if ( ! $table_exists ) {
+        $limit = max( 1, min( 50, (int) $limit ) );
+        $cache_key = 'meyvora_cro_' . md5( 'recent_events_' . serialize( array( $limit ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+        $analytics       = new self();
+        $events_table    = $analytics->events_table;
+        $campaigns_table = $analytics->campaigns_table;
+        if ( ! $analytics->cache_table_exists( $events_table ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
-        $limit = max( 1, min( 50, (int) $limit ) );
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT e.created_at, e.event_type, e.source_type, c.name AS campaign_name, e.order_value AS revenue
-                 FROM {$events_table} e
-                 LEFT JOIN {$campaigns_table} c ON e.source_type = 'campaign' AND e.source_id = c.id
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+                'SELECT e.created_at, e.event_type, e.source_type, c.name AS campaign_name, e.order_value AS revenue
+                 FROM %i e
+                 LEFT JOIN %i c ON e.source_type = \'campaign\' AND e.source_id = c.id
                  ORDER BY e.created_at DESC
-                 LIMIT %d",
+                 LIMIT %d',
+                $events_table,
+                $campaigns_table,
                 $limit
             ),
             ARRAY_A
         );
-        return is_array( $rows ) ? $rows : array();
+        $rows = is_array( $rows ) ? $rows : array();
+        wp_cache_set( $cache_key, $rows, self::CACHE_GROUP, self::CACHE_TTL );
+        return $rows;
     }
 
     /**
@@ -784,22 +1147,29 @@ class CRO_Analytics {
     public function get_revenue_by_campaign( $date_from, $date_to, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table    = esc_sql( $this->events_table );
-        $campaigns_table = esc_sql( $this->campaigns_table );
-        $events_ok       = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
-        $campaigns_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $campaigns_table ) ) === $campaigns_table;
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $cache_key   = 'meyvora_cro_' . md5( 'revenue_by_campaign_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached      = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $events_table    = $this->events_table;
+        $campaigns_table = $this->campaigns_table;
+        $events_ok       = $this->cache_table_exists( $events_table );
+        $campaigns_ok    = $this->cache_table_exists( $campaigns_table );
         if ( ! $events_ok ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
-        $et            = $this->events_table;
-        $ct            = $this->campaigns_table;
+        $et = $this->events_table;
+        $ct = $this->campaigns_table;
 
         if ( $campaign_id ) {
             if ( $campaigns_ok ) {
-                $rows = $wpdb->get_results(
-                    $wpdb->prepare(
+                $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
                         'SELECT
                         e.source_id AS campaign_id,
                         COALESCE(MAX(c.name), CONCAT(\'Campaign #\', e.source_id)) AS campaign_name,
@@ -807,7 +1177,7 @@ class CRO_Analytics {
                         COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
                     FROM %i e
                     LEFT JOIN %i c ON c.id = e.source_id
-                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND e.event_type = \'conversion\'
                     AND e.order_value IS NOT NULL
                     AND e.source_type = \'campaign\'
@@ -822,15 +1192,15 @@ class CRO_Analytics {
                     ARRAY_A
                 );
             } else {
-                $rows = $wpdb->get_results(
-                    $wpdb->prepare(
+                $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
                         'SELECT
                         e.source_id AS campaign_id,
                         CONCAT(\'Campaign #\', e.source_id) AS campaign_name,
                         COALESCE(SUM(e.order_value), 0) AS total_revenue,
                         COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
                     FROM %i e
-                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND e.event_type = \'conversion\'
                     AND e.order_value IS NOT NULL
                     AND e.source_type = \'campaign\'
@@ -845,8 +1215,8 @@ class CRO_Analytics {
                 );
             }
         } elseif ( $campaigns_ok ) {
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
+            $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
                     'SELECT
                         e.source_id AS campaign_id,
                         COALESCE(MAX(c.name), CONCAT(\'Campaign #\', e.source_id)) AS campaign_name,
@@ -854,7 +1224,7 @@ class CRO_Analytics {
                         COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
                     FROM %i e
                     LEFT JOIN %i c ON c.id = e.source_id
-                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND e.event_type = \'conversion\'
                     AND e.order_value IS NOT NULL
                     AND e.source_type = \'campaign\'
@@ -869,15 +1239,15 @@ class CRO_Analytics {
                 ARRAY_A
             );
         } else {
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
+            $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
                     'SELECT
                         e.source_id AS campaign_id,
                         CONCAT(\'Campaign #\', e.source_id) AS campaign_name,
                         COALESCE(SUM(e.order_value), 0) AS total_revenue,
                         COUNT(DISTINCT CASE WHEN e.order_id IS NOT NULL AND e.order_id > 0 THEN e.order_id ELSE e.id END) AS order_count
                     FROM %i e
-                    WHERE DATE(e.created_at) BETWEEN %s AND %s
+                    WHERE e.created_at >= %s AND e.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND e.event_type = \'conversion\'
                     AND e.order_value IS NOT NULL
                     AND e.source_type = \'campaign\'
@@ -901,6 +1271,7 @@ class CRO_Analytics {
                 'order_count'    => (int) ( $row['order_count'] ?? 0 ),
             );
         }
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
         return $out;
     }
 
@@ -915,24 +1286,31 @@ class CRO_Analytics {
     public function get_conversion_funnel( $date_from, $date_to, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $events_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
-        if ( ! $events_ok ) {
-            return array(
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $cache_key   = 'meyvora_cro_' . md5( 'conversion_funnel_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached      = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $events_table = $this->events_table;
+        if ( ! $this->cache_table_exists( $events_table ) ) {
+            $empty = array(
                 'impressions'      => 0,
                 'clicks'           => 0,
                 'emails_captured'  => 0,
                 'orders'           => 0,
             );
+            wp_cache_set( $cache_key, $empty, self::CACHE_GROUP, self::CACHE_TTL );
+            return $empty;
         }
 
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
-        $et          = $this->events_table;
+        $et = $this->events_table;
 
         if ( $campaign_id ) {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'impression\' AND source_type = %s AND source_id = %d',
+            $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\' AND source_type = %s AND source_id = %d',
                     $et,
                     $date_from,
                     $date_to,
@@ -940,9 +1318,9 @@ class CRO_Analytics {
                     $campaign_id
                 )
             );
-            $clicks      = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'interaction\' AND source_type = %s AND source_id = %d',
+            $clicks      = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'interaction\' AND source_type = %s AND source_id = %d',
                     $et,
                     $date_from,
                     $date_to,
@@ -950,9 +1328,9 @@ class CRO_Analytics {
                     $campaign_id
                 )
             );
-            $orders      = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND source_type = %s AND source_id = %d',
+            $orders      = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND source_type = %s AND source_id = %d',
                     $et,
                     $date_from,
                     $date_to,
@@ -961,25 +1339,25 @@ class CRO_Analytics {
                 )
             );
         } else {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'impression\'',
+            $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\'',
                     $et,
                     $date_from,
                     $date_to
                 )
             );
-            $clicks      = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'interaction\'',
+            $clicks      = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'interaction\'',
                     $et,
                     $date_from,
                     $date_to
                 )
             );
-            $orders      = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\'',
+            $orders      = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(DISTINCT CASE WHEN order_id IS NOT NULL AND order_id > 0 THEN order_id ELSE id END) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\'',
                     $et,
                     $date_from,
                     $date_to
@@ -988,13 +1366,13 @@ class CRO_Analytics {
         }
 
         $emails_table = $wpdb->prefix . 'cro_emails';
-        $emails_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $emails_table ) ) === $emails_table;
+        $emails_ok    = $this->cache_table_exists( $emails_table );
         $emails       = 0;
         if ( $emails_ok ) {
             if ( $campaign_id ) {
-                $emails = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        'SELECT COUNT(*) FROM %i WHERE DATE(subscribed_at) BETWEEN %s AND %s AND source_type = %s AND source_id = %d',
+                $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE subscribed_at >= %s AND subscribed_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = %s AND source_id = %d',
                         $emails_table,
                         $date_from,
                         $date_to,
@@ -1003,9 +1381,9 @@ class CRO_Analytics {
                     )
                 );
             } else {
-                $emails = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        'SELECT COUNT(*) FROM %i WHERE DATE(subscribed_at) BETWEEN %s AND %s',
+                $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE subscribed_at >= %s AND subscribed_at < DATE_ADD(%s, INTERVAL 1 DAY)',
                         $emails_table,
                         $date_from,
                         $date_to
@@ -1013,9 +1391,9 @@ class CRO_Analytics {
                 );
             }
         } elseif ( $campaign_id ) {
-            $emails = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' AND source_type = %s AND source_id = %d',
+            $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\' AND source_type = %s AND source_id = %d',
                     $et,
                     $date_from,
                     $date_to,
@@ -1024,9 +1402,9 @@ class CRO_Analytics {
                 )
             );
         } else {
-            $emails = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    'SELECT COUNT(*) FROM %i WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\'',
+            $emails = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'conversion\' AND email IS NOT NULL AND email != \'\'',
                     $et,
                     $date_from,
                     $date_to
@@ -1034,12 +1412,14 @@ class CRO_Analytics {
             );
         }
 
-        return array(
+        $return = array(
             'impressions'     => $impressions,
             'clicks'          => $clicks,
             'emails_captured' => $emails,
             'orders'          => $orders,
         );
+        wp_cache_set( $cache_key, $return, self::CACHE_GROUP, self::CACHE_TTL );
+        return $return;
     }
 
     /**
@@ -1052,24 +1432,32 @@ class CRO_Analytics {
     public function get_cohort_recovery( $date_from, $date_to ) {
         global $wpdb;
 
-        $table     = esc_sql( $wpdb->prefix . 'cro_abandoned_carts' );
-        $table_ok  = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+        $cache_key = 'meyvora_cro_' . md5( 'cohort_recovery_' . serialize( array( $date_from, $date_to ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $table    = $wpdb->prefix . 'cro_abandoned_carts';
+        $table_ok = $this->cache_table_exists( $table );
         if ( ! $table_ok ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT 
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+                'SELECT 
                     YEARWEEK(created_at, 3) AS yw,
                     MIN(DATE(created_at)) AS week_start,
                     COUNT(*) AS total_abandoned,
-                    SUM(CASE WHEN status = 'recovered' OR recovered_at IS NOT NULL THEN 1 ELSE 0 END) AS recovered
-                FROM {$table}
-                WHERE DATE(created_at) BETWEEN %s AND %s
+                    SUM(CASE WHEN status = \'recovered\' OR recovered_at IS NOT NULL THEN 1 ELSE 0 END) AS recovered
+                FROM %i
+                WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                 GROUP BY YEARWEEK(created_at, 3)
                 ORDER BY yw DESC
-                LIMIT 8",
+                LIMIT 8',
+                $table,
                 $date_from,
                 $date_to
             ),
@@ -1096,6 +1484,7 @@ class CRO_Analytics {
                 'recovery_rate'    => $rate,
             );
         }
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
         return $out;
     }
 
@@ -1110,26 +1499,34 @@ class CRO_Analytics {
     public function get_email_capture_rate( $date_from, $date_to, $campaign_id = null ) {
         global $wpdb;
 
-        $events_table = esc_sql( $this->events_table );
-        $events_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $events_table ) ) === $events_table;
-        if ( ! $events_ok ) {
-            return 0.0;
+        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $cache_key   = 'meyvora_cro_' . md5( 'email_capture_rate_' . serialize( array( $date_from, $date_to, $campaign_id ) ) );
+        $cached      = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return (float) $cached;
         }
 
-        $campaign_id = ( $campaign_id !== null && $campaign_id > 0 ) ? absint( $campaign_id ) : null;
+        $events_table = $this->events_table;
+        $events_ok    = $this->cache_table_exists( $events_table );
+        if ( ! $events_ok ) {
+            wp_cache_set( $cache_key, 0.0, self::CACHE_GROUP, self::CACHE_TTL );
+            return 0.0;
+        }
         if ( $campaign_id ) {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression' AND source_type = 'campaign' AND source_id = %d",
+            $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\' AND source_type = \'campaign\' AND source_id = %d',
+                    $events_table,
                     $date_from,
                     $date_to,
                     $campaign_id
                 )
             );
         } else {
-            $impressions = (int) $wpdb->get_var(
-                $wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$events_table} WHERE DATE(created_at) BETWEEN %s AND %s AND event_type = 'impression'",
+            $impressions = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT COUNT(*) FROM %i WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY) AND event_type = \'impression\'',
+                    $events_table,
                     $date_from,
                     $date_to
                 )
@@ -1137,13 +1534,14 @@ class CRO_Analytics {
         }
 
         $emails_table = $wpdb->prefix . 'cro_emails';
-        $emails_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $emails_table ) ) === $emails_table;
+        $emails_ok    = $this->cache_table_exists( $emails_table );
         $captures     = 0;
         if ( $emails_ok ) {
             if ( $campaign_id ) {
-                $captures = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$emails_table} WHERE DATE(subscribed_at) BETWEEN %s AND %s AND source_type = %s AND source_id = %d",
+                $captures = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE subscribed_at >= %s AND subscribed_at < DATE_ADD(%s, INTERVAL 1 DAY) AND source_type = %s AND source_id = %d',
+                        $emails_table,
                         $date_from,
                         $date_to,
                         'campaign',
@@ -1151,9 +1549,10 @@ class CRO_Analytics {
                     )
                 );
             } else {
-                $captures = (int) $wpdb->get_var(
-                    $wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$emails_table} WHERE DATE(subscribed_at) BETWEEN %s AND %s",
+                $captures = (int) $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+                $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE subscribed_at >= %s AND subscribed_at < DATE_ADD(%s, INTERVAL 1 DAY)',
+                        $emails_table,
                         $date_from,
                         $date_to
                     )
@@ -1162,9 +1561,12 @@ class CRO_Analytics {
         }
 
         if ( $impressions <= 0 ) {
+            wp_cache_set( $cache_key, 0.0, self::CACHE_GROUP, self::CACHE_TTL );
             return 0.0;
         }
-        return round( ( $captures / $impressions ) * 100, 2 );
+        $rate = round( ( $captures / $impressions ) * 100, 2 );
+        wp_cache_set( $cache_key, $rate, self::CACHE_GROUP, self::CACHE_TTL );
+        return $rate;
     }
 
     /**
@@ -1177,36 +1579,47 @@ class CRO_Analytics {
     public function get_offer_revenue_attribution( $date_from, $date_to ) {
         global $wpdb;
 
-        $logs_table   = esc_sql( $wpdb->prefix . 'cro_offer_logs' );
-        $offers_table = esc_sql( $wpdb->prefix . 'cro_offers' );
-        $logs_ok      = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $logs_table ) ) === $logs_table;
-        $offers_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $offers_table ) ) === $offers_table;
+        $cache_key = 'meyvora_cro_' . md5( 'offer_revenue_attr_' . serialize( array( $date_from, $date_to, $this->wc_orders_use_hpos() ? 1 : 0 ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $logs_table   = $wpdb->prefix . 'cro_offer_logs';
+        $offers_table = $wpdb->prefix . 'cro_offers';
+        $logs_ok      = $this->cache_table_exists( $logs_table );
+        $offers_ok    = $this->cache_table_exists( $offers_table );
         if ( ! $logs_ok || ! $offers_ok ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
         $prefix_like = $wpdb->esc_like( 'MYV-' ) . '%';
 
         if ( $this->wc_orders_use_hpos() ) {
-            $orders_table = esc_sql( $wpdb->prefix . 'wc_orders' );
-            $orders_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_table ) ) === $orders_table;
+            $orders_table = $wpdb->prefix . 'wc_orders';
+            $orders_ok    = $this->cache_table_exists( $orders_table );
             if ( ! $orders_ok ) {
+                wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
                 return array();
             }
-            $rows = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT 
+            $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT 
                         l.offer_id,
                         MAX(o.name) AS offer_name,
                         COUNT(DISTINCT l.order_id) AS total_orders,
                         COALESCE(SUM(CAST(ord.total_amount AS DECIMAL(12,4))), 0) AS total_revenue
-                    FROM {$logs_table} l
-                    INNER JOIN {$offers_table} o ON o.id = l.offer_id
-                    INNER JOIN {$orders_table} ord ON ord.id = l.order_id AND ord.type = %s AND ord.status NOT IN ('trash','draft','auto-draft')
-                    WHERE DATE(l.created_at) BETWEEN %s AND %s
+                    FROM %i l
+                    INNER JOIN %i o ON o.id = l.offer_id
+                    INNER JOIN %i ord ON ord.id = l.order_id AND ord.type = %s AND ord.status NOT IN (\'trash\',\'draft\',\'auto-draft\')
+                    WHERE l.created_at >= %s AND l.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND l.order_id IS NOT NULL AND l.order_id > 0
                     AND l.coupon_code IS NOT NULL AND LOWER(l.coupon_code) LIKE LOWER(%s)
-                    GROUP BY l.offer_id",
+                    GROUP BY l.offer_id',
+                    $logs_table,
+                    $offers_table,
+                    $orders_table,
                     'shop_order',
                     $date_from,
                     $date_to,
@@ -1215,24 +1628,28 @@ class CRO_Analytics {
                 ARRAY_A
             );
         } else {
-            $posts = esc_sql( $wpdb->posts );
-            $pm    = esc_sql( $wpdb->postmeta );
-            $rows  = $wpdb->get_results(
-                $wpdb->prepare(
-                    "SELECT 
+            $posts = $wpdb->posts;
+            $pm    = $wpdb->postmeta;
+            $rows  = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+            $wpdb->prepare(
+                    'SELECT 
                         l.offer_id,
                         MAX(o.name) AS offer_name,
                         COUNT(DISTINCT l.order_id) AS total_orders,
                         COALESCE(SUM(CAST(pm.meta_value AS DECIMAL(12,4))), 0) AS total_revenue
-                    FROM {$logs_table} l
-                    INNER JOIN {$offers_table} o ON o.id = l.offer_id
-                    INNER JOIN {$posts} p ON p.ID = l.order_id AND p.post_type = %s
-                    INNER JOIN {$pm} pm ON pm.post_id = p.ID AND pm.meta_key = %s
-                    WHERE DATE(l.created_at) BETWEEN %s AND %s
+                    FROM %i l
+                    INNER JOIN %i o ON o.id = l.offer_id
+                    INNER JOIN %i p ON p.ID = l.order_id AND p.post_type = %s
+                    INNER JOIN %i pm ON pm.post_id = p.ID AND pm.meta_key = %s
+                    WHERE l.created_at >= %s AND l.created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                     AND l.order_id IS NOT NULL AND l.order_id > 0
                     AND l.coupon_code IS NOT NULL AND LOWER(l.coupon_code) LIKE LOWER(%s)
-                    GROUP BY l.offer_id",
+                    GROUP BY l.offer_id',
+                    $logs_table,
+                    $offers_table,
+                    $posts,
                     'shop_order',
+                    $pm,
                     '_order_total',
                     $date_from,
                     $date_to,
@@ -1251,6 +1668,7 @@ class CRO_Analytics {
                 'total_revenue' => (float) ( $row['total_revenue'] ?? 0 ),
             );
         }
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
         return $out;
     }
 
@@ -1264,25 +1682,34 @@ class CRO_Analytics {
     public function get_ab_test_summary( $date_from, $date_to ) {
         global $wpdb;
 
+        $cache_key = 'meyvora_cro_' . md5( 'ab_test_summary_' . serialize( array( $date_from, $date_to ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
         if ( ! class_exists( 'CRO_AB_Test' ) || ! class_exists( 'CRO_AB_Statistics' ) ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $tests_table = esc_sql( $wpdb->prefix . 'cro_ab_tests' );
-        $tests_ok    = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $tests_table ) ) === $tests_table;
+        $tests_table = $wpdb->prefix . 'cro_ab_tests';
+        $tests_ok    = $this->cache_table_exists( $tests_table );
         if ( ! $tests_ok ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM {$tests_table}
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+                'SELECT * FROM %i
                 WHERE status != %s
-                AND status IN ('running','paused','completed')
+                AND status IN (\'running\',\'paused\',\'completed\')
                 ORDER BY 
-                    CASE status WHEN 'running' THEN 1 WHEN 'paused' THEN 2 ELSE 3 END,
+                    CASE status WHEN \'running\' THEN 1 WHEN \'paused\' THEN 2 ELSE 3 END,
                     COALESCE(started_at, created_at) DESC
-                LIMIT 40",
+                LIMIT 40',
+                $tests_table,
                 'draft'
             ),
             ARRAY_A
@@ -1351,6 +1778,7 @@ class CRO_Analytics {
             );
         }
 
+        wp_cache_set( $cache_key, $out, self::CACHE_GROUP, self::CACHE_TTL );
         return $out;
     }
 
@@ -1365,27 +1793,37 @@ class CRO_Analytics {
     public function get_abandoned_carts_export_rows( $date_from, $date_to, $limit = 2000 ) {
         global $wpdb;
 
-        $table    = esc_sql( $wpdb->prefix . 'cro_abandoned_carts' );
-        $table_ok = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table;
+        $limit = max( 1, min( 10000, absint( $limit ) ) );
+
+        $cache_key = 'meyvora_cro_' . md5( 'abandoned_carts_export_' . serialize( array( $date_from, $date_to, $limit ) ) );
+        $cached    = wp_cache_get( $cache_key, self::CACHE_GROUP );
+        if ( false !== $cached ) {
+            return $cached;
+        }
+
+        $table    = $wpdb->prefix . 'cro_abandoned_carts';
+        $table_ok = $this->cache_table_exists( $table );
         if ( ! $table_ok ) {
+            wp_cache_set( $cache_key, array(), self::CACHE_GROUP, self::CACHE_TTL );
             return array();
         }
 
-        $limit = max( 1, min( 10000, absint( $limit ) ) );
-
-        return $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT id, created_at, status, recovered_at,
-                    CASE WHEN email IS NOT NULL AND email != '' THEN 1 ELSE 0 END AS has_email
-                FROM {$table}
-                WHERE DATE(created_at) BETWEEN %s AND %s
+        $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+        $wpdb->prepare(
+                'SELECT id, created_at, status, recovered_at,
+                    CASE WHEN email IS NOT NULL AND email != \'\' THEN 1 ELSE 0 END AS has_email
+                FROM %i
+                WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
                 ORDER BY created_at DESC
-                LIMIT %d",
+                LIMIT %d',
+                $table,
                 $date_from,
                 $date_to,
                 $limit
             ),
             ARRAY_A
         );
+        wp_cache_set( $cache_key, is_array( $rows ) ? $rows : array(), self::CACHE_GROUP, self::CACHE_TTL );
+        return is_array( $rows ) ? $rows : array();
     }
 }

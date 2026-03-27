@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -29,11 +28,13 @@ class CRO_Deactivator {
 		}
 
 		// Clear scheduled events.
+		wp_clear_scheduled_hook( 'cro_daily_cleanup' );
 		wp_clear_scheduled_hook( 'cro_process_background_queue' );
 		wp_clear_scheduled_hook( 'cro_cleanup_old_events' );
 		wp_clear_scheduled_hook( 'cro_aggregate_daily_stats' );
 		wp_clear_scheduled_hook( 'cro_check_ab_winners' );
 		wp_clear_scheduled_hook( 'cro_send_abandoned_cart_reminders' );
+		wp_clear_scheduled_hook( 'cro_deliver_webhook' );
 
 		// Clear CRO transients.
 		self::clear_transients();
@@ -51,10 +52,13 @@ class CRO_Deactivator {
 	private static function clear_transients() {
 		global $wpdb;
 
-		$wpdb->query(
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			"DELETE FROM {$wpdb->options}
 			WHERE option_name LIKE '_transient_cro_%'
 			OR option_name LIKE '_transient_timeout_cro_%'"
 		);
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
 	}
 }

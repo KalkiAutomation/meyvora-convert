@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -14,8 +13,8 @@ $campaigns = array();
 if ( class_exists( 'CRO_Campaign' ) ) {
 	$campaigns = CRO_Campaign::get_all( array( 'limit' => 500 ) );
 }
-$error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
-$admin_debug_saved = isset( $_GET['cro_admin_debug_saved'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_admin_debug_saved'] ) ) : '';
+$error             = CRO_Security::get_query_var( 'error' );
+$admin_debug_saved = CRO_Security::get_query_var( 'cro_admin_debug_saved' );
 $cro_admin_debug   = (bool) get_option( 'cro_admin_debug', false );
 $verify_results = get_transient( 'cro_verify_results' );
 if ( $verify_results !== false ) {
@@ -75,10 +74,10 @@ if ( $verify_results !== false ) {
 					?>
 						<li>
 							<?php if ( $pass ) : ?>
-								<span class="cro-status-ok" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
+								<span class="cro-status-ok" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 							<?php else : ?>
-								<span class="cro-status-warn" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?></span>
+								<span class="cro-status-warn" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 							<?php endif; ?>
 							<strong><?php echo esc_html( $label ); ?></strong>: <?php echo esc_html( $message ); ?>

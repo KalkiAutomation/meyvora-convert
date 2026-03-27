@@ -62,6 +62,24 @@ if ( isset( $_POST['cro_save_boosters'] ) && $nonce_valid ) {
 	// Trust Badges.
 	$settings->set( 'general', 'trust_badges_enabled', ! empty( $_POST['trust_badges_enabled'] ) );
 
+	// Product recommendations.
+	$settings->set( 'general', 'recommendations_enabled', ! empty( $_POST['recommendations_enabled'] ) );
+
+	// Social proof.
+	$settings->set( 'general', 'social_proof_enabled', ! empty( $_POST['social_proof_enabled'] ) );
+	$settings->set( 'social_proof', 'window_hours', max( 1, min( 168, absint( $_POST['social_proof_window_hours'] ?? 24 ) ) ) );
+	$settings->set( 'social_proof', 'min_quantity', max( 1, absint( $_POST['social_proof_min_quantity'] ?? 1 ) ) );
+	$settings->set( 'social_proof', 'message_template', sanitize_text_field( wp_unslash( $_POST['social_proof_message'] ?? '' ) ) );
+	$settings->set( 'social_proof', 'viewing_counter_enabled', ! empty( $_POST['social_proof_viewing_counter'] ) );
+	$settings->set( 'social_proof', 'viewing_min', max( 2, absint( $_POST['social_proof_viewing_min'] ?? 2 ) ) );
+	$settings->set( 'social_proof', 'viewing_max', max( 3, absint( $_POST['social_proof_viewing_max'] ?? 9 ) ) );
+	$settings->set( 'social_proof', 'viewing_template', sanitize_text_field( wp_unslash( $_POST['social_proof_viewing_template'] ?? '' ) ) );
+	$settings->set( 'social_proof', 'toast_enabled', ! empty( $_POST['social_proof_toast_enabled'] ) );
+	$settings->set( 'social_proof', 'toast_pages', sanitize_key( wp_unslash( $_POST['social_proof_toast_pages'] ?? 'product' ) ) );
+	$settings->set( 'social_proof', 'toast_initial_delay', max( 0, absint( $_POST['social_proof_toast_initial_delay'] ?? 8 ) ) );
+	$settings->set( 'social_proof', 'toast_interval', max( 3, absint( $_POST['social_proof_toast_interval'] ?? 12 ) ) );
+	$settings->set( 'social_proof', 'toast_template', sanitize_text_field( wp_unslash( $_POST['social_proof_toast_template'] ?? '' ) ) );
+
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Settings saved!', 'meyvora-convert' ) . '</p></div>';
 }
 
@@ -69,6 +87,23 @@ if ( isset( $_POST['cro_save_boosters'] ) && $nonce_valid ) {
 $sticky_cart     = $settings->get_sticky_cart_settings();
 $shipping_bar    = $settings->get_shipping_bar_settings();
 $stock_urgency   = $settings->get_stock_urgency_settings();
+$social_proof    = wp_parse_args(
+	$settings->get_group( 'social_proof' ),
+	array(
+		'window_hours'            => 24,
+		'min_quantity'            => 1,
+		'message_template'        => /* translators: 1: purchase count, 2: number of hours in the window. */ __( '{count} people bought this in the last {hours} hours.', 'meyvora-convert' ),
+		'viewing_counter_enabled' => false,
+		'viewing_min'             => 2,
+		'viewing_max'             => 9,
+		'viewing_template'        => /* translators: %d: number of people viewing the product. */ __( '%d people are viewing this right now', 'meyvora-convert' ),
+		'toast_enabled'           => false,
+		'toast_pages'             => 'product',
+		'toast_initial_delay'    => 8,
+		'toast_interval'          => 12,
+		'toast_template'          => /* translators: 1: customer first name or placeholder, 2: city/region, 3: product name. */ __( '{name} from {location} just bought {product}', 'meyvora-convert' ),
+	)
+);
 $default_copy_tones = class_exists( 'CRO_Default_Copy' ) ? CRO_Default_Copy::get_tones() : array( 'neutral' => __( 'Neutral', 'meyvora-convert' ), 'urgent' => __( 'Urgent', 'meyvora-convert' ), 'friendly' => __( 'Friendly', 'meyvora-convert' ) );
 
 // Sticky cart admin preview: default button labels per tone (for live JS when field is empty).
@@ -127,7 +162,7 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?>
+					<?php echo wp_kses( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 					<?php esc_html_e( 'Sticky Add-to-Cart Bar', 'meyvora-convert' ); ?>
 				</h2>
@@ -289,7 +324,7 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?>
+					<?php echo wp_kses( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 					<?php esc_html_e( 'Free Shipping Progress Bar', 'meyvora-convert' ); ?>
 				</h2>
@@ -430,7 +465,7 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 						style="background-color: <?php echo esc_attr( $shipping_bar['bg_color'] ); ?>;"
 					>
 						<div class="cro-shipping-bar-inner">
-							<span class="cro-shipping-bar-icon"><?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?></span>
+							<span class="cro-shipping-bar-icon"><?php echo wp_kses( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 							<span class="cro-shipping-bar-message" id="cro-shipping-bar-preview-message"><?php echo wp_kses_post( $sb_preview_message ); ?></span>
 						</div>
 						<div class="cro-shipping-bar-progress" id="cro-shipping-bar-preview-progress-wrap">
@@ -452,7 +487,7 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?>
+					<?php echo wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 					<?php esc_html_e( 'Low Stock Urgency', 'meyvora-convert' ); ?>
 				</h2>
@@ -501,7 +536,7 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 		<div class="cro-settings-section">
 			<div class="cro-section-header">
 				<h2>
-					<?php echo CRO_Icons::svg_kses( 'shield', array( 'class' => 'cro-ico' ) ); ?>
+					<?php echo wp_kses( CRO_Icons::svg( 'shield', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
 
 					<?php esc_html_e( 'Trust Badges', 'meyvora-convert' ); ?>
 				</h2>
@@ -515,6 +550,107 @@ $sb_preview_message      = str_replace( '{amount}', function_exists( 'wc_price' 
 			<p class="cro-section-description">
 				<?php esc_html_e( 'Show trust badges (secure checkout, free shipping, returns) on product, cart, and checkout to build confidence.', 'meyvora-convert' ); ?>
 			</p>
+		</div>
+
+		<div class="cro-settings-section">
+			<div class="cro-section-header">
+				<h2>
+					<?php echo wp_kses( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?>
+
+					<?php esc_html_e( 'Product recommendations', 'meyvora-convert' ); ?>
+				</h2>
+				<label class="cro-toggle">
+					<input type="checkbox" name="recommendations_enabled" value="1"
+						<?php checked( $settings->is_feature_enabled( 'recommendations' ) ); ?> />
+					<span class="cro-toggle-slider"></span>
+				</label>
+			</div>
+			<p class="cro-section-description">
+				<?php esc_html_e( 'Show “Frequently bought together” on product pages and “You might also like” on the cart, based on co-purchase history.', 'meyvora-convert' ); ?>
+			</p>
+		</div>
+
+		<div class="cro-settings-section">
+			<div class="cro-section-header">
+				<h2><?php esc_html_e( 'Social proof', 'meyvora-convert' ); ?></h2>
+				<label class="cro-toggle">
+					<input type="checkbox" name="social_proof_enabled" value="1"
+						<?php checked( $settings->is_feature_enabled( 'social_proof' ) ); ?> />
+					<span class="cro-toggle-slider"></span>
+				</label>
+			</div>
+			<p class="cro-section-description"><?php esc_html_e( 'Show recent purchase volume on product pages (from completed/processing orders).', 'meyvora-convert' ); ?></p>
+			<div class="cro-fields-grid">
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Rolling window (hours)', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_window_hours" min="1" max="168" class="small-text" value="<?php echo esc_attr( (string) $social_proof['window_hours'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Minimum units sold to show', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_min_quantity" min="1" class="small-text" value="<?php echo esc_attr( (string) $social_proof['min_quantity'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-field__label"><?php esc_html_e( 'Message', 'meyvora-convert' ); ?></label>
+					<input type="text" name="social_proof_message" class="large-text" value="<?php echo esc_attr( (string) $social_proof['message_template'] ); ?>" />
+					<span class="cro-help"><?php esc_html_e( 'Placeholders: {count}, {hours}', 'meyvora-convert' ); ?></span>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-checkbox-card">
+						<input type="checkbox" name="social_proof_viewing_counter" value="1" <?php checked( ! empty( $social_proof['viewing_counter_enabled'] ) ); ?> />
+						<span class="cro-checkbox-content">
+							<strong><?php esc_html_e( '“People viewing” counter', 'meyvora-convert' ); ?></strong>
+							<span><?php esc_html_e( 'Shows a rotating viewer count on product pages (client-side).', 'meyvora-convert' ); ?></span>
+						</span>
+					</label>
+				</div>
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Viewing count min', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_viewing_min" min="2" class="small-text" value="<?php echo esc_attr( (string) $social_proof['viewing_min'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Viewing count max', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_viewing_max" min="3" class="small-text" value="<?php echo esc_attr( (string) $social_proof['viewing_max'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-field__label"><?php esc_html_e( 'Viewing message', 'meyvora-convert' ); ?></label>
+					<input type="text" name="social_proof_viewing_template" class="large-text" value="<?php echo esc_attr( (string) $social_proof['viewing_template'] ); ?>" />
+					<span class="cro-help"><?php
+					/* translators: %d: placeholder token to insert the viewer count in the message. */
+					esc_html_e( 'Use %d for the number.', 'meyvora-convert' );
+					?></span>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-checkbox-card">
+						<input type="checkbox" name="social_proof_toast_enabled" value="1" <?php checked( ! empty( $social_proof['toast_enabled'] ) ); ?> />
+						<span class="cro-checkbox-content">
+							<strong><?php esc_html_e( 'Recent purchase toast', 'meyvora-convert' ); ?></strong>
+							<span><?php esc_html_e( 'Bottom-left notification with anonymised recent orders.', 'meyvora-convert' ); ?></span>
+						</span>
+					</label>
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-field__label"><?php esc_html_e( 'Toast pages', 'meyvora-convert' ); ?></label>
+					<select name="social_proof_toast_pages">
+						<option value="product" <?php selected( (string) $social_proof['toast_pages'], 'product' ); ?>><?php esc_html_e( 'Product only', 'meyvora-convert' ); ?></option>
+						<option value="home" <?php selected( (string) $social_proof['toast_pages'], 'home' ); ?>><?php esc_html_e( 'Home only', 'meyvora-convert' ); ?></option>
+						<option value="both" <?php selected( (string) $social_proof['toast_pages'], 'both' ); ?>><?php esc_html_e( 'Home and product', 'meyvora-convert' ); ?></option>
+						<option value="all" <?php selected( (string) $social_proof['toast_pages'], 'all' ); ?>><?php esc_html_e( 'All pages', 'meyvora-convert' ); ?></option>
+					</select>
+				</div>
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Toast first delay (seconds)', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_toast_initial_delay" min="0" class="small-text" value="<?php echo esc_attr( (string) $social_proof['toast_initial_delay'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-6">
+					<label class="cro-field__label"><?php esc_html_e( 'Toast interval (seconds)', 'meyvora-convert' ); ?></label>
+					<input type="number" name="social_proof_toast_interval" min="3" class="small-text" value="<?php echo esc_attr( (string) $social_proof['toast_interval'] ); ?>" />
+				</div>
+				<div class="cro-field cro-col-12">
+					<label class="cro-field__label"><?php esc_html_e( 'Toast template', 'meyvora-convert' ); ?></label>
+					<input type="text" name="social_proof_toast_template" class="large-text" value="<?php echo esc_attr( (string) $social_proof['toast_template'] ); ?>" />
+					<span class="cro-help"><?php esc_html_e( 'Placeholders: {name}, {location}, {product}', 'meyvora-convert' ); ?></span>
+				</div>
+			</div>
 		</div>
 
 		<?php submit_button( __( 'Save All Settings', 'meyvora-convert' ), 'primary', 'cro_save_boosters' ); ?>

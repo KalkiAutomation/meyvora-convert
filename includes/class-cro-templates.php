@@ -172,6 +172,21 @@ class CRO_Templates {
 				),
 			),
 
+			'gamified-wheel'      => array(
+				'name'            => __( 'Spin to Win', 'meyvora-convert' ),
+				'description'     => __( 'Wheel with email capture and optional coupon reveal', 'meyvora-convert' ),
+				'type'            => 'popup',
+				'category'        => 'gamified',
+				'preview_image'   => '',
+				'supports'        => array( 'headline', 'subheadline', 'cta', 'dismiss' ),
+				'default_styling' => array(
+					'position'        => 'center',
+					'size'            => 'medium',
+					'animation'       => 'fade',
+					'overlay_opacity' => 50,
+				),
+			),
+
 		);
 
 		return apply_filters( 'cro_templates', $templates );
@@ -259,6 +274,12 @@ class CRO_Templates {
 	 * @return string File path.
 	 */
 	public static function get_template_file( $template_key ) {
+		$template_key = sanitize_key( (string) $template_key );
+		$template_key = str_replace( '_', '-', $template_key );
+		if ( $template_key === '' ) {
+			$template_key = 'centered';
+		}
+
 		$template = self::get( $template_key );
 		if ( ! $template ) {
 			$template_key = 'centered';
@@ -396,5 +417,48 @@ class CRO_Templates {
 		}
 		
 		return implode('; ', $styles);
+	}
+
+	/**
+	 * Server-rendered popup HTML for admin preview (matches storefront templates).
+	 *
+	 * @param array $data template or template_type, content, styling.
+	 * @return string
+	 */
+	public static function render_campaign_preview_html( array $data ) {
+		$template_raw = isset( $data['template'] ) ? $data['template'] : ( isset( $data['template_type'] ) ? $data['template_type'] : 'centered' );
+		$template     = sanitize_key( str_replace( '_', '-', is_string( $template_raw ) ? $template_raw : 'centered' ) );
+		if ( $template === '' ) {
+			$template = 'centered';
+		}
+		$available = self::get_available_for_builder();
+		if ( ! isset( $available[ $template ] ) ) {
+			$template = 'centered';
+		}
+		$content = isset( $data['content'] ) && is_array( $data['content'] ) ? $data['content'] : array();
+		$styling = isset( $data['styling'] ) && is_array( $data['styling'] ) ? $data['styling'] : array();
+
+		if ( ! class_exists( 'CRO_Placeholders' ) ) {
+			require_once CRO_PLUGIN_DIR . 'includes/class-cro-placeholders.php';
+		}
+
+		$campaign = array(
+			'id'           => 0,
+			'type'         => 'popup',
+			'is_preview'   => true,
+			'settings'     => array( 'template' => $template ),
+			'content'      => $content,
+			'styling'      => $styling,
+			'template_type' => $template,
+		);
+
+		$path = CRO_PLUGIN_DIR . 'templates/popups/' . $template . '.php';
+		if ( ! file_exists( $path ) ) {
+			$path = CRO_PLUGIN_DIR . 'templates/popups/centered.php';
+		}
+
+		ob_start();
+		include $path;
+		return (string) ob_get_clean();
 	}
 }

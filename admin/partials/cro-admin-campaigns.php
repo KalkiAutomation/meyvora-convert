@@ -4,20 +4,21 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+require_once CRO_PLUGIN_DIR . 'admin/partials/cro-admin-ai-panel.php';
+
 // Show notices
-if ( ! empty( $_GET['deleted'] ) ) {
+if ( CRO_Security::get_query_var( 'deleted' ) !== '' ) {
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Campaign deleted.', 'meyvora-convert' ) . '</p></div>';
 }
 
 // Show error notices (sanitized)
-$campaign_error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
+$campaign_error = CRO_Security::get_query_var( 'error' );
 if ( $campaign_error === 'duplicate_failed' ) {
 	echo '<div class="notice notice-error"><p>' . esc_html__( 'Failed to duplicate campaign.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $campaign_error === 'invalid_nonce' ) {
@@ -52,7 +53,7 @@ foreach ( $campaigns as $_c ) {
 	}
 }
 
-if ( ! empty( $_GET['cro_bulk_done'] ) ) {
+if ( CRO_Security::get_query_var( 'cro_bulk_done' ) !== '' ) {
 	echo '<div class="notice notice-success is-dismissible"><p>'
 		. esc_html__( 'Bulk action applied successfully.', 'meyvora-convert' )
 		. '</p></div>';
@@ -61,7 +62,7 @@ if ( ! empty( $_GET['cro_bulk_done'] ) ) {
 
 	<?php if ( empty( $campaigns ) ) : ?>
 		<div class="cro-table-empty-state">
-			<span class="cro-table-empty-state__icon" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'sparkles', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-table-empty-state__icon" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'sparkles', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<h3 class="cro-table-empty-state__title"><?php esc_html_e( 'No campaigns yet', 'meyvora-convert' ); ?></h3>
 			<p class="cro-table-empty-state__text"><?php esc_html_e( 'Create your first campaign to show exit intent, scroll, or time-based offers to visitors.', 'meyvora-convert' ); ?></p>
@@ -165,30 +166,4 @@ if ( ! empty( $_GET['cro_bulk_done'] ) ) {
 			</table>
 		</div>
 		</form>
-		<style>
-			.cro-table-actions .cro-table-actions__sep { color: #c3c4c7; margin: 0 4px; user-select: none; }
-			.cro-ai-hypothesis-panel-wrap td { background: #f6f7f7; padding: 0 !important; border-top: none; }
-			.cro-ai-hypothesis-panel__slide { padding: 16px 20px 20px; }
-			.cro-ai-ab-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 1200px; }
-			@media (max-width: 782px) { .cro-ai-ab-cards { grid-template-columns: 1fr; } }
-			.cro-ai-ab-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
-			.cro-ai-ab-card__title { margin: 0 0 8px; font-size: 15px; }
-			.cro-ai-ab-card__meta, .cro-ai-ab-card__hypothesis, .cro-ai-ab-card__summary { margin: 0 0 10px; font-size: 13px; line-height: 1.45; }
-			.cro-ai-ab-diff { margin: 12px 0; padding-top: 8px; border-top: 1px solid #eee; }
-			.cro-ai-ab-diff-row { margin-bottom: 12px; }
-			.cro-ai-ab-diff-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: #646970; margin-bottom: 6px; }
-			.cro-ai-ab-diff-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-			.cro-ai-ab-diff-col { border-radius: 4px; padding: 8px 10px; font-size: 13px; line-height: 1.4; }
-			.cro-ai-ab-diff-col--before { background: #fcf0f1; border: 1px solid #f0b0b5; }
-			.cro-ai-ab-diff-col--after { background: #edfaef; border: 1px solid #9bd69f; }
-			.cro-ai-ab-diff-tag { display: block; font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; opacity: .85; }
-			.cro-ai-ab-diff-text { white-space: pre-wrap; word-break: break-word; }
-			.cro-ai-ab-card__actions { margin: 16px 0 0; }
-		</style>
-		<script>
-		document.getElementById('cro-select-all').addEventListener('change', function() {
-			var cbs = document.querySelectorAll('.cro-campaign-cb');
-			for (var i = 0; i < cbs.length; i++) { cbs[i].checked = this.checked; }
-		});
-		</script>
 	<?php endif; ?>

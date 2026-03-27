@@ -9,7 +9,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -25,6 +24,15 @@ class CRO_Abandoned_Cart_Reminder {
 	const GROUP = 'cro_abandoned_cart';
 	const MAX_EMAILS = 3;
 	const MAX_REMINDERS = 3;
+
+	/**
+	 * @return void
+	 */
+	private static function reminder_flush_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
 
 	/**
 	 * Register the action hook and (for wp-cron fallback) ensure cron is scheduled.
@@ -160,17 +168,30 @@ class CRO_Abandoned_Cart_Reminder {
 		global $wpdb;
 		$table = CRO_Abandoned_Cart_Tracker::get_table_name();
 		if ( $sent ) {
-			$wpdb->update(
-				$table,
+			$u1 = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 				array( $sent_col => current_time( 'mysql' ), 'last_error' => null, 'updated_at' => current_time( 'mysql' ) ),
 				array( 'id' => $abandoned_cart_id ),
 				array( '%s', '%s', '%s' ),
 				array( '%d' )
 			);
-			$wpdb->query( $wpdb->prepare(
-				"UPDATE {$table} SET reminder_count = reminder_count + 1 WHERE id = %d",
-				$abandoned_cart_id
-			) );
+			if ( false !== $u1 ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::reminder_flush_read_cache();
+			}
+			$rc = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+				$wpdb->prepare(
+					'UPDATE %i SET reminder_count = reminder_count + 1 WHERE id = %d',
+					$table,
+					$abandoned_cart_id
+				) );
+			if ( false !== $rc ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::reminder_flush_read_cache();
+			}
 			// Schedule next email if N < 3.
 			if ( $email_number < self::MAX_EMAILS ) {
 				$next        = $email_number + 1;
@@ -187,13 +208,18 @@ class CRO_Abandoned_Cart_Reminder {
 			}
 		} else {
 			$err = self::get_last_send_error();
-			$wpdb->update(
-				$table,
+			$u2  = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 				array( 'last_error' => $err ? substr( $err, 0, 500 ) : __( 'Send failed', 'meyvora-convert' ), 'updated_at' => current_time( 'mysql' ) ),
 				array( 'id' => $abandoned_cart_id ),
 				array( '%s', '%s' ),
 				array( '%d' )
 			);
+			if ( false !== $u2 ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::reminder_flush_read_cache();
+			}
 		}
 	}
 
@@ -236,17 +262,30 @@ class CRO_Abandoned_Cart_Reminder {
 			$sent_col = 'email_' . $email_number . '_sent_at';
 			global $wpdb;
 			$table = CRO_Abandoned_Cart_Tracker::get_table_name();
-			$wpdb->update(
-				$table,
+			$u3    = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 				array( $sent_col => current_time( 'mysql' ), 'last_error' => null, 'updated_at' => current_time( 'mysql' ) ),
 				array( 'id' => $cart_id ),
 				array( '%s', '%s', '%s' ),
 				array( '%d' )
 			);
-			$wpdb->query( $wpdb->prepare(
-				"UPDATE {$table} SET reminder_count = reminder_count + 1 WHERE id = %d",
-				$cart_id
-			) );
+			if ( false !== $u3 ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::reminder_flush_read_cache();
+			}
+			$rc2 = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+				$wpdb->prepare(
+					'UPDATE %i SET reminder_count = reminder_count + 1 WHERE id = %d',
+					$table,
+					$cart_id
+				) );
+			if ( false !== $rc2 ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				self::reminder_flush_read_cache();
+			}
 			if ( function_exists( 'do_action' ) ) {
 				do_action( 'cro_abandoned_cart_email_sent', $cart_id, $email_number );
 			}
@@ -265,6 +304,14 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( empty( $opts['enable_abandoned_cart_emails'] ) ) {
 			return;
 		}
+
+		$lock_key = 'cro_reminder_cron_lock';
+		if ( get_transient( $lock_key ) ) {
+			return;
+		}
+		set_transient( $lock_key, 1, 5 * MINUTE_IN_SECONDS );
+
+		try {
 		global $wpdb;
 		$table = CRO_Abandoned_Cart_Tracker::get_table_name();
 		if ( ! CRO_Database::table_exists( $table ) ) {
@@ -275,14 +322,25 @@ class CRO_Abandoned_Cart_Reminder {
 		$ts_now = time();
 
 		// Broad fetch then per-row segment delays (min high-value delay: 0.5h → 30 min; email 2 min 4h; email 3 min 24h).
-		$due1 = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 30 MINUTE) LIMIT 40",
-				$active,
-				$now
-			),
-			OBJECT
-		);
+		$cache_key_due1 = 'meyvora_cro_' . md5( serialize( array( 'abandoned_due_reminders_email_one', $table, $active, $now ) ) );
+		$due1           = wp_cache_get( $cache_key_due1, 'meyvora_cro' );
+		if ( false === $due1 ) {
+			$due1 = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != \'\' AND email_1_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 30 MINUTE) LIMIT 40',
+					$table,
+					$active,
+					$now
+				),
+				OBJECT
+			);
+			if ( ! is_array( $due1 ) ) {
+				$due1 = array();
+			}
+			wp_cache_set( $cache_key_due1, $due1, 'meyvora_cro', 300 );
+		} else {
+			$due1 = is_array( $due1 ) ? $due1 : array();
+		}
 		foreach ( $due1 ? $due1 : array() as $r ) {
 			$seg   = self::get_segment( self::cart_row_to_array( $r ) );
 			$need  = self::get_delay_hours( 1, $seg );
@@ -292,14 +350,25 @@ class CRO_Abandoned_Cart_Reminder {
 			}
 		}
 
-		$due2 = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_1_sent_at IS NOT NULL AND email_2_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 4 HOUR) LIMIT 40",
-				$active,
-				$now
-			),
-			OBJECT
-		);
+		$cache_key_due2 = 'meyvora_cro_' . md5( serialize( array( 'abandoned_due_reminders_email_two', $table, $active, $now ) ) );
+		$due2           = wp_cache_get( $cache_key_due2, 'meyvora_cro' );
+		if ( false === $due2 ) {
+			$due2 = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != \'\' AND email_1_sent_at IS NOT NULL AND email_2_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 4 HOUR) LIMIT 40',
+					$table,
+					$active,
+					$now
+				),
+				OBJECT
+			);
+			if ( ! is_array( $due2 ) ) {
+				$due2 = array();
+			}
+			wp_cache_set( $cache_key_due2, $due2, 'meyvora_cro', 300 );
+		} else {
+			$due2 = is_array( $due2 ) ? $due2 : array();
+		}
 		foreach ( $due2 ? $due2 : array() as $r ) {
 			$seg    = self::get_segment( self::cart_row_to_array( $r ) );
 			$need   = self::get_delay_hours( 2, $seg );
@@ -309,14 +378,25 @@ class CRO_Abandoned_Cart_Reminder {
 			}
 		}
 
-		$due3 = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM {$table} WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != '' AND email_2_sent_at IS NOT NULL AND email_3_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 24 HOUR) LIMIT 40",
-				$active,
-				$now
-			),
-			OBJECT
-		);
+		$cache_key_due3 = 'meyvora_cro_' . md5( serialize( array( 'abandoned_due_reminders_email_three', $table, $active, $now ) ) );
+		$due3           = wp_cache_get( $cache_key_due3, 'meyvora_cro' );
+		if ( false === $due3 ) {
+			$due3 = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE status = %s AND email_consent = 1 AND email IS NOT NULL AND email != \'\' AND email_2_sent_at IS NOT NULL AND email_3_sent_at IS NULL AND last_activity_at <= DATE_SUB(%s, INTERVAL 24 HOUR) LIMIT 40',
+					$table,
+					$active,
+					$now
+				),
+				OBJECT
+			);
+			if ( ! is_array( $due3 ) ) {
+				$due3 = array();
+			}
+			wp_cache_set( $cache_key_due3, $due3, 'meyvora_cro', 300 );
+		} else {
+			$due3 = is_array( $due3 ) ? $due3 : array();
+		}
 		foreach ( $due3 ? $due3 : array() as $r ) {
 			$seg    = self::get_segment( self::cart_row_to_array( $r ) );
 			$need   = self::get_delay_hours( 3, $seg );
@@ -324,6 +404,10 @@ class CRO_Abandoned_Cart_Reminder {
 			if ( $due_ts <= $ts_now ) {
 				do_action( self::HOOK, (int) $r->id, 3 );
 			}
+		}
+
+		} finally {
+			delete_transient( $lock_key );
 		}
 	}
 
@@ -488,7 +572,16 @@ class CRO_Abandoned_Cart_Reminder {
 		if ( ! CRO_Database::table_exists( $table ) ) {
 			return null;
 		}
-		return $wpdb->get_row( $wpdb->prepare( "SELECT * FROM {$table} WHERE id = %d LIMIT 1", $id ), OBJECT );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'abandoned_cart_row_reminder', $table, $id ) ) );
+		$row       = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d LIMIT 1', $table, $id ),
+				OBJECT
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		}
+		return $row;
 	}
 
 	/**
@@ -689,21 +782,40 @@ class CRO_Abandoned_Cart_Reminder {
 			$body    = self::replace_placeholders( $body_tpl, $values );
 		}
 
-		$message  = $body;
-		$message .= '<p style="font-size:11px;color:#999999;text-align:center;margin-top:32px;border-top:1px solid #eeeeee;padding-top:16px;">'
-			. esc_html__( "You're receiving this email because you left items in your cart.", 'meyvora-convert' )
-			. '<br><a href="' . esc_url( $unsubscribe_url ) . '" style="color:#999999;text-decoration:underline;">'
-			. esc_html__( 'Unsubscribe from cart recovery emails', 'meyvora-convert' )
-			. '</a></p>';
+		// Build the full email message using the HTML wrapper template.
+		$store_name  = get_bloginfo( 'name' );
+		$store_url   = home_url( '/' );
+		$footer_text = __( "You're receiving this email because you left items in your cart.", 'meyvora-convert' );
+
+		$email_template = apply_filters(
+			'cro_abandoned_cart_email_template',
+			CRO_PLUGIN_DIR . 'templates/emails/abandoned-cart.php'
+		);
+
+		ob_start();
+		if ( is_readable( $email_template ) ) {
+			$body_content = $body;
+			include $email_template;
+		} else {
+			echo '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:sans-serif;padding:20px;">';
+			echo wp_kses_post( $body );
+			echo '<p style="font-size:11px;color:#999;margin-top:32px;">' . esc_html( $footer_text );
+			echo ' <a href="' . esc_url( $unsubscribe_url ) . '">' . esc_html__( 'Unsubscribe', 'meyvora-convert' ) . '</a></p>';
+			echo '</body></html>';
+		}
+		$message = ob_get_clean();
+
 		self::set_last_send_error( null );
 		$headers = array(
 			'Content-Type: text/html; charset=UTF-8',
 			'List-Unsubscribe: <' . esc_url( $unsubscribe_url ) . '>',
 		);
-		$result  = wp_mail( $to, $subject, $message, $headers );
+		$result = wp_mail( $to, $subject, $message, $headers );
 		if ( ! $result ) {
 			global $phpmailer;
-			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo ) ? $phpmailer->ErrorInfo : __( 'wp_mail failed', 'meyvora-convert' );
+			$err = is_object( $phpmailer ) && isset( $phpmailer->ErrorInfo )
+				? $phpmailer->ErrorInfo
+				: __( 'wp_mail failed', 'meyvora-convert' );
 			self::set_last_send_error( $err );
 		}
 		return $result;
@@ -739,8 +851,7 @@ class CRO_Abandoned_Cart_Reminder {
 		}
 		global $wpdb;
 		$msg = 'AI email: ' . substr( wp_strip_all_tags( (string) $message ), 0, 450 );
-		$wpdb->update(
-			$table,
+		$u4  = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'last_error' => $msg,
 				'updated_at' => current_time( 'mysql' ),
@@ -749,6 +860,10 @@ class CRO_Abandoned_Cart_Reminder {
 			array( '%s', '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $u4 ) {
+			CRO_Database::invalidate_table_cache_after_write( $table );
+			self::reminder_flush_read_cache();
+		}
 	}
 
 	/**

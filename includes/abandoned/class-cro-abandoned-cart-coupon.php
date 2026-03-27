@@ -43,14 +43,20 @@ class CRO_Abandoned_Cart_Coupon {
 		if ( $code ) {
 			global $wpdb;
 			$table = CRO_Abandoned_Cart_Tracker::get_table_name();
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom abandoned-cart table update.
-			$wpdb->update(
-				$table,
+			$upd   = $wpdb->update( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 				array( 'discount_coupon' => $code, 'updated_at' => current_time( 'mysql' ) ),
 				array( 'id' => (int) $row->id ),
 				array( '%s', '%s' ),
 				array( '%d' )
 			);
+			if ( false !== $upd ) {
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+				if ( function_exists( 'wp_cache_flush_group' ) ) {
+					wp_cache_flush_group( 'meyvora_cro' );
+				}
+			}
 		}
 		return $code;
 	}

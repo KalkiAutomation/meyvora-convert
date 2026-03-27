@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -12,11 +11,11 @@ if ( ! defined( 'WPINC' ) ) {
 
 $presets = class_exists( 'CRO_Presets' ) ? CRO_Presets::get_all() : array();
 
-$preset_applied = isset( $_GET['preset_applied'] ) && (string) $_GET['preset_applied'] === '1';
-$applied_message = isset( $_GET['message'] ) ? sanitize_text_field( wp_unslash( $_GET['message'] ) ) : '';
-$applied_campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : 0;
+$preset_applied      = CRO_Security::get_query_var( 'preset_applied' ) === '1';
+$applied_message     = CRO_Security::get_query_var( 'message' );
+$applied_campaign_id = CRO_Security::get_query_var_absint( 'campaign_id' );
 
-$error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
+$error = CRO_Security::get_query_var( 'error' );
 $error_messages = array(
 	'invalid_nonce'   => __( 'Invalid security check. Please try again.', 'meyvora-convert' ),
 	'unauthorized'    => __( 'You do not have permission to apply presets.', 'meyvora-convert' ),
@@ -32,6 +31,8 @@ $feature_labels = array(
 	'checkout_optimizer'=> __( 'Checkout optimizer', 'meyvora-convert' ),
 	'stock_urgency'     => __( 'Low stock urgency', 'meyvora-convert' ),
 );
+
+$industry_packs = class_exists( 'CRO_Presets' ) ? CRO_Presets::get_industry_packs() : array();
 ?>
 
 <div class="cro-admin-presets">
@@ -52,6 +53,32 @@ $feature_labels = array(
 	<?php if ( $error && isset( $error_messages[ $error ] ) ) : ?>
 		<div class="notice notice-error is-dismissible"><p><?php echo esc_html( $error_messages[ $error ] ); ?></p></div>
 	<?php endif; ?>
+
+	<?php if ( ! empty( $industry_packs ) ) : ?>
+		<h2 class="cro-presets-section-title"><?php esc_html_e( 'Industry packs', 'meyvora-convert' ); ?></h2>
+		<p class="description"><?php esc_html_e( 'Apply several presets at once for a vertical or use case.', 'meyvora-convert' ); ?></p>
+		<div class="cro-presets-grid cro-industry-packs-grid">
+			<?php foreach ( $industry_packs as $pack ) : ?>
+				<?php
+				$pid   = isset( $pack['id'] ) ? (string) $pack['id'] : '';
+				$pname = isset( $pack['name'] ) ? (string) $pack['name'] : '';
+				$pdesc = isset( $pack['description'] ) ? (string) $pack['description'] : '';
+				?>
+				<div class="cro-preset-card" data-pack-id="<?php echo esc_attr( $pid ); ?>">
+					<div class="cro-preset-card-inner">
+						<h3 class="cro-preset-name"><?php echo esc_html( $pname ); ?></h3>
+						<p class="cro-preset-desc"><?php echo esc_html( $pdesc ); ?></p>
+						<div class="cro-preset-actions">
+							<button type="button" class="button button-primary cro-industry-pack-apply" data-pack-id="<?php echo esc_attr( $pid ); ?>"><?php esc_html_e( 'Apply pack', 'meyvora-convert' ); ?></button>
+						</div>
+					</div>
+				</div>
+			<?php endforeach; ?>
+		</div>
+		<div id="cro-industry-pack-notice" class="notice cro-hidden" style="display:none;margin-top:12px;" role="status"></div>
+	<?php endif; ?>
+
+	<h2 class="cro-presets-section-title"><?php esc_html_e( 'Single presets', 'meyvora-convert' ); ?></h2>
 
 	<div class="cro-presets-grid">
 		<?php foreach ( $presets as $preset ) : ?>
@@ -110,7 +137,7 @@ $feature_labels = array(
 <div id="cro-preset-preview-modal" class="cro-preset-modal cro-hidden" role="dialog" aria-labelledby="cro-preset-preview-title" aria-modal="true">
 	<div class="cro-preset-modal-backdrop"></div>
 	<div class="cro-preset-modal-content">
-		<button type="button" class="cro-preset-modal-close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo CRO_Icons::svg_kses( 'x', array( 'class' => 'cro-ico' ) ); ?></button>
+		<button type="button" class="cro-preset-modal-close" aria-label="<?php esc_attr_e( 'Close', 'meyvora-convert' ); ?>"><?php echo wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 		<h2 id="cro-preset-preview-title" class="cro-preset-modal-title"><?php esc_html_e( 'Preset preview', 'meyvora-convert' ); ?></h2>
 		<div id="cro-preset-preview-body" class="cro-preset-modal-body"></div>
@@ -119,43 +146,3 @@ $feature_labels = array(
 		</div>
 	</div>
 </div>
-
-<script>
-(function() {
-	var modal = document.getElementById('cro-preset-preview-modal');
-	if (!modal) {
-		return;
-	}
-	document.querySelectorAll('.cro-preset-preview-btn').forEach(function(btn) {
-		btn.addEventListener('click', function() {
-			var id = this.getAttribute('data-preset-id');
-			var content = document.getElementById('cro-preset-preview-' + id);
-			var body = document.getElementById('cro-preset-preview-body');
-			if (content && body) {
-				body.innerHTML = content.innerHTML;
-				modal.classList.remove('cro-hidden');
-			}
-		});
-	});
-	function closeModal() {
-		modal.classList.add('cro-hidden');
-	}
-	var backdrop = document.querySelector('.cro-preset-modal-backdrop');
-	if (backdrop) {
-		backdrop.addEventListener('click', closeModal);
-	}
-	var closeBtn = document.querySelector('.cro-preset-modal-close');
-	if (closeBtn) {
-		closeBtn.addEventListener('click', closeModal);
-	}
-	var closeBtn2 = document.querySelector('.cro-preset-modal-close-btn');
-	if (closeBtn2) {
-		closeBtn2.addEventListener('click', closeModal);
-	}
-	document.addEventListener('keydown', function(e) {
-		if (e.key === 'Escape' && !modal.classList.contains('cro-hidden')) {
-			closeModal();
-		}
-	});
-})();
-</script>

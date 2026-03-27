@@ -149,14 +149,14 @@ class CRO_Shortcodes {
 
 		wp_enqueue_style(
 			'cro-popup',
-			CRO_PLUGIN_URL . 'public/css/cro-popup.css',
+			CRO_PLUGIN_URL . 'public/css/cro-popup' . cro_asset_min_suffix() . '.css',
 			array(),
 			$version
 		);
 
 		wp_enqueue_style(
 			'cro-animations',
-			CRO_PLUGIN_URL . 'public/css/cro-animations.css',
+			CRO_PLUGIN_URL . 'public/css/cro-animations' . cro_asset_min_suffix() . '.css',
 			array( 'cro-popup' ),
 			$version
 		);

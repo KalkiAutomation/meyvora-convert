@@ -162,12 +162,25 @@ class CRO_Offer_Model {
 	 * @return object|null
 	 */
 	public static function get( $id ) {
+		global $wpdb;
+
 		$table = self::get_offers_table();
-		$row   = CRO_Database::get_row(
-			"SELECT * FROM {$table} WHERE id = %d",
-			array( absint( $id ) ),
-			OBJECT
-		);
+		$oid   = absint( $id );
+		$cache_key   = 'meyvora_cro_' . md5( serialize( array( 'offer_row_by_id', $table, $oid ) ) );
+		$cached_row  = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $cached_row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table,
+					$oid
+				),
+				OBJECT
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		} else {
+			$row = is_object( $cached_row ) ? $cached_row : null;
+		}
 		return $row ? self::decode_offer_row( $row ) : null;
 	}
 
@@ -178,15 +191,38 @@ class CRO_Offer_Model {
 	 * @return array
 	 */
 	public static function get_all( $status = null ) {
+		global $wpdb;
+
 		$table = self::get_offers_table();
-		$sql   = "SELECT * FROM {$table}";
-		$args  = array();
 		if ( $status !== null && $status !== '' ) {
-			$sql   .= " WHERE status = %s";
-			$args[] = sanitize_text_field( $status );
+			$status_s  = sanitize_text_field( $status );
+			$cache_key = 'meyvora_cro_' . md5( serialize( array( 'offer_list_by_status', $table, $status_s ) ) );
+			$rows      = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE status = %s ORDER BY priority ASC, id ASC',
+						$table,
+						$status_s
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key, $rows, 'meyvora_cro', 300 );
+			}
+		} else {
+			$cache_key = 'meyvora_cro_' . md5( serialize( array( 'offer_list_all_ordered', $table ) ) );
+			$rows      = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i ORDER BY priority ASC, id ASC',
+						$table
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key, $rows, 'meyvora_cro', 300 );
+			}
 		}
-		$sql .= " ORDER BY priority ASC, id ASC";
-		$rows = CRO_Database::get_results( $sql, $args, OBJECT );
 		if ( ! is_array( $rows ) ) {
 			return array();
 		}
@@ -304,18 +340,42 @@ class CRO_Offer_Model {
 	 * @return array
 	 */
 	public static function get_logs( $offer_id = null, $limit = 100 ) {
+		global $wpdb;
+
 		$table = self::get_logs_table();
 		$limit = absint( $limit );
 		$limit = $limit > 0 ? $limit : 100;
-		$sql   = "SELECT * FROM {$table}";
-		$args  = array();
 		if ( $offer_id !== null && $offer_id !== '' ) {
-			$sql   .= " WHERE offer_id = %d";
-			$args[] = absint( $offer_id );
+			$oid       = absint( $offer_id );
+			$cache_key = 'meyvora_cro_' . md5( serialize( array( 'offer_logs_by_offer_id', $table, $oid, $limit ) ) );
+			$rows      = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE offer_id = %d ORDER BY created_at DESC LIMIT %d',
+						$table,
+						$oid,
+						$limit
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key, $rows, 'meyvora_cro', 300 );
+			}
+		} else {
+			$cache_key = 'meyvora_cro_' . md5( serialize( array( 'offer_logs_recent_all', $table, $limit ) ) );
+			$rows      = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $rows ) {
+				$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i ORDER BY created_at DESC LIMIT %d',
+						$table,
+						$limit
+					),
+					OBJECT
+				);
+				wp_cache_set( $cache_key, $rows, 'meyvora_cro', 300 );
+			}
 		}
-		$sql .= " ORDER BY created_at DESC LIMIT %d";
-		$args[] = $limit;
-		$rows = CRO_Database::get_results( $sql, $args, OBJECT );
 		return is_array( $rows ) ? $rows : array();
 	}
 }

@@ -8,7 +8,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -182,11 +181,34 @@ class CRO_Context {
 			$is_admin = user_can( $user, 'manage_options' );
 		}
 		return array(
-			'logged_in' => $logged_in,
-			'id'        => $id,
-			'role'      => $role,
-			'is_admin'  => $is_admin,
+			'logged_in'   => $logged_in,
+			'id'          => $id,
+			'role'        => $role,
+			'is_admin'    => $is_admin,
+			'order_count' => $this->customer_order_count( $id ),
 		);
+	}
+
+	/**
+	 * Completed / processing / on-hold order count for a customer (for targeting).
+	 *
+	 * @param int $user_id User ID.
+	 * @return int
+	 */
+	private function customer_order_count( $user_id ) {
+		$user_id = absint( $user_id );
+		if ( ! $user_id || ! function_exists( 'wc_get_orders' ) ) {
+			return 0;
+		}
+		$ids = wc_get_orders(
+			array(
+				'customer_id' => $user_id,
+				'status'      => array( 'wc-completed', 'wc-processing', 'wc-on-hold' ),
+				'limit'       => -1,
+				'return'      => 'ids',
+			)
+		);
+		return is_array( $ids ) ? count( $ids ) : 0;
 	}
 
 	/**
@@ -199,19 +221,62 @@ class CRO_Context {
 		if ( ! empty( $_SERVER['HTTP_REFERER'] ) && is_string( $_SERVER['HTTP_REFERER'] ) ) {
 			$referrer = esc_url_raw( wp_unslash( $_SERVER['HTTP_REFERER'] ) );
 		}
+		$referrer_domain = $referrer !== '' ? (string) wp_parse_url( $referrer, PHP_URL_HOST ) : '';
+		$referrer_domain = str_replace( 'www.', '', strtolower( $referrer_domain ) );
+
+		$utm_source_get   = CRO_Security::get_query_var( 'utm_source' );
+		$utm_medium_get   = CRO_Security::get_query_var( 'utm_medium' );
+		$utm_campaign_get = CRO_Security::get_query_var( 'utm_campaign' );
+
+		$utm_source   = $utm_source_get;
+		$utm_medium   = $utm_medium_get;
+		$utm_campaign = $utm_campaign_get;
+
+		if ( class_exists( 'CRO_Visitor_State' ) ) {
+			$visitor = CRO_Visitor_State::get_instance();
+			if ( $utm_source_get !== '' ) {
+				$visitor->persist_utm_if_present( $utm_source_get, $utm_medium_get, $utm_campaign_get );
+			} else {
+				$stored       = $visitor->get_persisted_utm();
+				$utm_source   = $stored['utm_source'];
+				$utm_medium   = $stored['utm_medium'];
+				$utm_campaign = $stored['utm_campaign'];
+			}
+		}
+
 		$utm = array();
 		$keys = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term' );
 		foreach ( $keys as $k ) {
-			if ( isset( $_GET[ $k ] ) && is_string( $_GET[ $k ] ) ) {
-				$utm[ $k ] = sanitize_text_field( wp_unslash( $_GET[ $k ] ) );
+			$v = CRO_Security::get_query_var( $k );
+			if ( $v !== '' ) {
+				$utm[ $k ] = $v;
 			}
 		}
+		if ( $utm_source !== '' ) {
+			$utm['utm_source'] = $utm_source;
+		}
+		if ( $utm_medium !== '' ) {
+			$utm['utm_medium'] = $utm_medium;
+		}
+		if ( $utm_campaign !== '' ) {
+			$utm['utm_campaign'] = $utm_campaign;
+		}
+
 		$visitor_type = $this->detect_visitor_type();
+		$geo_country  = '';
+		if ( class_exists( 'CRO_Geo' ) ) {
+			$geo_country = CRO_Geo::detect_country();
+		}
 		return array(
-			'referrer'       => $referrer,
-			'utm'            => $utm,
-			'visitor_type'   => $visitor_type,
-			'session_count'  => 0,
+			'referrer'          => $referrer,
+			'referrer_domain'   => $referrer_domain,
+			'utm'               => $utm,
+			'utm_source'        => $utm_source,
+			'utm_medium'        => $utm_medium,
+			'utm_campaign'      => $utm_campaign,
+			'visitor_type'      => $visitor_type,
+			'session_count'     => 0,
+			'geo_country'       => $geo_country,
 		);
 	}
 
@@ -427,10 +492,15 @@ class CRO_Context {
 				'role'      => (string) ( $user['role'] ?? '' ),
 			),
 			'request'     => array(
-				'referrer'       => (string) ( $request['referrer'] ?? '' ),
-				'utm'            => isset( $request['utm'] ) && is_array( $request['utm'] ) ? $request['utm'] : array(),
-				'visitor_type'   => (string) ( $request['visitor_type'] ?? 'new' ),
-				'session_count'  => (int) ( $request['session_count'] ?? 0 ),
+				'referrer'          => (string) ( $request['referrer'] ?? '' ),
+				'referrer_domain'   => (string) ( $request['referrer_domain'] ?? '' ),
+				'utm'               => isset( $request['utm'] ) && is_array( $request['utm'] ) ? $request['utm'] : array(),
+				'utm_source'        => (string) ( $request['utm_source'] ?? '' ),
+				'utm_medium'        => (string) ( $request['utm_medium'] ?? '' ),
+				'utm_campaign'      => (string) ( $request['utm_campaign'] ?? '' ),
+				'visitor_type'      => (string) ( $request['visitor_type'] ?? 'new' ),
+				'session_count'     => (int) ( $request['session_count'] ?? 0 ),
+				'geo_country'       => (string) ( $request['geo_country'] ?? '' ),
 			),
 			'time'        => array(
 				'hour'      => (int) ( $time['hour'] ?? 0 ),

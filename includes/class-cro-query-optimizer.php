@@ -6,7 +6,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 defined( 'ABSPATH' ) || exit;
 
@@ -75,7 +74,7 @@ class CRO_Query_Optimizer {
 
 		$pages = isset( $tr['pages'] ) && is_array( $tr['pages'] ) ? $tr['pages'] : array();
 		$include = isset( $pages['include'] ) && is_array( $pages['include'] ) ? $pages['include'] : array();
-		$exclude = isset( $pages['exclude'] ) && is_array( $pages['exclude'] ) ? $pages['exclude'] : array();
+		$exclude = CRO_Campaign_Model::get_pages_excluded_slugs( $pages );
 		$include = array_map( array( __CLASS__, 'map_page_type' ), $include );
 		$exclude = array_map( array( __CLASS__, 'map_page_type' ), $exclude );
 		$page_mode = isset( $tr['page_mode'] ) ? $tr['page_mode'] : 'all';
@@ -141,8 +140,7 @@ class CRO_Query_Optimizer {
 			$device_type = $device_type !== '' ? $device_type : 'desktop';
 			$page_url    = isset( $event['page_url'] ) ? esc_url_raw( $event['page_url'] ) : '';
 
-			$wpdb->insert(
-				$table,
+			$ins = $wpdb->insert( $table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 				array(
 					'event_type' => $event_type,
 					'source_type'=> 'campaign',
@@ -155,6 +153,14 @@ class CRO_Query_Optimizer {
 				),
 				array( '%s', '%s', '%d', '%s', '%s', '%s', '%f', '%s' )
 			);
+			if ( false !== $ins ) {
+				if ( function_exists( 'wp_cache_flush_group' ) ) {
+					wp_cache_flush_group( 'meyvora_cro' );
+				}
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $table );
+				}
+			}
 		}
 	}
 
@@ -169,20 +175,27 @@ class CRO_Query_Optimizer {
 		global $wpdb;
 		$table = $wpdb->prefix . 'cro_events';
 
-		$result = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT 
+		$cache_key = 'meyvora_cro_analytics_summary_' . md5( (string) $date_from . '_' . (string) $date_to );
+		$found     = false;
+		$result    = wp_cache_get( $cache_key, 'meyvora_cro', false, $found );
+		if ( ! $found ) {
+			$result = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					"SELECT 
 					COUNT(CASE WHEN event_type = 'impression' THEN 1 END) AS impressions,
 					COUNT(CASE WHEN event_type = 'conversion' THEN 1 END) AS conversions,
 					COALESCE(SUM(CASE WHEN event_type = 'conversion' THEN order_value END), 0) AS revenue,
 					COUNT(CASE WHEN event_type = 'conversion' AND email IS NOT NULL AND email != '' THEN 1 END) AS emails
-				FROM {$table}
+				FROM %i
 				WHERE created_at BETWEEN %s AND %s",
-				$date_from . ' 00:00:00',
-				$date_to . ' 23:59:59'
-			),
-			ARRAY_A
-		);
+					$table,
+					$date_from . ' 00:00:00',
+					$date_to . ' 23:59:59'
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key, $result, 'meyvora_cro', 300 );
+		}
 
 		return is_array( $result ) ? $result : array(
 			'impressions' => 0,
@@ -196,47 +209,9 @@ class CRO_Query_Optimizer {
 	 * Add database indexes if missing (matches actual table columns).
 	 */
 	public static function ensure_indexes() {
-		global $wpdb;
-
-		$indexes = array(
-			'cro_events'   => array(
-				'idx_event_type'   => 'event_type',
-				'idx_source_id'    => 'source_id',
-				'idx_created_at'   => 'created_at',
-				'idx_composite'    => 'event_type, created_at',
-			),
-			'cro_campaigns' => array(
-				'idx_status'   => 'status',
-				'idx_priority' => 'priority',
-			),
-		);
-
-		foreach ( $indexes as $table_suffix => $table_indexes ) {
-			$table = esc_sql( $wpdb->prefix . $table_suffix );
-
-			foreach ( $table_indexes as $index_name => $columns ) {
-				$safe_index_name = sanitize_key( $index_name );
-				$column_list = array();
-				foreach ( explode( ',', $columns ) as $column ) {
-					$column_list[] = sanitize_key( trim( $column ) );
-				}
-				$safe_columns = implode( ', ', $column_list );
-				$exists = $wpdb->get_var(
-					$wpdb->prepare(
-						"SELECT COUNT(*) FROM information_schema.statistics 
-						WHERE table_schema = DATABASE() 
-						AND table_name = %s 
-						AND index_name = %s",
-						$table,
-						$safe_index_name
-					)
-				);
-
-				if ( ! $exists ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$wpdb->query( "CREATE INDEX {$safe_index_name} ON {$table} ({$safe_columns})" );
-				}
-			}
+		if ( ! class_exists( 'CRO_Database' ) ) {
+			return;
 		}
+		CRO_Database::create_tables();
 	}
 }

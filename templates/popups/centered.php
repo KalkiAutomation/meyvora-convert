@@ -75,9 +75,13 @@ if ( $is_preview ) {
         <?php include CRO_PLUGIN_DIR . 'templates/partials/countdown.php'; ?>
         <?php endif; ?>
         
-        <?php if ( ! empty( $content['show_coupon'] ) && ! empty( $content['coupon_code'] ) ) : ?>
-        <?php include CRO_PLUGIN_DIR . 'templates/partials/coupon.php'; ?>
-        <?php endif; ?>
+        <?php
+        $cro_coupon_actions = array( 'apply_coupon', 'apply_coupon_checkout', 'copy_coupon' );
+        $cro_show_coupon_block = ( ! empty( $content['show_coupon'] ) || in_array( $content['cta_action'] ?? '', $cro_coupon_actions, true ) ) && ! empty( $content['coupon_code'] );
+        if ( $cro_show_coupon_block ) :
+            include CRO_PLUGIN_DIR . 'templates/partials/coupon.php';
+        endif;
+        ?>
         
         <?php if ( ! empty( $content['show_email_field'] ) ) : ?>
         <?php include CRO_PLUGIN_DIR . 'templates/partials/email-form.php'; ?>

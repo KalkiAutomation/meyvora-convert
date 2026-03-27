@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -15,6 +14,45 @@ if ( ! defined( 'WPINC' ) ) {
  * The admin-specific functionality of the plugin.
  */
 class CRO_Admin {
+
+	/**
+	 * Sanitized GET query string (uses filter_input for static analysis).
+	 *
+	 * @param string $key     Query parameter name.
+	 * @param string $default Default if missing.
+	 * @return string
+	 */
+	private static function get_get_text( $key, $default = '' ) {
+		$raw = filter_input( INPUT_GET, $key, FILTER_UNSAFE_RAW );
+		if ( ! is_string( $raw ) ) {
+			return $default;
+		}
+		return sanitize_text_field( wp_unslash( $raw ) );
+	}
+
+	/**
+	 * Positive integer from GET (0 if missing/invalid).
+	 *
+	 * @param string $key Query parameter name.
+	 * @return int
+	 */
+	private static function get_get_absint( $key ) {
+		$raw = filter_input( INPUT_GET, $key, FILTER_UNSAFE_RAW );
+		if ( ! is_string( $raw ) ) {
+			return 0;
+		}
+		return absint( wp_unslash( $raw ) );
+	}
+
+	/**
+	 * Whether the URL requests onboarding mode (?cro_onboarding=1).
+	 *
+	 * @return bool
+	 */
+	private static function is_cro_onboarding_query() {
+		$raw = filter_input( INPUT_GET, 'cro_onboarding', FILTER_UNSAFE_RAW );
+		return is_string( $raw ) && wp_unslash( $raw ) === '1';
+	}
 
 	/**
 	 * Initialize the class and set its properties.
@@ -46,6 +84,8 @@ class CRO_Admin {
 		add_action( 'admin_init', array( $this, 'handle_bulk_campaigns' ) );
 		add_action( 'admin_init', array( $this, 'handle_campaign_actions' ) );
 		add_action( 'admin_init', array( $this, 'handle_ab_test_actions' ) );
+		add_action( 'admin_post_cro_save_sequence', array( $this, 'handle_save_sequence' ) );
+		add_action( 'admin_post_cro_delete_sequence', array( $this, 'handle_delete_sequence' ) );
 		// Front-end error reporting (graceful error handling).
 		add_action( 'wp_ajax_cro_log_error', array( $this, 'handle_log_error' ) );
 		add_action( 'wp_ajax_nopriv_cro_log_error', array( $this, 'handle_log_error' ) );
@@ -90,7 +130,7 @@ class CRO_Admin {
 		}
 		add_action( 'cro_admin_nav_actions', array( $this, 'render_ai_chat_nav_toggle' ) );
 		add_action( 'cro_admin_after_page', array( $this, 'render_ai_chat_shell' ) );
-		add_action( 'admin_footer', array( $this, 'render_admin_debug_panel' ), 999 );
+		add_action( 'admin_footer', array( $this, 'render_admin_debug_panel' ), 15 );
 	}
 
 	/**
@@ -133,6 +173,16 @@ class CRO_Admin {
 			'manage_meyvora_convert',
 			'cro-presets',
 			array( $this, 'render_presets' )
+		);
+
+		// Campaign sequences
+		add_submenu_page(
+			'meyvora-convert',
+			__( 'Campaign Sequences', 'meyvora-convert' ),
+			__( 'Sequences', 'meyvora-convert' ),
+			'manage_meyvora_convert',
+			'cro-sequences',
+			array( $this, 'render_sequences' )
 		);
 
 		// Campaigns
@@ -351,11 +401,25 @@ class CRO_Admin {
 	}
 
 	/**
+	 * Campaign sequences admin.
+	 */
+	public function render_sequences() {
+		CRO_Admin_UI::render_page( array(
+			'title'           => get_admin_page_title() ?: __( 'Campaign sequences', 'meyvora-convert' ),
+			'subtitle'        => __( 'After a visitor converts on a campaign, schedule follow-up campaigns.', 'meyvora-convert' ),
+			'active_tab'      => 'cro-sequences',
+			'primary_action'  => null,
+			'content_partial' => CRO_PLUGIN_DIR . 'admin/partials/cro-admin-sequences.php',
+			'wrap_class'      => 'cro-sequences-page',
+		) );
+	}
+
+	/**
 	 * Render dashboard (main CRO page). Shows onboarding wizard when onboarding=1 or when not yet completed.
 	 */
 	public function render_dashboard() {
-		$onboarding_request   = isset( $_GET['cro_onboarding'] ) && (string) $_GET['cro_onboarding'] === '1';
-		$onboarding_completed = get_option( 'cro_onboarding_completed', false );
+		$onboarding_request   = self::is_cro_onboarding_query();
+		$onboarding_completed = function_exists( 'cro_is_onboarding_complete' ) && cro_is_onboarding_complete();
 
 		if ( $onboarding_request || ! $onboarding_completed ) {
 			CRO_Admin_UI::render_page( array(
@@ -494,17 +558,21 @@ class CRO_Admin {
 	 * Render Analytics page (with layout and Export CSV header CTA).
 	 */
 	public function render_analytics() {
-		$action = isset( $_GET['action'] ) ? sanitize_text_field( wp_unslash( $_GET['action'] ) ) : '';
+		$action = self::get_get_text( 'action' );
 		if ( $action === 'export' ) {
 			$this->handle_csv_export();
 			return;
 		}
-		$date_from   = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : gmdate( 'Y-m-d', strtotime( '-30 days' ) );
-		$date_to     = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : gmdate( 'Y-m-d' );
-		$campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : null;
-		if ( $campaign_id === 0 ) {
-			$campaign_id = null;
+		$date_from   = self::get_get_text( 'from' );
+		$date_to     = self::get_get_text( 'to' );
+		if ( $date_from === '' ) {
+			$date_from = gmdate( 'Y-m-d', strtotime( '-30 days' ) );
 		}
+		if ( $date_to === '' ) {
+			$date_to = gmdate( 'Y-m-d' );
+		}
+		$campaign_id = self::get_get_absint( 'campaign_id' );
+		$campaign_id = $campaign_id > 0 ? $campaign_id : null;
 		$export_url = add_query_arg(
 			array(
 				'page'     => 'cro-analytics',
@@ -560,9 +628,16 @@ class CRO_Admin {
 			);
 		}
 		wp_register_script(
+			'cro-sortable',
+			CRO_PLUGIN_URL . 'admin/js/vendor/sortable.min.js',
+			array(),
+			'1.15.2',
+			true
+		);
+		wp_register_script(
 			'cro-campaign-builder',
 			CRO_PLUGIN_URL . 'admin/js/cro-campaign-builder.js',
-			array( 'jquery', 'cro-admin', 'wp-api-fetch' ),
+			array( 'jquery', 'cro-admin', 'wp-api-fetch', 'cro-sortable' ),
 			CRO_VERSION,
 			true
 		);
@@ -581,7 +656,7 @@ class CRO_Admin {
 	 */
 	public function enqueue_styles( $hook ) {
 		$hook = (string) ( $hook ?? '' );
-		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$page = self::get_get_text( 'page' );
 		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false || strpos( $hook, 'meyvora-convert' ) !== false );
 		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false || $page === 'meyvora-convert' ) );
 		if ( ! $is_cro_hook && ! $is_cro_page ) {
@@ -633,7 +708,7 @@ class CRO_Admin {
 		}
 
 		// Page-specific CSS only (design system provides base). Use both hook and page for hidden/submenu screens.
-		$admin_page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$admin_page = self::get_get_text( 'page' );
 		$is_analytics = ( strpos( $hook, 'cro-analytics' ) !== false || $admin_page === 'cro-analytics' );
 		$is_offers    = ( strpos( $hook, 'cro-offers' ) !== false || $admin_page === 'cro-offers' );
 		$is_insights  = ( strpos( $hook, 'cro-insights' ) !== false || $admin_page === 'cro-insights' );
@@ -671,6 +746,18 @@ class CRO_Admin {
 				array( 'cro-admin-design-system' ),
 				CRO_VERSION
 			);
+			$show_ob_wizard = function_exists( 'cro_is_onboarding_complete' ) && (
+				! cro_is_onboarding_complete()
+				|| self::is_cro_onboarding_query()
+			);
+			if ( $show_ob_wizard ) {
+				wp_enqueue_style(
+					'cro-onboarding-wizard',
+					CRO_PLUGIN_URL . 'admin/css/cro-onboarding-wizard.css',
+					array( 'cro-admin-design-system' ),
+					CRO_VERSION
+				);
+			}
 		}
 
 		// Campaign builder/edit page (hidden submenu: hook can vary; check both hook and page).
@@ -678,7 +765,7 @@ class CRO_Admin {
 			|| $admin_page === 'cro-campaign-edit' || $admin_page === 'cro-campaign-builder' ) {
 			wp_enqueue_style(
 				'cro-popup',
-				CRO_PLUGIN_URL . 'public/css/cro-popup.css',
+				CRO_PLUGIN_URL . 'public/css/cro-popup' . cro_asset_min_suffix() . '.css',
 				array(),
 				CRO_VERSION
 			);
@@ -700,14 +787,14 @@ class CRO_Admin {
 	 */
 	public function enqueue_scripts( $hook ) {
 		$hook = (string) ( $hook ?? '' );
-		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$page = self::get_get_text( 'page' );
 		$is_cro_hook = ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false || strpos( $hook, 'meyvora-convert' ) !== false );
 		$is_cro_page = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false || $page === 'meyvora-convert' ) );
 		if ( ! $is_cro_hook && ! $is_cro_page ) {
 			return;
 		}
 
-		if ( $page === 'cro-analytics' ) {
+		if ( in_array( $page, array( 'cro-analytics', 'cro-ab-test-view' ), true ) ) {
 			wp_enqueue_script(
 				'chart-js',
 				CRO_PLUGIN_URL . 'admin/js/vendor/chart.umd.min.js',
@@ -715,6 +802,19 @@ class CRO_Admin {
 				'4.4.0',
 				true
 			);
+		}
+
+		if ( 'cro-sequences' === $page ) {
+			wp_enqueue_script(
+				'sortablejs',
+				CRO_PLUGIN_URL . 'admin/js/vendor/sortable.min.js',
+				array(),
+				'1.15.2',
+				true
+			);
+		}
+
+		if ( $page === 'cro-analytics' ) {
 			wp_enqueue_script(
 				'cro-analytics-page',
 				CRO_PLUGIN_URL . 'admin/js/cro-analytics-page.js',
@@ -764,10 +864,14 @@ class CRO_Admin {
 			);
 		}
 
+		$cro_admin_script_deps = array( 'jquery', 'wp-color-picker' );
+		if ( 'cro-ab-test-view' === $page ) {
+			$cro_admin_script_deps[] = 'chart-js';
+		}
 		wp_enqueue_script(
 			'cro-admin',
 			CRO_PLUGIN_URL . 'admin/js/cro-admin.js',
-			array( 'jquery', 'wp-color-picker' ),
+			$cro_admin_script_deps,
 			CRO_VERSION,
 			true
 		);
@@ -794,7 +898,10 @@ class CRO_Admin {
 				'clickToUpload' => __( 'Click to upload', 'meyvora-convert' ),
 				'previewError'  => __( 'Preview could not be opened. Please try again.', 'meyvora-convert' ),
 				'copied'        => __( 'Copied!', 'meyvora-convert' ),
+				'remove'        => __( 'Remove', 'meyvora-convert' ),
+				'categoryShort' => __( 'Category…', 'meyvora-convert' ),
 			),
+			'copied_label' => __( 'Copied!', 'meyvora-convert' ),
 		);
 		if ( 'cro-settings' === $page ) {
 			$cro_admin_l10n['aiTestNonce'] = wp_create_nonce( 'cro_ai_test_connection' );
@@ -803,12 +910,184 @@ class CRO_Admin {
 				'testOk'   => __( 'Connection successful.', 'meyvora-convert' ),
 				'testFail' => __( 'Connection failed.', 'meyvora-convert' ),
 			);
+			$cro_admin_l10n['aiApiKey']    = array(
+				'verifiedSr' => __( 'API key saved and connection verified', 'meyvora-convert' ),
+				'show'       => __( 'Show', 'meyvora-convert' ),
+				'hide'       => __( 'Hide', 'meyvora-convert' ),
+			);
 		}
 		wp_localize_script(
 			'cro-admin',
 			'croAdmin',
 			$cro_admin_l10n
 		);
+
+		if ( 'cro-abandoned-cart' === $page && function_exists( 'cro_settings' ) ) {
+			$cro_ac_cart_json = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT;
+			wp_add_inline_script(
+				'cro-admin',
+				'window.croAbandonedCart = ' . wp_json_encode(
+					array(
+						'ajaxUrl'             => admin_url( 'admin-ajax.php' ),
+						'nonce'               => wp_create_nonce( 'cro_abandoned_cart_nonce' ),
+						'defaultBodyTemplate' => cro_settings()->get_abandoned_cart_email_body_default(),
+						'strings'             => array(
+							'confirmReset'  => __( 'Replace the current body with the default template?', 'meyvora-convert' ),
+							'emailRequired' => __( 'Please enter an email address.', 'meyvora-convert' ),
+							'testSent'      => __( 'Test email sent.', 'meyvora-convert' ),
+							'testFail'      => __( 'Failed to send.', 'meyvora-convert' ),
+							'requestFail'   => __( 'Request failed. Please try again.', 'meyvora-convert' ),
+						),
+					),
+					$cro_ac_cart_json
+				) . ';',
+				'before'
+			);
+		}
+
+		$show_ob_wizard_scripts = 'meyvora-convert' === $page && function_exists( 'cro_is_onboarding_complete' ) && (
+			! cro_is_onboarding_complete()
+			|| self::is_cro_onboarding_query()
+		);
+		if ( $show_ob_wizard_scripts ) {
+			wp_enqueue_script(
+				'cro-onboarding-wizard',
+				CRO_PLUGIN_URL . 'admin/js/cro-onboarding-wizard.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-onboarding-wizard',
+				'croOnboardingWizard',
+				array(
+					'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+					'nonce'        => wp_create_nonce( 'cro_admin_nonce' ),
+					'dashboardUrl' => admin_url( 'admin.php?page=meyvora-convert' ),
+					'checklists'   => array(
+						'recover_abandoned' => array(
+							__( 'Abandoned cart emails are enabled — review templates under Abandoned Cart Emails.', 'meyvora-convert' ),
+							__( 'Spot-check sticky cart and shipping bar on a product and cart page.', 'meyvora-convert' ),
+							__( 'Open Campaigns and preview your new recovery popups.', 'meyvora-convert' ),
+							__( 'Run a test order to confirm tracking and recovery flows.', 'meyvora-convert' ),
+							__( 'Optional: connect webhooks or AI insights in Settings.', 'meyvora-convert' ),
+						),
+						'grow_email'        => array(
+							__( 'Confirm new-visitor popups look on-brand in the campaign builder.', 'meyvora-convert' ),
+							__( 'Trust badges are on — verify they appear on product pages.', 'meyvora-convert' ),
+							__( 'Test email capture from an incognito window.', 'meyvora-convert' ),
+							__( 'Review frequency caps under campaign or global settings if popups feel heavy.', 'meyvora-convert' ),
+							__( 'Optional: enable AI copy suggestions for faster iterations.', 'meyvora-convert' ),
+						),
+						'increase_aov'     => array(
+							__( 'Check the shipping bar threshold matches your free-shipping rules.', 'meyvora-convert' ),
+							__( 'Browse a product on mobile to see the sticky add-to-cart bar.', 'meyvora-convert' ),
+							__( 'Edit the cart boost campaign copy to match your offers.', 'meyvora-convert' ),
+							__( 'Add trust badges content (returns, guarantee) in Boosters.', 'meyvora-convert' ),
+							__( 'Watch revenue influenced on the dashboard after a few days.', 'meyvora-convert' ),
+						),
+						'reduce_checkout'  => array(
+							__( 'Open Checkout settings and adjust trust messaging if needed.', 'meyvora-convert' ),
+							__( 'Walk through checkout as a customer — confirm reassurance popup timing.', 'meyvora-convert' ),
+							__( 'Review the cart scroll nudge campaign and CTA link.', 'meyvora-convert' ),
+							__( 'Enable payment methods you advertise in trust copy.', 'meyvora-convert' ),
+							__( 'Optional: run an A/B test on checkout headline copy later.', 'meyvora-convert' ),
+						),
+						'default'          => array(
+							__( 'Review new campaigns under Campaigns.', 'meyvora-convert' ),
+							__( 'Confirm boosted features under On-Page Boosters.', 'meyvora-convert' ),
+							__( 'Check Settings → General for global toggles.', 'meyvora-convert' ),
+							__( 'Place a test order to validate the full funnel.', 'meyvora-convert' ),
+							__( 'Explore analytics after you have a few days of traffic.', 'meyvora-convert' ),
+						),
+					),
+					'strings'      => array(
+						'error'    => __( 'Something went wrong. Please try again.', 'meyvora-convert' ),
+						'ajaxFail' => __( 'Could not reach the server. Check your connection and try again.', 'meyvora-convert' ),
+					),
+				)
+			);
+		}
+
+		$ai_panel_pages = array( 'meyvora-convert', 'cro-campaigns', 'cro-offers' );
+		if ( in_array( $page, $ai_panel_pages, true ) ) {
+			wp_enqueue_style(
+				'cro-admin-ai-panel',
+				CRO_PLUGIN_URL . 'admin/css/cro-admin-ai-panel.css',
+				array( 'cro-admin-design-system' ),
+				CRO_VERSION
+			);
+			wp_enqueue_script(
+				'cro-admin-ai-panel',
+				CRO_PLUGIN_URL . 'admin/js/cro-admin-ai-panel.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-admin-ai-panel',
+				'croAiPanel',
+				array(
+					'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+					'nonce'             => wp_create_nonce( 'cro_admin_nonce' ),
+					'insightsUrl'       => admin_url( 'admin.php?page=cro-insights' ),
+					'offersUrl'         => admin_url( 'admin.php?page=cro-offers' ),
+					'campaignNewUrl'    => admin_url( 'admin.php?page=cro-campaign-edit' ),
+					'nonceAiAnalyse'    => wp_create_nonce( 'cro_ai_analyse' ),
+					'nonceSuggestOffer' => wp_create_nonce( 'cro_ai_suggest_offer' ),
+					'nonceGenerateCopy' => wp_create_nonce( 'cro_ai_generate_copy' ),
+					'settingsAiLink'    => sprintf(
+						'<a href="%1$s">%2$s</a>',
+						esc_url( admin_url( 'admin.php?page=cro-settings&settings_tab=ai' ) ),
+						esc_html__( 'Add API key in Settings → AI', 'meyvora-convert' )
+					),
+					'strings'           => array(
+						'close'           => __( 'Close', 'meyvora-convert' ),
+						'apply'           => __( 'Apply this', 'meyvora-convert' ),
+						'aiReady'         => __( 'AI is configured.', 'meyvora-convert' ),
+						'noInsight'       => __( 'No rule-based insights yet. Collect more traffic or open the Insights tab.', 'meyvora-convert' ),
+						'error'           => __( 'Something went wrong.', 'meyvora-convert' ),
+						'suggestionTitle' => __( 'Suggested offer', 'meyvora-convert' ),
+						'createOffer'     => __( 'Create this offer', 'meyvora-convert' ),
+						'needGoal'        => __( 'Describe your popup goal first.', 'meyvora-convert' ),
+						'useThis'         => __( 'Use this in campaign builder', 'meyvora-convert' ),
+					),
+				)
+			);
+		}
+
+		if ( 'meyvora-convert' === $page ) {
+			wp_enqueue_script(
+				'cro-dashboard-actions',
+				CRO_PLUGIN_URL . 'admin/js/cro-dashboard-actions.js',
+				array( 'jquery' ),
+				CRO_VERSION,
+				true
+			);
+			wp_localize_script(
+				'cro-dashboard-actions',
+				'croDashboardActions',
+				array(
+					'ajaxUrl'           => admin_url( 'admin-ajax.php' ),
+					'insightsUrl'       => admin_url( 'admin.php?page=cro-insights' ),
+					'offersUrl'         => admin_url( 'admin.php?page=cro-offers' ),
+					'nonceAiAnalyse'    => wp_create_nonce( 'cro_ai_analyse' ),
+					'nonceSuggestOffer' => wp_create_nonce( 'cro_ai_suggest_offer' ),
+					'strings'           => array(
+						'error'       => __( 'Something went wrong.', 'meyvora-convert' ),
+						'openOffers'  => __( 'Open the Offers page to create this offer?', 'meyvora-convert' ),
+					),
+				)
+			);
+			wp_localize_script(
+				'cro-dashboard-actions',
+				'croDashboardLive',
+				array(
+					'nonce'   => wp_create_nonce( 'cro_admin_nonce' ),
+					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+				)
+			);
+		}
 
 		wp_enqueue_script(
 			'cro-ai-chat',
@@ -837,7 +1116,7 @@ class CRO_Admin {
 		);
 
 		// Campaign builder: enqueue on builder pages only (script/style registered in register_campaign_builder_assets).
-		$current_page_slug = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$current_page_slug = self::get_get_text( 'page' );
 		$is_builder_page = ( strpos( $hook, 'cro-campaign-edit' ) !== false )
 			|| ( strpos( $hook, 'cro-campaign-builder' ) !== false )
 			|| $current_page_slug === 'cro-campaign-edit'
@@ -846,17 +1125,9 @@ class CRO_Admin {
 		if ( $is_builder_page ) {
 			wp_enqueue_media();
 			wp_enqueue_script( 'wp-api-fetch' );
-			wp_localize_script(
-				'wp-api-fetch',
-				'wpApiSettings',
-				array(
-					'root'  => esc_url_raw( rest_url() ),
-					'nonce' => wp_create_nonce( 'wp_rest' ),
-				)
-			);
 			wp_enqueue_style(
 				'cro-popup',
-				CRO_PLUGIN_URL . 'public/css/cro-popup.css',
+				CRO_PLUGIN_URL . 'public/css/cro-popup' . cro_asset_min_suffix() . '.css',
 				array(),
 				CRO_VERSION
 			);
@@ -893,10 +1164,32 @@ class CRO_Admin {
 				'cro-campaign-builder',
 				'croBuilderIcons',
 				array(
-					'remove' => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ) : '×',
-					'upload' => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'upload', array( 'class' => 'cro-ico' ) ) : '',
-					'image'  => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'image', array( 'class' => 'cro-ico' ) ) : '',
-					'check'  => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) : '',
+					'remove' => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '×',
+					'upload' => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'upload', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
+					'image'  => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'image', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
+					'check'  => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
+				)
+			);
+			wp_localize_script(
+				'cro-campaign-builder',
+				'croBuilderAjax',
+				array(
+					'ajaxUrl'        => admin_url( 'admin-ajax.php' ),
+					'nonce'          => wp_create_nonce( 'cro_admin_nonce' ),
+					'wheelWinLabel'  => __( 'Win', 'meyvora-convert' ),
+					'wheelLoseLabel' => __( 'Lose', 'meyvora-convert' ),
+					'strings'        => array(
+						'showIframePreview' => __( 'Show live preview (iframe)', 'meyvora-convert' ),
+						'hideIframePreview' => __( 'Hide live preview (iframe)', 'meyvora-convert' ),
+					),
+				)
+			);
+			wp_localize_script(
+				'cro-campaign-builder',
+				'croCampaignBuilder',
+				array(
+					'restRoot'  => esc_url_raw( rest_url() ),
+					'restNonce' => wp_create_nonce( 'wp_rest' ),
 				)
 			);
 		}
@@ -1051,7 +1344,7 @@ class CRO_Admin {
 		}
 
 		// Offers page: drawer + AJAX save. Use page slug so it loads when page=cro-offers.
-		$admin_page_scripts = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$admin_page_scripts = self::get_get_text( 'page' );
 		if ( strpos( $hook, 'cro-offers' ) !== false || $admin_page_scripts === 'cro-offers' ) {
 			wp_enqueue_script(
 				'cro-offers',
@@ -1134,13 +1427,13 @@ class CRO_Admin {
 					'summaryBullet'    => ' • ',
 					'summaryArrow'     => ' → ',
 					'newOffer'         => __( 'New offer', 'meyvora-convert' ),
-					'checkIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ) : '✓',
-					'crossIcon'         => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ) : '✗',
-					'moveUpIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ) : '↑',
-					'moveDownIcon'      => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ) : '↓',
-					'editIcon'          => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ) : '',
-					'duplicateIcon'     => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ) : '',
-					'deleteIcon'        => class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ) : '',
+					'checkIcon'        => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '✓',
+					'crossIcon'         => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'x', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '✗',
+					'moveUpIcon'        => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '↑',
+					'moveDownIcon'      => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '↓',
+					'editIcon'          => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'pencil', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
+					'duplicateIcon'     => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
+					'deleteIcon'        => class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'trash', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : '',
 					'checkConflicts'    => __( 'Check for conflicts', 'meyvora-convert' ),
 					'checkConflictsRunning' => __( 'Checking…', 'meyvora-convert' ),
 					'noConflictCycles'  => __( 'No circular conflict chains found among active offers.', 'meyvora-convert' ),
@@ -1263,7 +1556,7 @@ class CRO_Admin {
 
 		?>
 		<button type="button" id="cro-insert-campaign-btn" class="button" title="<?php esc_attr_e( 'Insert a Meyvora Convert campaign shortcode', 'meyvora-convert' ); ?>">
-			<?php echo class_exists( 'CRO_Icons' ) ? \CRO_Icons::svg_kses( 'plus', array( 'class' => 'cro-ico' ) ) : ''; ?>
+			<?php echo class_exists( 'CRO_Icons' ) ? wp_kses( CRO_Icons::svg( 'plus', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) : ''; ?>
 			<?php esc_html_e( 'Add CRO Campaign', 'meyvora-convert' ); ?>
 		</button>
 		<div id="cro-campaign-modal-content" class="cro-is-hidden">
@@ -1507,7 +1800,7 @@ class CRO_Admin {
 			return;
 		}
 		delete_transient( 'cro_activation_redirect' );
-		if ( isset( $_GET['page'] ) && $_GET['page'] === 'meyvora-convert' && isset( $_GET['cro_onboarding'] ) && (string) $_GET['cro_onboarding'] === '1' ) {
+		if ( self::get_get_text( 'page' ) === 'meyvora-convert' && self::is_cro_onboarding_query() ) {
 			return;
 		}
 		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&cro_onboarding=1' ) );
@@ -1530,6 +1823,7 @@ class CRO_Admin {
 			wp_safe_redirect( add_query_arg( 'error', 'invalid_nonce', admin_url( 'admin.php?page=cro-settings' ) ) );
 			exit;
 		}
+		update_option( 'cro_onboarding_complete', false );
 		update_option( 'cro_onboarding_completed', false );
 		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&cro_onboarding=1' ) );
 		exit;
@@ -1546,7 +1840,12 @@ class CRO_Admin {
 		if ( ! wp_verify_nonce( $nonce, 'cro_skip_onboarding' ) ) {
 			return;
 		}
-		update_option( 'cro_onboarding_completed', true );
+		if ( function_exists( 'cro_mark_onboarding_complete' ) ) {
+			cro_mark_onboarding_complete();
+		} else {
+			update_option( 'cro_onboarding_complete', true );
+			update_option( 'cro_onboarding_completed', true );
+		}
 		wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert' ) );
 		exit;
 	}
@@ -1570,7 +1869,12 @@ class CRO_Admin {
 		}
 
 		if ( ! empty( $_POST['cro_onboarding_done'] ) ) {
-			update_option( 'cro_onboarding_completed', true );
+			if ( function_exists( 'cro_mark_onboarding_complete' ) ) {
+				cro_mark_onboarding_complete();
+			} else {
+				update_option( 'cro_onboarding_complete', true );
+				update_option( 'cro_onboarding_completed', true );
+			}
 			wp_safe_redirect( admin_url( 'admin.php?page=meyvora-convert&onboarding_done=1' ) );
 			exit;
 		}
@@ -1612,6 +1916,88 @@ class CRO_Admin {
 			exit;
 		}
 		wp_safe_redirect( add_query_arg( 'error', 'apply_failed', admin_url( 'admin.php?page=cro-presets' ) ) );
+		exit;
+	}
+
+	/**
+	 * Save a campaign sequence (admin_post).
+	 */
+	public function handle_save_sequence() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission to save sequences.', 'meyvora-convert' ), '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'cro_save_sequence', 'cro_sequence_nonce' );
+		if ( ! class_exists( 'CRO_Sequence_Engine' ) ) {
+			wp_safe_redirect( add_query_arg( 'sequence_error', 'unavailable', admin_url( 'admin.php?page=cro-sequences' ) ) );
+			exit;
+		}
+		$post_in = filter_input_array( INPUT_POST );
+		if ( ! is_array( $post_in ) ) {
+			$post_in = array();
+		}
+		$name = isset( $post_in['sequence_name'] ) ? sanitize_text_field( wp_unslash( (string) $post_in['sequence_name'] ) ) : '';
+		$trigger = isset( $post_in['trigger_campaign_id'] ) ? absint( $post_in['trigger_campaign_id'] ) : 0;
+		$status  = isset( $post_in['sequence_status'] ) ? sanitize_key( wp_unslash( (string) $post_in['sequence_status'] ) ) : 'draft';
+		$id      = isset( $post_in['sequence_id'] ) ? absint( $post_in['sequence_id'] ) : 0;
+
+		$step_campaigns = isset( $post_in['step_campaign_id'] ) && is_array( $post_in['step_campaign_id'] ) ? array_map( 'absint', wp_unslash( $post_in['step_campaign_id'] ) ) : array();
+		$step_delays_raw = isset( $post_in['step_delay_hours'] ) && is_array( $post_in['step_delay_hours'] ) ? wp_unslash( $post_in['step_delay_hours'] ) : array();
+		$step_delays     = map_deep( $step_delays_raw, 'sanitize_text_field' );
+		$steps          = array();
+		$max            = max( count( $step_campaigns ), count( $step_delays ) );
+		for ( $i = 0; $i < $max; $i++ ) {
+			$cid = isset( $step_campaigns[ $i ] ) ? (int) $step_campaigns[ $i ] : 0;
+			if ( $cid <= 0 ) {
+				continue;
+			}
+			$h_raw = isset( $step_delays[ $i ] ) ? (string) $step_delays[ $i ] : '0';
+			$h     = is_numeric( $h_raw ) ? (float) $h_raw : 0.0;
+			$steps[] = array(
+				'campaign_id'    => $cid,
+				'delay_seconds'  => (int) round( max( 0, $h ) * 3600 ),
+			);
+		}
+
+		if ( $name === '' || $trigger <= 0 || empty( $steps ) ) {
+			wp_safe_redirect( add_query_arg( 'sequence_error', 'invalid', admin_url( 'admin.php?page=cro-sequences' ) ) );
+			exit;
+		}
+
+		$result = CRO_Sequence_Engine::save(
+			array(
+				'id'                  => $id,
+				'name'                => $name,
+				'trigger_campaign_id' => $trigger,
+				'status'              => $status,
+				'steps_json'          => wp_json_encode( $steps ),
+			)
+		);
+
+		if ( false === $result || $result === 0 ) {
+			wp_safe_redirect( add_query_arg( 'sequence_error', 'save_failed', admin_url( 'admin.php?page=cro-sequences' ) ) );
+			exit;
+		}
+
+		wp_safe_redirect( admin_url( 'admin.php?page=cro-sequences&sequence_saved=1' ) );
+		exit;
+	}
+
+	/**
+	 * Delete a campaign sequence (admin_post).
+	 */
+	public function handle_delete_sequence() {
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission to delete sequences.', 'meyvora-convert' ), '', array( 'response' => 403 ) );
+		}
+		$id = isset( $_GET['sequence_id'] ) ? absint( $_GET['sequence_id'] ) : 0;
+		if ( ! $id || ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_delete_sequence_' . $id ) ) {
+			wp_safe_redirect( add_query_arg( 'sequence_error', 'invalid_nonce', admin_url( 'admin.php?page=cro-sequences' ) ) );
+			exit;
+		}
+		if ( class_exists( 'CRO_Sequence_Engine' ) ) {
+			CRO_Sequence_Engine::delete( $id );
+		}
+		wp_safe_redirect( admin_url( 'admin.php?page=cro-sequences&sequence_deleted=1' ) );
 		exit;
 	}
 
@@ -1720,20 +2106,7 @@ class CRO_Admin {
 		}
 
 		$cro_put_csv = static function ( $headers, $rows ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- In-memory CSV stream (php://temp).
-			$fh = fopen( 'php://temp', 'r+' );
-			if ( ! $fh ) {
-				return '';
-			}
-			fprintf( $fh, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
-			fputcsv( $fh, $headers );
-			foreach ( $rows as $row ) {
-				fputcsv( $fh, $row );
-			}
-			rewind( $fh );
-			$content = stream_get_contents( $fh );
-			fclose( $fh ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
-			return $content ? $content : '';
+			return class_exists( 'CRO_Security' ) ? CRO_Security::build_csv_document( $headers, $rows ) : '';
 		};
 
 		$campaign_rows = array();
@@ -1846,8 +2219,17 @@ class CRO_Admin {
 		header( 'Pragma: no-cache' );
 		header( 'Expires: 0' );
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile
-		readfile( $tmp );
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		WP_Filesystem();
+		global $wp_filesystem;
+		if ( $wp_filesystem && is_string( $tmp ) && $tmp !== '' && $wp_filesystem->exists( $tmp ) ) {
+			$zip_body = $wp_filesystem->get_contents( $tmp );
+			if ( is_string( $zip_body ) && $zip_body !== '' ) {
+				$wp_filesystem->put_contents( 'php://output', $zip_body );
+			}
+		}
 		wp_delete_file( $tmp );
 		exit;
 	}
@@ -1906,72 +2288,97 @@ class CRO_Admin {
 		}
 
 		if ( $export_format === 'daily' ) {
-			$rows = $analytics->get_daily_summary_for_export( $date_from, $date_to );
+			$rows    = $analytics->get_daily_summary_for_export( $date_from, $date_to );
+			$csv_doc = '';
+			if ( class_exists( 'CRO_Security' ) ) {
+				$data_rows = array();
+				foreach ( $rows as $row ) {
+					$data_rows[] = array(
+						$row['day'],
+						(int) $row['impressions'],
+						(int) $row['conversions'],
+						(int) $row['offer_applies'],
+						(int) $row['campaign_clicks'],
+						(int) $row['ab_exposures'],
+					);
+				}
+				$csv_doc = CRO_Security::build_csv_document(
+					array( 'day', 'impressions', 'conversions', 'offer_applies', 'campaign_clicks', 'ab_exposures' ),
+					$data_rows
+				);
+			}
 			header( 'Content-Type: text/csv; charset=utf-8' );
 			header( 'Content-Disposition: attachment; filename="cro-daily-summary-' . sanitize_file_name( $date_from ) . '-to-' . sanitize_file_name( $date_to ) . '.csv"' );
 			header( 'Pragma: no-cache' );
 			header( 'Expires: 0' );
-			$output = fopen( 'php://output', 'w' );
-			fprintf( $output, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
-			fputcsv( $output, array( 'day', 'impressions', 'conversions', 'offer_applies', 'campaign_clicks', 'ab_exposures' ) );
-			foreach ( $rows as $row ) {
-				fputcsv( $output, array(
-					$row['day'],
-					(int) $row['impressions'],
-					(int) $row['conversions'],
-					(int) $row['offer_applies'],
-					(int) $row['campaign_clicks'],
-					(int) $row['ab_exposures'],
-				) );
+			if ( ! function_exists( 'WP_Filesystem' ) ) {
+				require_once ABSPATH . 'wp-admin/includes/file.php';
 			}
-			fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+			WP_Filesystem();
+			global $wp_filesystem;
+			if ( $wp_filesystem && $csv_doc !== '' ) {
+				$wp_filesystem->put_contents( 'php://output', $csv_doc );
+			}
 			exit;
 		}
-
-		$data = $analytics->export_events_for_csv( $date_from, $date_to, $campaign_id );
 
 		header( 'Content-Type: text/csv; charset=utf-8' );
 		header( 'Content-Disposition: attachment; filename="cro-events-' . sanitize_file_name( $date_from ) . '-to-' . sanitize_file_name( $date_to ) . '.csv"' );
 		header( 'Pragma: no-cache' );
 		header( 'Expires: 0' );
 
-		$output = fopen( 'php://output', 'w' );
-		fprintf( $output, chr( 0xEF ) . chr( 0xBB ) . chr( 0xBF ) );
-		fputcsv( $output, array( 'date_time', 'event_type', 'object_type', 'object_id', 'variant', 'page_type', 'page_url', 'user_id', 'session_key', 'meta_json' ) );
+		$event_rows = array();
+		$analytics->walk_export_events_rows(
+			$date_from,
+			$date_to,
+			$campaign_id,
+			function ( $row ) use ( &$event_rows ) {
+				$created_at  = isset( $row['created_at'] ) ? $row['created_at'] : '';
+				$date_utc    = $created_at && function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', strtotime( $created_at ), new \DateTimeZone( 'UTC' ) ) : $created_at;
+				$source_type = isset( $row['source_type'] ) ? $row['source_type'] : '';
+				$metadata    = isset( $row['metadata'] ) ? $row['metadata'] : '';
+				$meta        = is_string( $metadata ) ? ( maybe_unserialize( $metadata ) ?: array() ) : ( is_array( $metadata ) ? $metadata : array() );
+				$ab_test_id  = isset( $meta['ab_test_id'] ) ? (int) $meta['ab_test_id'] : 0;
+				$variation   = isset( $meta['variation_id'] ) ? (int) $meta['variation_id'] : '';
+				$object_type = $ab_test_id > 0 ? 'ab_test' : $source_type;
+				$object_id   = $ab_test_id > 0 ? $ab_test_id : ( isset( $row['source_id'] ) ? (int) $row['source_id'] : '' );
+				$user_id     = isset( $row['user_id'] ) && (int) $row['user_id'] > 0 ? (int) $row['user_id'] : '';
+				$session_id  = isset( $row['session_id'] ) ? $row['session_id'] : '';
+				$session_key = $session_id !== '' ? substr( hash( 'sha256', $session_id ), 0, 16 ) : '';
+				$meta_json   = '';
+				if ( $metadata !== '' && $metadata !== null ) {
+					$meta_json = is_array( $meta ) ? wp_json_encode( $meta ) : ( is_string( $metadata ) && ( $metadata[0] === '{' || $metadata[0] === '[' ) ? $metadata : wp_json_encode( array( 'raw' => $metadata ) ) );
+				}
 
-		foreach ( $data as $row ) {
-			$created_at = isset( $row['created_at'] ) ? $row['created_at'] : '';
-			$date_utc   = $created_at && function_exists( 'wp_date' ) ? wp_date( 'Y-m-d H:i:s', strtotime( $created_at ), new \DateTimeZone( 'UTC' ) ) : $created_at;
-			$source_type = isset( $row['source_type'] ) ? $row['source_type'] : '';
-			$metadata    = isset( $row['metadata'] ) ? $row['metadata'] : '';
-			$meta        = is_string( $metadata ) ? ( maybe_unserialize( $metadata ) ?: array() ) : ( is_array( $metadata ) ? $metadata : array() );
-			$ab_test_id  = isset( $meta['ab_test_id'] ) ? (int) $meta['ab_test_id'] : 0;
-			$variation   = isset( $meta['variation_id'] ) ? (int) $meta['variation_id'] : '';
-			$object_type = $ab_test_id > 0 ? 'ab_test' : $source_type;
-			$object_id   = $ab_test_id > 0 ? $ab_test_id : ( isset( $row['source_id'] ) ? (int) $row['source_id'] : '' );
-			$user_id     = isset( $row['user_id'] ) && (int) $row['user_id'] > 0 ? (int) $row['user_id'] : '';
-			$session_id  = isset( $row['session_id'] ) ? $row['session_id'] : '';
-			$session_key = $session_id !== '' ? substr( hash( 'sha256', $session_id ), 0, 16 ) : '';
-			$meta_json   = '';
-			if ( $metadata !== '' && $metadata !== null ) {
-				$meta_json = is_array( $meta ) ? wp_json_encode( $meta ) : ( is_string( $metadata ) && ( $metadata[0] === '{' || $metadata[0] === '[' ) ? $metadata : wp_json_encode( array( 'raw' => $metadata ) ) );
+				$event_rows[] = array(
+					$date_utc,
+					isset( $row['event_type'] ) ? $row['event_type'] : '',
+					$object_type,
+					$object_id,
+					$variation,
+					isset( $row['page_type'] ) ? $row['page_type'] : '',
+					isset( $row['page_url'] ) ? $row['page_url'] : '',
+					$user_id,
+					$session_key,
+					$meta_json,
+				);
 			}
+		);
 
-			fputcsv( $output, array(
-				$date_utc,
-				isset( $row['event_type'] ) ? $row['event_type'] : '',
-				$object_type,
-				$object_id,
-				$variation,
-				isset( $row['page_type'] ) ? $row['page_type'] : '',
-				isset( $row['page_url'] ) ? $row['page_url'] : '',
-				$user_id,
-				$session_key,
-				$meta_json,
-			) );
+		$csv_doc = class_exists( 'CRO_Security' )
+			? CRO_Security::build_csv_document(
+				array( 'date_time', 'event_type', 'object_type', 'object_id', 'variant', 'page_type', 'page_url', 'user_id', 'session_key', 'meta_json' ),
+				$event_rows
+			)
+			: '';
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
-
-		fclose( $output ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
+		WP_Filesystem();
+		global $wp_filesystem;
+		if ( $wp_filesystem && $csv_doc !== '' ) {
+			$wp_filesystem->put_contents( 'php://output', $csv_doc );
+		}
 		exit;
 	}
 
@@ -2055,7 +2462,7 @@ class CRO_Admin {
 		}
 		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
 		$hook   = $screen ? $screen->id : '';
-		$page   = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+		$page   = self::get_get_text( 'page' );
 		$is_cro = ( $page !== '' && ( strpos( $page, 'cro-' ) !== false || strpos( $page, 'cro_' ) !== false ) )
 			|| ( strpos( $hook, 'cro-' ) !== false || strpos( $hook, 'cro_' ) !== false );
 		if ( ! $is_cro ) {
@@ -2114,28 +2521,35 @@ class CRO_Admin {
 			</details>
 		</div>
 		<?php if ( $is_builder ) : ?>
-		<script>
-		(function(){
-			function setStatus(){
-				var el = document.getElementById('cro-admin-debug-builder-status');
-				if (!el) return;
-				if (typeof window.croBuilderInitStatus !== 'undefined') {
-					var s = window.croBuilderInitStatus;
-					el.textContent = (s.status === 'OK') ? 'OK' : ('FAIL: ' + (s.reason || 'unknown'));
-				} else {
-					el.textContent = 'FAIL: not set (script error or not run)';
-				}
-			}
-			if (document.readyState === 'complete') setStatus(); else window.addEventListener('load', setStatus);
-			setTimeout(setStatus, 1500);
-		})();
-		</script>
+			<?php
+			wp_add_inline_script(
+				'cro-admin',
+				'(function(){
+					function croDebugSetBuilderStatus(){
+						var el = document.getElementById("cro-admin-debug-builder-status");
+						if (!el) return;
+						if (typeof window.croBuilderInitStatus !== "undefined") {
+							var s = window.croBuilderInitStatus;
+							el.textContent = (s.status === "OK") ? "OK" : ("FAIL: " + (s.reason || "unknown"));
+						} else {
+							el.textContent = "FAIL: not set (script error or not run)";
+						}
+					}
+					if (document.readyState === "complete") {
+						croDebugSetBuilderStatus();
+					} else {
+						window.addEventListener("load", croDebugSetBuilderStatus);
+					}
+					setTimeout(croDebugSetBuilderStatus, 1500);
+				})();'
+			);
+			?>
 		<?php endif; ?>
 		<?php
 	}
 
 	public function handle_import() {
-		if ( ! isset( $_POST['cro_import'] ) || ! wp_verify_nonce( $_POST['cro_import_nonce'] ?? '', 'cro_import' ) ) {
+		if ( ! isset( $_POST['cro_import'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['cro_import_nonce'] ?? '' ) ), 'cro_import' ) ) {
 			return;
 		}
 
@@ -2143,17 +2557,61 @@ class CRO_Admin {
 			wp_die( esc_html__( 'Unauthorized', 'meyvora-convert' ) );
 		}
 
+		$max_paste_bytes = 500000;
+		$max_file_bytes  = 1048576;
+		$max_campaigns   = 50;
+
 		$json_string = '';
-		if ( ! empty( $_POST['import_json'] ) && is_string( $_POST['import_json'] ) ) {
-			$json_string = wp_unslash( $_POST['import_json'] );
-		} elseif ( isset( $_FILES['import_file'] ) && $_FILES['import_file']['error'] === UPLOAD_ERR_OK && is_readable( $_FILES['import_file']['tmp_name'] ) ) {
-			$json_string = file_get_contents( $_FILES['import_file']['tmp_name'] );
+		$import_json_raw = filter_input( INPUT_POST, 'import_json', FILTER_UNSAFE_RAW );
+		if ( is_string( $import_json_raw ) && $import_json_raw !== '' ) {
+			$pasted = wp_unslash( $import_json_raw );
+			if ( strlen( $pasted ) > $max_paste_bytes ) {
+				add_action(
+					'admin_notices',
+					function() {
+						echo '<div class="notice notice-error"><p>' . esc_html__( 'Pasted JSON is too large. Maximum size is 500 KB.', 'meyvora-convert' ) . '</p></div>';
+					}
+				);
+				return;
+			}
+			$json_string = $pasted;
+		} else {
+			$files = filter_input_array( INPUT_FILES );
+			if ( is_array( $files ) && isset( $files['import_file'] ) && is_array( $files['import_file'] ) ) {
+				$import_file = $files['import_file'];
+				$file_error  = isset( $import_file['error'] ) ? (int) $import_file['error'] : UPLOAD_ERR_NO_FILE;
+				if ( $file_error === UPLOAD_ERR_OK && isset( $import_file['tmp_name'] ) && is_string( $import_file['tmp_name'] ) && $import_file['tmp_name'] !== '' ) {
+					if ( isset( $import_file['size'] ) && (int) $import_file['size'] > $max_file_bytes ) {
+						add_action(
+							'admin_notices',
+							function() {
+								echo '<div class="notice notice-error"><p>' . esc_html__( 'Import file is too large. Maximum size is 1 MB.', 'meyvora-convert' ) . '</p></div>';
+							}
+						);
+						return;
+					}
+					$tmp_path = $import_file['tmp_name'];
+					if ( is_readable( $tmp_path ) ) {
+						$json_string = file_get_contents( $tmp_path );
+					}
+				}
+			}
 		}
 
 		if ( $json_string === '' ) {
 			add_action( 'admin_notices', function() {
 				echo '<div class="notice notice-error"><p>' . esc_html__( 'Please upload a file or paste JSON.', 'meyvora-convert' ) . '</p></div>';
 			} );
+			return;
+		}
+
+		if ( strlen( $json_string ) > $max_file_bytes ) {
+			add_action(
+				'admin_notices',
+				function() {
+					echo '<div class="notice notice-error"><p>' . esc_html__( 'Import data is too large. Maximum size is 1 MB.', 'meyvora-convert' ) . '</p></div>';
+				}
+			);
 			return;
 		}
 
@@ -2180,8 +2638,12 @@ class CRO_Admin {
 			return;
 		}
 
+		$total_in_file = count( $import_data['campaigns'] );
+		$campaigns_to_import = array_slice( $import_data['campaigns'], 0, $max_campaigns );
+		$truncated           = $total_in_file > $max_campaigns;
+
 		$imported = 0;
-		foreach ( $import_data['campaigns'] as $campaign ) {
+		foreach ( $campaigns_to_import as $campaign ) {
 			if ( ! is_array( $campaign ) ) {
 				continue;
 			}
@@ -2199,20 +2661,94 @@ class CRO_Admin {
 				'targeting_rules'  => isset( $campaign['targeting_rules'] ) && is_array( $campaign['targeting_rules'] ) ? $campaign['targeting_rules'] : array(),
 				'display_rules'    => isset( $campaign['display_rules'] ) && is_array( $campaign['display_rules'] ) ? $campaign['display_rules'] : array(),
 			);
-			$id = CRO_Campaign::create( $data );
+			$data = $this->sanitize_imported_campaign_payload( $data );
+			$id   = CRO_Campaign::create( $data );
 			if ( $id ) {
-				$imported++;
+				++$imported;
 			}
 		}
 
 		$imported_count = $imported;
-		add_action( 'admin_notices', function() use ( $imported_count ) {
-			echo '<div class="notice notice-success"><p>' . esc_html( sprintf(
-				/* translators: %d: number of campaigns imported */
-				__( 'Successfully imported %d campaign(s).', 'meyvora-convert' ),
-				$imported_count
-			) ) . '</p></div>';
-		} );
+		add_action(
+			'admin_notices',
+			function() use ( $imported_count, $truncated, $max_campaigns ) {
+				echo '<div class="notice notice-success"><p>' . esc_html(
+					sprintf(
+						/* translators: %d: number of campaigns imported */
+						__( 'Successfully imported %d campaign(s).', 'meyvora-convert' ),
+						$imported_count
+					)
+				) . '</p>';
+				if ( $truncated ) {
+					echo '<p>' . esc_html(
+						sprintf(
+							/* translators: %d: max campaigns per import */
+							__( 'Only the first %d campaigns were imported. Split larger exports into multiple files.', 'meyvora-convert' ),
+							$max_campaigns
+						)
+					) . '</p>';
+				}
+				echo '</div>';
+			}
+		);
+	}
+
+	/**
+	 * Recursively sanitize array values for import (matches CRO_Ajax::sanitize_array_recursive).
+	 *
+	 * @param mixed $data Data to sanitize.
+	 * @return mixed
+	 */
+	private function sanitize_array_recursive_import( $data ) {
+		if ( ! is_array( $data ) ) {
+			if ( is_int( $data ) || is_float( $data ) ) {
+				return $data;
+			}
+			return sanitize_text_field( (string) $data );
+		}
+		$out = array();
+		foreach ( $data as $k => $v ) {
+			$key           = is_string( $k ) ? sanitize_key( $k ) : $k;
+			$out[ $key ] = $this->sanitize_array_recursive_import( $v );
+		}
+		return $out;
+	}
+
+	/**
+	 * Sanitize imported campaign payload: recursive text stripping plus safe HTML in content.body (wp_kses_post).
+	 *
+	 * @param array $data Campaign data for CRO_Campaign::create.
+	 * @return array
+	 */
+	private function sanitize_imported_campaign_payload( array $data ) {
+		$data['name'] = isset( $data['name'] ) ? sanitize_text_field( (string) $data['name'] ) : '';
+		$data['campaign_type'] = isset( $data['campaign_type'] ) ? sanitize_key( (string) $data['campaign_type'] ) : 'exit_intent';
+		$data['template_type'] = isset( $data['template_type'] ) ? sanitize_key( (string) $data['template_type'] ) : 'centered';
+
+		$body_raw = '';
+		if ( isset( $data['content'] ) && is_array( $data['content'] ) && isset( $data['content']['body'] ) ) {
+			$body_raw = is_string( $data['content']['body'] ) ? $data['content']['body'] : '';
+		}
+
+		if ( isset( $data['content'] ) && is_array( $data['content'] ) ) {
+			$data['content'] = $this->sanitize_array_recursive_import( $data['content'] );
+			$data['content']['body'] = wp_kses_post( wp_unslash( $body_raw ) );
+		}
+
+		if ( isset( $data['trigger_settings'] ) && is_array( $data['trigger_settings'] ) ) {
+			$data['trigger_settings'] = $this->sanitize_array_recursive_import( $data['trigger_settings'] );
+		}
+		if ( isset( $data['styling'] ) && is_array( $data['styling'] ) ) {
+			$data['styling'] = $this->sanitize_array_recursive_import( $data['styling'] );
+		}
+		if ( isset( $data['targeting_rules'] ) && is_array( $data['targeting_rules'] ) ) {
+			$data['targeting_rules'] = $this->sanitize_array_recursive_import( $data['targeting_rules'] );
+		}
+		if ( isset( $data['display_rules'] ) && is_array( $data['display_rules'] ) ) {
+			$data['display_rules'] = $this->sanitize_array_recursive_import( $data['display_rules'] );
+		}
+
+		return $data;
 	}
 
 	/**
@@ -2284,16 +2820,18 @@ class CRO_Admin {
 			return;
 		}
 
-		global $wpdb;
-		$table       = $wpdb->prefix . 'cro_campaigns';
-		$placeholder = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		if ( ! class_exists( 'CRO_Campaign' ) ) {
+			return;
+		}
 
-		if ( 'activate' === $action ) {
-			$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='active' WHERE id IN ({$placeholder})", ...$ids ) );
-		} elseif ( 'pause' === $action ) {
-			$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET status='paused' WHERE id IN ({$placeholder})", ...$ids ) );
-		} elseif ( 'delete' === $action ) {
-			$wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE id IN ({$placeholder})", ...$ids ) );
+		foreach ( $ids as $cid ) {
+			if ( 'activate' === $action ) {
+				CRO_Campaign::update( $cid, array( 'status' => 'active' ) );
+			} elseif ( 'pause' === $action ) {
+				CRO_Campaign::update( $cid, array( 'status' => 'paused' ) );
+			} elseif ( 'delete' === $action ) {
+				CRO_Campaign::delete( $cid );
+			}
 		}
 
 		wp_safe_redirect( admin_url( 'admin.php?page=cro-campaigns&cro_bulk_done=1' ) );
@@ -2450,8 +2988,6 @@ class CRO_Admin {
 	 * @param int $winner_variation_id  Winning variation ID.
 	 */
 	private function apply_ab_winner( $test_id, $winner_variation_id ) {
-		global $wpdb;
-
 		$ab_model = new CRO_AB_Test();
 		$test = $ab_model->get( $test_id );
 		$variation = $ab_model->get_variation( $winner_variation_id );
@@ -2469,23 +3005,32 @@ class CRO_Admin {
 		// Apply variation data to original campaign
 		$variation_data = json_decode( $variation->campaign_data, true );
 
-		if ( $variation_data ) {
-			$campaigns_table = $wpdb->prefix . 'cro_campaigns';
+		if ( $variation_data && class_exists( 'CRO_Campaign' ) ) {
 			$update_data = array();
 			if ( ! empty( $variation_data['content'] ) ) {
-				$update_data['content'] = is_string( $variation_data['content'] ) ? $variation_data['content'] : wp_json_encode( $variation_data['content'] );
+				$c = $variation_data['content'];
+				if ( is_array( $c ) ) {
+					$update_data['content'] = $c;
+				} elseif ( is_string( $c ) ) {
+					$decoded_content = json_decode( $c, true );
+					$update_data['content'] = ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded_content ) ) ? $decoded_content : $c;
+				} else {
+					$update_data['content'] = wp_json_encode( $c );
+				}
 			}
 			if ( ! empty( $variation_data['styling'] ) ) {
-				$update_data['styling'] = is_string( $variation_data['styling'] ) ? $variation_data['styling'] : wp_json_encode( $variation_data['styling'] );
+				$s = $variation_data['styling'];
+				if ( is_array( $s ) ) {
+					$update_data['styling'] = $s;
+				} elseif ( is_string( $s ) ) {
+					$decoded_styling = json_decode( $s, true );
+					$update_data['styling'] = ( JSON_ERROR_NONE === json_last_error() && is_array( $decoded_styling ) ) ? $decoded_styling : $s;
+				} else {
+					$update_data['styling'] = wp_json_encode( $s );
+				}
 			}
 			if ( ! empty( $update_data ) ) {
-				$wpdb->update(
-					$campaigns_table,
-					$update_data,
-					array( 'id' => $test->original_campaign_id ),
-					null,
-					array( '%d' )
-				);
+				CRO_Campaign::update( (int) $test->original_campaign_id, $update_data );
 			}
 		}
 
@@ -2496,24 +3041,42 @@ class CRO_Admin {
 	 * Handle front-end error logging (graceful error handling).
 	 */
 	public function handle_log_error() {
-		// Only when error reporting is enabled and nonce valid.
-		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['nonce'] ) ) : '';
+		$nonce_raw = filter_input( INPUT_POST, 'nonce', FILTER_UNSAFE_RAW );
+		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_log_error' ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ), 403 );
 		}
 
-		$raw = isset( $_POST['data'] ) ? wp_unslash( $_POST['data'] ) : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput
+		// Rate limit per IP — nonce is public in croConfig; prevents log-flooding DoS.
+		if ( class_exists( 'CRO_Security' ) ) {
+			$ip = CRO_Security::get_client_ip();
+			if ( ! CRO_Security::check_rate_limit( 'cro_log_error_' . $ip, 10, 60 ) ) {
+				wp_send_json_success();
+				return;
+			}
+		}
+
+		$data_raw = filter_input( INPUT_POST, 'data', FILTER_UNSAFE_RAW );
+		$raw        = is_string( $data_raw ) ? wp_unslash( $data_raw ) : '';
+		if ( strlen( $raw ) > 4096 ) {
+			wp_send_json_success();
+			return;
+		}
+
 		$data = json_decode( $raw, true );
 		if ( ! is_array( $data ) ) {
 			wp_send_json_success();
+			return;
 		}
 
-		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional debug logging when WP_DEBUG_LOG is enabled.
-			error_log( '[Meyvora Convert] JS Error: ' . ( isset( $data['message'] ) ? $data['message'] : '' ) );
-			if ( ! empty( $data['url'] ) ) {
-				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Intentional debug logging when WP_DEBUG_LOG is enabled.
-				error_log( '[Meyvora Convert] URL: ' . $data['url'] );
+		if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG && class_exists( 'CRO_Error_Handler' ) ) {
+			$message = isset( $data['message'] ) ? substr( (string) $data['message'], 0, 500 ) : '';
+			$url     = isset( $data['url'] ) ? substr( (string) $data['url'], 0, 300 ) : '';
+			if ( $message ) {
+				CRO_Error_Handler::log( 'DEBUG', '[Meyvora Convert] JS Error: ' . $message );
+			}
+			if ( $url ) {
+				CRO_Error_Handler::log( 'DEBUG', '[Meyvora Convert] URL: ' . $url );
 			}
 		}
 
@@ -2528,9 +3091,15 @@ class CRO_Admin {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 
-		$nonce = isset( $_POST['cro_save_offer_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_save_offer_nonce'] ) ) : '';
+		$nonce_raw = filter_input( INPUT_POST, 'cro_save_offer_nonce', FILTER_UNSAFE_RAW );
+		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'cro_save_offer_nonce' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ) ), 403 );
+		}
+
+		$post_in = filter_input_array( INPUT_POST );
+		if ( ! is_array( $post_in ) ) {
+			$post_in = array();
 		}
 
 		$max_offers = 5;
@@ -2542,7 +3111,7 @@ class CRO_Admin {
 		}
 		$offers = array_pad( $offers, $max_offers, array() );
 
-		$offer_index = isset( $_POST['cro_offer_index'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_offer_index'] ) ) : '';
+		$offer_index = isset( $post_in['cro_offer_index'] ) ? sanitize_text_field( wp_unslash( (string) $post_in['cro_offer_index'] ) ) : '';
 		if ( $offer_index === '' ) {
 			// Add: use first empty slot. Enforce MAX_OFFERS server-side.
 			for ( $i = 0; $i < $max_offers; $i++ ) {
@@ -2581,40 +3150,46 @@ class CRO_Admin {
 			}
 		}
 
+		$mq_post = isset( $post_in['cro_drawer_min_qty_for_category'] ) ? wp_unslash( $post_in['cro_drawer_min_qty_for_category'] ) : '';
+		$mq_fc   = is_string( $mq_post ) ? self::parse_min_qty_for_category( $mq_post ) : array();
+
 		$raw = array(
-			'headline'                      => isset( $_POST['cro_drawer_headline'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_drawer_headline'] ) ) : '',
-			'priority'                      => isset( $_POST['cro_drawer_priority'] ) ? (int) $_POST['cro_drawer_priority'] : 10,
-			'enabled'                       => ! empty( $_POST['cro_drawer_enabled'] ),
-			'description'                   => isset( $_POST['cro_drawer_description'] ) ? sanitize_textarea_field( wp_unslash( $_POST['cro_drawer_description'] ) ) : '',
-			'min_cart_total'                => isset( $_POST['cro_drawer_min_cart_total'] ) && is_numeric( $_POST['cro_drawer_min_cart_total'] ) ? (float) $_POST['cro_drawer_min_cart_total'] : 0,
-			'max_cart_total'                => isset( $_POST['cro_drawer_max_cart_total'] ) && is_numeric( $_POST['cro_drawer_max_cart_total'] ) ? (float) $_POST['cro_drawer_max_cart_total'] : 0,
-			'min_items'                     => isset( $_POST['cro_drawer_min_items'] ) && is_numeric( $_POST['cro_drawer_min_items'] ) ? (int) $_POST['cro_drawer_min_items'] : 0,
-			'first_time_customer'           => ! empty( $_POST['cro_drawer_first_time_customer'] ),
-			'returning_customer_min_orders' => isset( $_POST['cro_drawer_returning_customer_min_orders'] ) && is_numeric( $_POST['cro_drawer_returning_customer_min_orders'] ) ? (int) $_POST['cro_drawer_returning_customer_min_orders'] : 0,
-			'lifetime_spend_min'            => isset( $_POST['cro_drawer_lifetime_spend_min'] ) && is_numeric( $_POST['cro_drawer_lifetime_spend_min'] ) ? (float) $_POST['cro_drawer_lifetime_spend_min'] : 0,
-			'allowed_roles'                 => isset( $_POST['cro_drawer_allowed_roles'] ) && is_array( $_POST['cro_drawer_allowed_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_allowed_roles'] ) ) : array(),
-			'excluded_roles'                => isset( $_POST['cro_drawer_excluded_roles'] ) && is_array( $_POST['cro_drawer_excluded_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_excluded_roles'] ) ) : array(),
-			'exclude_sale_items'             => ! empty( $_POST['cro_drawer_exclude_sale_items'] ),
-			'include_categories'             => isset( $_POST['cro_drawer_include_categories'] ) && is_array( $_POST['cro_drawer_include_categories'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_drawer_include_categories'] ) ) : array(),
-			'exclude_categories'             => isset( $_POST['cro_drawer_exclude_categories'] ) && is_array( $_POST['cro_drawer_exclude_categories'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_drawer_exclude_categories'] ) ) : array(),
-			'include_products'               => isset( $_POST['cro_drawer_include_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( $_POST['cro_drawer_include_products'] ) ) ) ) ) : array(),
-			'exclude_products'               => isset( $_POST['cro_drawer_exclude_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( $_POST['cro_drawer_exclude_products'] ) ) ) ) ) : array(),
-			'cart_contains_category'         => isset( $_POST['cro_drawer_cart_contains_category'] ) && is_array( $_POST['cro_drawer_cart_contains_category'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_drawer_cart_contains_category'] ) ) : array(),
-			'min_qty_for_category'           => isset( $_POST['cro_drawer_min_qty_for_category'] ) ? self::parse_min_qty_for_category( wp_unslash( $_POST['cro_drawer_min_qty_for_category'] ) ) : array(),
-			'apply_to_categories'            => isset( $_POST['cro_drawer_apply_to_categories'] ) && is_array( $_POST['cro_drawer_apply_to_categories'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_drawer_apply_to_categories'] ) ) : array(),
-			'apply_to_products'              => isset( $_POST['cro_drawer_apply_to_products'] ) && is_array( $_POST['cro_drawer_apply_to_products'] ) ? array_map( 'absint', wp_unslash( $_POST['cro_drawer_apply_to_products'] ) ) : ( isset( $_POST['cro_drawer_apply_to_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( $_POST['cro_drawer_apply_to_products'] ) ) ) ) ) : array() ),
-			'per_category_discount'         => self::parse_per_category_discount_post( isset( $_POST['cro_drawer_per_category_discount_cat'] ) ? $_POST['cro_drawer_per_category_discount_cat'] : array(), isset( $_POST['cro_drawer_per_category_discount_amount'] ) ? $_POST['cro_drawer_per_category_discount_amount'] : array() ),
-			'reward_type'                    => isset( $_POST['cro_drawer_reward_type'] ) ? sanitize_text_field( wp_unslash( $_POST['cro_drawer_reward_type'] ) ) : 'percent',
-			'reward_amount'                  => isset( $_POST['cro_drawer_reward_amount'] ) ? (float) $_POST['cro_drawer_reward_amount'] : 10,
-			'coupon_ttl_hours'              => isset( $_POST['cro_drawer_coupon_ttl_hours'] ) ? absint( $_POST['cro_drawer_coupon_ttl_hours'] ) : 48,
-			'individual_use'                => ! empty( $_POST['cro_drawer_individual_use'] ),
-			'rate_limit_hours'              => isset( $_POST['cro_drawer_rate_limit_hours'] ) && is_numeric( $_POST['cro_drawer_rate_limit_hours'] ) ? absint( $_POST['cro_drawer_rate_limit_hours'] ) : 6,
-			'max_coupons_per_visitor'       => isset( $_POST['cro_drawer_max_coupons_per_visitor'] ) && is_numeric( $_POST['cro_drawer_max_coupons_per_visitor'] ) ? absint( $_POST['cro_drawer_max_coupons_per_visitor'] ) : 1,
-			'conflict_offer_ids'            => isset( $_POST['cro_drawer_conflict_offer_ids'] ) && is_array( $_POST['cro_drawer_conflict_offer_ids'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_conflict_offer_ids'] ) ) : array(),
+			'headline'                      => isset( $post_in['cro_drawer_headline'] ) ? sanitize_text_field( wp_unslash( (string) $post_in['cro_drawer_headline'] ) ) : '',
+			'priority'                      => isset( $post_in['cro_drawer_priority'] ) ? (int) $post_in['cro_drawer_priority'] : 10,
+			'enabled'                       => ! empty( $post_in['cro_drawer_enabled'] ),
+			'description'                   => isset( $post_in['cro_drawer_description'] ) ? sanitize_textarea_field( wp_unslash( (string) $post_in['cro_drawer_description'] ) ) : '',
+			'min_cart_total'                => isset( $post_in['cro_drawer_min_cart_total'] ) && is_numeric( $post_in['cro_drawer_min_cart_total'] ) ? (float) $post_in['cro_drawer_min_cart_total'] : 0,
+			'max_cart_total'                => isset( $post_in['cro_drawer_max_cart_total'] ) && is_numeric( $post_in['cro_drawer_max_cart_total'] ) ? (float) $post_in['cro_drawer_max_cart_total'] : 0,
+			'min_items'                     => isset( $post_in['cro_drawer_min_items'] ) && is_numeric( $post_in['cro_drawer_min_items'] ) ? (int) $post_in['cro_drawer_min_items'] : 0,
+			'first_time_customer'           => ! empty( $post_in['cro_drawer_first_time_customer'] ),
+			'returning_customer_min_orders' => isset( $post_in['cro_drawer_returning_customer_min_orders'] ) && is_numeric( $post_in['cro_drawer_returning_customer_min_orders'] ) ? (int) $post_in['cro_drawer_returning_customer_min_orders'] : 0,
+			'lifetime_spend_min'            => isset( $post_in['cro_drawer_lifetime_spend_min'] ) && is_numeric( $post_in['cro_drawer_lifetime_spend_min'] ) ? (float) $post_in['cro_drawer_lifetime_spend_min'] : 0,
+			'allowed_roles'                 => isset( $post_in['cro_drawer_allowed_roles'] ) && is_array( $post_in['cro_drawer_allowed_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_allowed_roles'] ) ) : array(),
+			'excluded_roles'                => isset( $post_in['cro_drawer_excluded_roles'] ) && is_array( $post_in['cro_drawer_excluded_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_excluded_roles'] ) ) : array(),
+			'exclude_sale_items'             => ! empty( $post_in['cro_drawer_exclude_sale_items'] ),
+			'include_categories'             => isset( $post_in['cro_drawer_include_categories'] ) && is_array( $post_in['cro_drawer_include_categories'] ) ? array_map( 'absint', wp_unslash( $post_in['cro_drawer_include_categories'] ) ) : array(),
+			'exclude_categories'             => isset( $post_in['cro_drawer_exclude_categories'] ) && is_array( $post_in['cro_drawer_exclude_categories'] ) ? array_map( 'absint', wp_unslash( $post_in['cro_drawer_exclude_categories'] ) ) : array(),
+			'include_products'               => isset( $post_in['cro_drawer_include_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( (string) $post_in['cro_drawer_include_products'] ) ) ) ) ) : array(),
+			'exclude_products'               => isset( $post_in['cro_drawer_exclude_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( (string) $post_in['cro_drawer_exclude_products'] ) ) ) ) ) : array(),
+			'cart_contains_category'         => isset( $post_in['cro_drawer_cart_contains_category'] ) && is_array( $post_in['cro_drawer_cart_contains_category'] ) ? array_map( 'absint', wp_unslash( $post_in['cro_drawer_cart_contains_category'] ) ) : array(),
+			'min_qty_for_category'           => $mq_fc,
+			'apply_to_categories'            => isset( $post_in['cro_drawer_apply_to_categories'] ) && is_array( $post_in['cro_drawer_apply_to_categories'] ) ? array_map( 'absint', wp_unslash( $post_in['cro_drawer_apply_to_categories'] ) ) : array(),
+			'apply_to_products'              => isset( $post_in['cro_drawer_apply_to_products'] ) && is_array( $post_in['cro_drawer_apply_to_products'] ) ? array_map( 'absint', wp_unslash( $post_in['cro_drawer_apply_to_products'] ) ) : ( isset( $post_in['cro_drawer_apply_to_products'] ) ? array_filter( array_map( 'absint', array_map( 'trim', explode( ',', (string) wp_unslash( (string) $post_in['cro_drawer_apply_to_products'] ) ) ) ) ) : array() ),
+			'per_category_discount'         => self::parse_per_category_discount_post(
+				isset( $post_in['cro_drawer_per_category_discount_cat'] ) && is_array( $post_in['cro_drawer_per_category_discount_cat'] ) ? wp_unslash( $post_in['cro_drawer_per_category_discount_cat'] ) : array(),
+				isset( $post_in['cro_drawer_per_category_discount_amount'] ) && is_array( $post_in['cro_drawer_per_category_discount_amount'] ) ? wp_unslash( $post_in['cro_drawer_per_category_discount_amount'] ) : array()
+			),
+			'reward_type'                    => isset( $post_in['cro_drawer_reward_type'] ) ? sanitize_text_field( wp_unslash( (string) $post_in['cro_drawer_reward_type'] ) ) : 'percent',
+			'reward_amount'                  => isset( $post_in['cro_drawer_reward_amount'] ) ? (float) $post_in['cro_drawer_reward_amount'] : 10,
+			'coupon_ttl_hours'              => isset( $post_in['cro_drawer_coupon_ttl_hours'] ) ? absint( $post_in['cro_drawer_coupon_ttl_hours'] ) : 48,
+			'individual_use'                => ! empty( $post_in['cro_drawer_individual_use'] ),
+			'rate_limit_hours'              => isset( $post_in['cro_drawer_rate_limit_hours'] ) && is_numeric( $post_in['cro_drawer_rate_limit_hours'] ) ? absint( $post_in['cro_drawer_rate_limit_hours'] ) : 6,
+			'max_coupons_per_visitor'       => isset( $post_in['cro_drawer_max_coupons_per_visitor'] ) && is_numeric( $post_in['cro_drawer_max_coupons_per_visitor'] ) ? absint( $post_in['cro_drawer_max_coupons_per_visitor'] ) : 1,
+			'conflict_offer_ids'            => isset( $post_in['cro_drawer_conflict_offer_ids'] ) && is_array( $post_in['cro_drawer_conflict_offer_ids'] ) ? array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_conflict_offer_ids'] ) ) : array(),
 		);
-		$allowed_raw = isset( $_POST['cro_drawer_allowed_roles'] ) && is_array( $_POST['cro_drawer_allowed_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_allowed_roles'] ) ) : array();
+		$allowed_raw = isset( $post_in['cro_drawer_allowed_roles'] ) && is_array( $post_in['cro_drawer_allowed_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_allowed_roles'] ) ) : array();
 		$raw['allowed_roles'] = array_values( array_filter( $allowed_raw, function ( $v ) { return $v !== ''; } ) );
-		$excluded_raw = isset( $_POST['cro_drawer_excluded_roles'] ) && is_array( $_POST['cro_drawer_excluded_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $_POST['cro_drawer_excluded_roles'] ) ) : array();
+		$excluded_raw = isset( $post_in['cro_drawer_excluded_roles'] ) && is_array( $post_in['cro_drawer_excluded_roles'] ) ? array_map( 'sanitize_text_field', wp_unslash( $post_in['cro_drawer_excluded_roles'] ) ) : array();
 		$raw['excluded_roles'] = array_values( array_filter( $excluded_raw, function ( $v ) { return $v !== ''; } ) );
 
 		if ( class_exists( 'CRO_Offer_Schema' ) ) {
@@ -2834,7 +3409,7 @@ class CRO_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_send_json( array() );
 		}
-		$term = isset( $_GET['term'] ) ? sanitize_text_field( wp_unslash( $_GET['term'] ) ) : '';
+		$term = self::get_get_text( 'term' );
 		$results = array();
 		if ( function_exists( 'wc_get_products' ) && strlen( $term ) >= 1 ) {
 			$products = wc_get_products( array(
@@ -3020,10 +3595,12 @@ class CRO_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
+		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
+		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
-		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		$id = self::get_get_absint( 'id' );
 		if ( $id > 0 && class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
 			CRO_Abandoned_Cart_Tracker::cancel_scheduled_reminders( $id );
 		}
@@ -3037,10 +3614,12 @@ class CRO_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
+		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
+		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
-		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		$id = self::get_get_absint( 'id' );
 		if ( $id > 0 && class_exists( 'CRO_Abandoned_Cart_Tracker' ) ) {
 			CRO_Abandoned_Cart_Tracker::mark_recovered_by_id( $id );
 		}
@@ -3054,10 +3633,12 @@ class CRO_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'cro_abandoned_carts_list' ) ) {
+		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
+		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'cro_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
-		$id = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+		$id = self::get_get_absint( 'id' );
 		$sent = false;
 		if ( $id > 0 && class_exists( 'CRO_Abandoned_Cart_Reminder' ) ) {
 			$sent = CRO_Abandoned_Cart_Reminder::send_reminder_immediately( $id, 1 );
@@ -3073,14 +3654,17 @@ class CRO_Admin {
 	private function redirect_abandoned_carts_list( $message = null ) {
 		$base = admin_url( 'admin.php?page=cro-abandoned-carts' );
 		$args = array();
-		if ( isset( $_GET['status_filter'] ) && is_string( $_GET['status_filter'] ) ) {
-			$args['status_filter'] = sanitize_text_field( wp_unslash( $_GET['status_filter'] ) );
+		$status_filter = self::get_get_text( 'status_filter' );
+		if ( $status_filter !== '' ) {
+			$args['status_filter'] = $status_filter;
 		}
-		if ( isset( $_GET['search'] ) && is_string( $_GET['search'] ) ) {
-			$args['search'] = rawurlencode( sanitize_text_field( wp_unslash( $_GET['search'] ) ) );
+		$search = self::get_get_text( 'search' );
+		if ( $search !== '' ) {
+			$args['search'] = rawurlencode( $search );
 		}
-		if ( isset( $_GET['paged'] ) && absint( $_GET['paged'] ) > 0 ) {
-			$args['paged'] = absint( $_GET['paged'] );
+		$paged = self::get_get_absint( 'paged' );
+		if ( $paged > 0 ) {
+			$args['paged'] = $paged;
 		}
 		if ( $message ) {
 			$args['cro_notice'] = $message;

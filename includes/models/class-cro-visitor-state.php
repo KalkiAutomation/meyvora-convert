@@ -57,6 +57,8 @@ class CRO_Visitor_State {
 	const K_CL  = 'cl'; // Campaign last click: campaign_id => ts
 	const K_ABA = 'aba'; // A/B attribution: { test_id, variation_id } for last shown variation (order conversion)
 	const K_PVC = 'pvc'; // Page views (incremented once per normal frontend request).
+	/** Persisted UTM from first landing URL with utm_source (compact: s, m, c). */
+	const K_TRAFFIC_UTM = 'tx';
 
 	/**
 	 * Singleton instance.
@@ -106,10 +108,12 @@ class CRO_Visitor_State {
 	 * Load visitor state from cookie (compact keys).
 	 */
 	private function load_state() {
-		if ( isset( $_COOKIE[ self::COOKIE_NAME ] ) ) {
+		$cookie_raw = filter_input( INPUT_COOKIE, self::COOKIE_NAME, FILTER_UNSAFE_RAW );
+		if ( is_string( $cookie_raw ) && $cookie_raw !== '' ) {
 			// Un-escape URL encoding that some environments apply to cookie values; decode before sanitizing.
-			$raw     = wp_unslash( $_COOKIE[ self::COOKIE_NAME ] );
-			$raw     = is_string( $raw ) ? str_replace( ' ', '+', $raw ) : '';
+			$raw = wp_unslash( $cookie_raw );
+			$raw = is_string( $raw ) ? sanitize_text_field( $raw ) : '';
+			$raw = $raw !== '' ? str_replace( ' ', '+', $raw ) : '';
 			$decoded = json_decode( base64_decode( $raw, true ), true );
 			if ( is_array( $decoded ) ) {
 				$this->state = $decoded;
@@ -206,6 +210,47 @@ class CRO_Visitor_State {
 	 */
 	private function generate_visitor_id() {
 		return 'cro_' . bin2hex( random_bytes( 16 ) );
+	}
+
+	/**
+	 * UTM from first page in session that had utm_source (for multi-page targeting).
+	 *
+	 * @return array{utm_source:string,utm_medium:string,utm_campaign:string}
+	 */
+	public function get_persisted_utm(): array {
+		$raw = $this->state[ self::K_TRAFFIC_UTM ] ?? null;
+		if ( ! is_array( $raw ) ) {
+			return array(
+				'utm_source'   => '',
+				'utm_medium'   => '',
+				'utm_campaign' => '',
+			);
+		}
+		return array(
+			'utm_source'   => isset( $raw['s'] ) ? (string) $raw['s'] : '',
+			'utm_medium'   => isset( $raw['m'] ) ? (string) $raw['m'] : '',
+			'utm_campaign' => isset( $raw['c'] ) ? (string) $raw['c'] : '',
+		);
+	}
+
+	/**
+	 * Persist UTM when the request includes utm_source.
+	 *
+	 * @param string $source   utm_source.
+	 * @param string $medium   utm_medium.
+	 * @param string $campaign utm_campaign.
+	 */
+	public function persist_utm_if_present( $source, $medium, $campaign ): void {
+		$source = is_string( $source ) ? sanitize_text_field( $source ) : '';
+		if ( $source === '' ) {
+			return;
+		}
+		$this->state[ self::K_TRAFFIC_UTM ] = array(
+			's' => $source,
+			'm' => is_string( $medium ) ? sanitize_text_field( $medium ) : '',
+			'c' => is_string( $campaign ) ? sanitize_text_field( $campaign ) : '',
+		);
+		$this->dirty = true;
 	}
 
 	// --- Getters ---
@@ -807,6 +852,7 @@ class CRO_Visitor_State {
 		}
 		$payload = wp_json_encode( $data );
 		$duration = self::COOKIE_DURATION_DAYS * DAY_IN_SECONDS;
+		// HttpOnly false: blocks/cart-checkout-extension reads this cookie from document.cookie for cap logic.
 		setcookie(
 			self::BANNER_VIEWS_COOKIE,
 			$payload,

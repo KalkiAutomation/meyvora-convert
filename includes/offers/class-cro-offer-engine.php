@@ -15,6 +15,21 @@ if ( ! defined( 'WPINC' ) ) {
  */
 class CRO_Offer_Engine {
 
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
+
 	/**
 	 * Build context for offer evaluation (cart, customer, visitor).
 	 *
@@ -996,14 +1011,31 @@ class CRO_Offer_Engine {
 		if ( ! class_exists( 'CRO_Offer_Model' ) || empty( $visitor_id ) ) {
 			return null;
 		}
+
+		global $wpdb;
+
 		$table  = CRO_Offer_Model::get_logs_table();
 		$hours  = self::get_rate_limit_hours();
 		$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $hours * HOUR_IN_SECONDS ) );
-		$row    = CRO_Database::get_row(
-			"SELECT id, coupon_code, created_at FROM {$table} WHERE offer_id = %d AND visitor_id = %s AND created_at > %s ORDER BY created_at DESC LIMIT 1",
-			array( absint( $offer_id ), sanitize_text_field( $visitor_id ), $cutoff ),
-			OBJECT
+		$ck     = self::read_cache_key(
+			'recent_offer_log_visitor',
+			array( $table, absint( $offer_id ), sanitize_text_field( $visitor_id ), $cutoff )
 		);
+		$found  = false;
+		$row    = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT id, coupon_code, created_at FROM %i WHERE offer_id = %d AND visitor_id = %s AND created_at > %s ORDER BY created_at DESC LIMIT 1',
+					$table,
+					absint( $offer_id ),
+					sanitize_text_field( $visitor_id ),
+					$cutoff
+				),
+				OBJECT
+			);
+			wp_cache_set( $ck, $row, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		return $row ? $row : null;
 	}
 

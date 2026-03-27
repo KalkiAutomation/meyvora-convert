@@ -40,7 +40,7 @@ class CRO_Stock_Urgency {
 
 		wp_enqueue_style(
 			'cro-boosters',
-			CRO_PLUGIN_URL . 'public/css/cro-boosters.css',
+			CRO_PLUGIN_URL . 'public/css/cro-boosters' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);
@@ -75,7 +75,7 @@ class CRO_Stock_Urgency {
 		do_action( 'cro_frontend_before_render', 'stock_urgency', $render_context );
 
 		echo '<div class="cro-stock-urgency">';
-		echo '<span class="cro-stock-urgency-icon">' . CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ) . '</span>';
+		echo '<span class="cro-stock-urgency-icon">' . wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) . '</span>';
 		echo '<span class="cro-stock-urgency-message">' . esc_html( $message ) . '</span>';
 		echo '</div>';
 		do_action( 'cro_frontend_after_render', 'stock_urgency', $render_context );

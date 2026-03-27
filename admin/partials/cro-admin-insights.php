@@ -4,13 +4,15 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$days = isset( $_GET['cro_insights_days'] ) ? absint( $_GET['cro_insights_days'] ) : 30;
+$days = CRO_Security::get_query_var_absint( 'cro_insights_days' );
+if ( ! $days ) {
+	$days = 30;
+}
 $days = $days >= 7 && $days <= 90 ? $days : 30;
 
 $insights_class = class_exists( 'CRO_Insights' );
@@ -32,8 +34,10 @@ foreach ( $heatmap as $r ) {
 
 $export_max_days     = (int) apply_filters( 'cro_export_max_days', 90 );
 $export_default_days = 30;
-$export_to           = isset( $_GET['cro_export_to'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_export_to'] ) ) : gmdate( 'Y-m-d' );
-$export_from         = isset( $_GET['cro_export_from'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_export_from'] ) ) : gmdate( 'Y-m-d', strtotime( "-{$export_default_days} days" ) );
+$export_to           = CRO_Security::get_query_var( 'cro_export_to' );
+$export_to           = $export_to !== '' ? $export_to : gmdate( 'Y-m-d' );
+$export_from         = CRO_Security::get_query_var( 'cro_export_from' );
+$export_from         = $export_from !== '' ? $export_from : gmdate( 'Y-m-d', strtotime( "-{$export_default_days} days" ) );
 $ts_from             = strtotime( $export_from );
 $ts_to               = strtotime( $export_to );
 if ( false === $ts_from || false === $ts_to || $ts_to < $ts_from ) {
@@ -149,8 +153,8 @@ $icon_for_type = static function ( $type ) {
 				?>
 				<div class="cro-period-kpi">
 					<span class="cro-period-kpi__name"><?php echo esc_html( $def['label'] ); ?></span>
-					<span class="cro-period-kpi__current"><?php echo $cur_out; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
-					<span class="cro-period-kpi__previous"><?php esc_html_e( 'Previous:', 'meyvora-convert' ); ?> <?php echo $prv_out; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+					<span class="cro-period-kpi__current"><?php echo wp_kses_post( $cur_out ); ?></span>
+					<span class="cro-period-kpi__previous"><?php esc_html_e( 'Previous:', 'meyvora-convert' ); ?> <?php echo wp_kses_post( $prv_out ); ?></span>
 					<span class="cro-period-kpi__change <?php echo esc_attr( $chg['class'] ); ?>"><?php echo esc_html( $chg['text'] ); ?></span>
 				</div>
 			<?php endforeach; ?>
@@ -173,7 +177,7 @@ $icon_for_type = static function ( $type ) {
 					?>
 					<li class="<?php echo esc_attr( $cls ); ?>">
 						<div class="cro-insight-card__head">
-							<span class="cro-insight-card__icon" aria-hidden="true"><?php echo class_exists( 'CRO_Icons' ) ? CRO_Icons::svg_kses_html( $icon_for_type( $item['type'] ?? 'action' ) ) : ''; ?></span>
+							<span class="cro-insight-card__icon" aria-hidden="true"><?php echo class_exists( 'CRO_Icons' ) ? wp_kses( $icon_for_type( $item['type'] ?? 'action' ), CRO_Icons::get_svg_kses_allowed() ) : ''; ?></span>
 							<span class="cro-insight-card__category"><?php echo esc_html( $item['category'] ?? '' ); ?></span>
 							<span class="cro-insight-card__priority" title="<?php esc_attr_e( 'Priority (1 = highest)', 'meyvora-convert' ); ?>">P<?php echo esc_html( (string) $pri ); ?></span>
 						</div>
@@ -321,7 +325,7 @@ $icon_for_type = static function ( $type ) {
 					</div>
 				<?php endif; ?>
 				<div class="cro-funnel__step" role="listitem">
-					<span class="cro-funnel__icon" aria-hidden="true"><?php echo class_exists( 'CRO_Icons' ) ? CRO_Icons::svg_kses_html( $icon_svg ) : ''; ?></span>
+					<span class="cro-funnel__icon" aria-hidden="true"><?php echo class_exists( 'CRO_Icons' ) ? wp_kses( $icon_svg, CRO_Icons::get_svg_kses_allowed() ) : ''; ?></span>
 					<span class="cro-funnel__label"><?php echo esc_html( $st['label'] ); ?></span>
 					<span class="cro-funnel__count"><?php echo esc_html( number_format_i18n( $st['count'] ) ); ?></span>
 					<?php if ( null !== $pct_prev ) : ?>

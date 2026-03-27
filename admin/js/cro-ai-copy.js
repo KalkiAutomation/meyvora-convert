@@ -56,7 +56,7 @@
 		}
 		var parts = [];
 		var code = ($("#content-coupon-code").val() || "").trim();
-		var text = ($("#content-coupon-text").val() || "").trim();
+		var text = ($("#content-coupon-label").val() || "").trim();
 		if (text) {
 			parts.push(text);
 		}

@@ -16,12 +16,22 @@ if ( ! defined( 'WPINC' ) ) {
 class CRO_Campaign {
 
 	/**
+	 * @return void
+	 */
+	private static function flush_meyvora_cro_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
+
+	/**
 	 * Clear `cro_has_active_campaigns` and CRO_Cache campaign lists after CRUD changes.
 	 *
 	 * @return void
 	 */
 	private static function bust_campaign_caches() {
 		delete_transient( 'cro_has_active_campaigns' );
+		delete_transient( 'cro_tables_ok' );
 		if ( class_exists( 'CRO_Cache' ) ) {
 			CRO_Cache::invalidate_campaigns();
 		}
@@ -45,7 +55,7 @@ class CRO_Campaign {
 
 		$args = wp_parse_args( $args, $defaults );
 
-		$table_name = esc_sql( $wpdb->prefix . 'cro_campaigns' );
+		$table_name = $wpdb->prefix . 'cro_campaigns';
 		$status = ! empty( $args['status'] ) ? sanitize_text_field( $args['status'] ) : '';
 		$type = '';
 		if ( ! empty( $args['type'] ) || ! empty( $args['campaign_type'] ) ) {
@@ -58,41 +68,81 @@ class CRO_Campaign {
 		if ( $args['limit'] > 0 ) {
 			$query_args[] = (int) $args['limit'];
 			$query_args[] = (int) $args['offset'];
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, no high-level API.
-			return $wpdb->get_results(
-				$wpdb->prepare(
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-					"SELECT * FROM {$table_name}
-					WHERE ( %s = '' OR status = %s )
-					AND ( %s = '' OR campaign_type = %s )
+			$cache_key    = 'meyvora_cro_' . md5(
+				serialize(
+					array(
+						'campaign_list_paged',
+						$table_name,
+						$query_args[0],
+						$query_args[1],
+						$query_args[2],
+						$query_args[3],
+						$query_args[4],
+						$query_args[5],
+					)
+				)
+			);
+			$result       = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $result ) {
+				$result = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i
+					WHERE ( %s = \'\' OR status = %s )
+					AND ( %s = \'\' OR campaign_type = %s )
 					ORDER BY created_at DESC
-					LIMIT %d OFFSET %d",
+					LIMIT %d OFFSET %d',
+						$table_name,
+						$query_args[0],
+						$query_args[1],
+						$query_args[2],
+						$query_args[3],
+						$query_args[4],
+						$query_args[5]
+					),
+					ARRAY_A
+				);
+				wp_cache_set( $cache_key, $result, 'meyvora_cro', 300 );
+			}
+			if ( ! is_array( $result ) ) {
+				$result = array();
+			}
+			return $result;
+		}
+
+		$cache_key = 'meyvora_cro_' . md5(
+			serialize(
+				array(
+					'campaign_list_unlimited',
+					$table_name,
 					$query_args[0],
 					$query_args[1],
 					$query_args[2],
 					$query_args[3],
-					$query_args[4],
-					$query_args[5]
+				)
+			)
+		);
+		$result    = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $result ) {
+			$result = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i
+				WHERE ( %s = \'\' OR status = %s )
+				AND ( %s = \'\' OR campaign_type = %s )
+				ORDER BY created_at DESC',
+					$table_name,
+					$query_args[0],
+					$query_args[1],
+					$query_args[2],
+					$query_args[3]
 				),
 				ARRAY_A
 			);
+			wp_cache_set( $cache_key, $result, 'meyvora_cro', 300 );
 		}
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, no high-level API.
-		return $wpdb->get_results(
-			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				"SELECT * FROM {$table_name}
-				WHERE ( %s = '' OR status = %s )
-				AND ( %s = '' OR campaign_type = %s )
-				ORDER BY created_at DESC",
-				$query_args[0],
-				$query_args[1],
-				$query_args[2],
-				$query_args[3]
-			),
-			ARRAY_A
-		);
+		if ( ! is_array( $result ) ) {
+			$result = array();
+		}
+		return $result;
 	}
 
 	/**
@@ -104,17 +154,23 @@ class CRO_Campaign {
 	public static function get( $id ) {
 		global $wpdb;
 
-		$table_name = esc_sql( $wpdb->prefix . 'cro_campaigns' );
+		$table_name = $wpdb->prefix . 'cro_campaigns';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table, no high-level API.
-		$campaign = $wpdb->get_row(
-			$wpdb->prepare(
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				"SELECT * FROM {$table_name} WHERE id = %d",
-				$id
-			),
-			ARRAY_A
-		);
+		$cache_key       = 'meyvora_cro_' . md5( serialize( array( 'campaign_row_by_id', $table_name, $id ) ) );
+		$cached_campaign = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $cached_campaign ) {
+			$campaign = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table_name,
+					$id
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key, $campaign, 'meyvora_cro', 300 );
+		} else {
+			$campaign = is_array( $cached_campaign ) ? $cached_campaign : null;
+		}
 
 		if ( $campaign ) {
 			$campaign['settings']       = maybe_unserialize( $campaign['trigger_settings'] ?? '' );
@@ -171,10 +227,13 @@ class CRO_Campaign {
 			'fallback_delay_seconds' => isset( $data['fallback_delay_seconds'] ) ? min( 300, max( 0, (int) $data['fallback_delay_seconds'] ) ) : 5,
 		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table insert.
-		$result = $wpdb->insert( $table_name, $insert_data );
+		$result = $wpdb->insert( $table_name, $insert_data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 
 		if ( $result ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table_name );
+			}
+			self::flush_meyvora_cro_read_cache();
 			self::bust_campaign_caches();
 			return $wpdb->insert_id;
 		}
@@ -255,9 +314,7 @@ class CRO_Campaign {
 
 		$format = array_fill( 0, count( $update_data ), '%s' );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table update.
-		$result = $wpdb->update(
-			$table_name,
+		$result = $wpdb->update( $table_name, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			$update_data,
 			array( 'id' => $id ),
 			$format,
@@ -265,6 +322,10 @@ class CRO_Campaign {
 		);
 
 		if ( false !== $result ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table_name );
+			}
+			self::flush_meyvora_cro_read_cache();
 			self::bust_campaign_caches();
 		}
 
@@ -282,14 +343,16 @@ class CRO_Campaign {
 
 		$table_name = $wpdb->prefix . 'cro_campaigns';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom table delete.
-		$result = $wpdb->delete(
-			$table_name,
+		$result = $wpdb->delete( $table_name, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array( 'id' => $id ),
 			array( '%d' )
 		);
 
 		if ( false !== $result ) {
+			if ( class_exists( 'CRO_Database' ) ) {
+				CRO_Database::invalidate_table_cache_after_write( $table_name );
+			}
+			self::flush_meyvora_cro_read_cache();
 			self::bust_campaign_caches();
 		}
 
@@ -332,13 +395,16 @@ class CRO_Campaign {
 			'revenue_attributed' => 0,
 		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table insert for duplicate.
-		$result = $wpdb->insert( $table_name, $new_data );
+		$result = $wpdb->insert( $table_name, $new_data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 
 		if ( false === $result ) {
 			return new WP_Error( 'db_error', __( 'Failed to duplicate campaign', 'meyvora-convert' ) );
 		}
 
+		if ( class_exists( 'CRO_Database' ) ) {
+			CRO_Database::invalidate_table_cache_after_write( $table_name );
+		}
+		self::flush_meyvora_cro_read_cache();
 		self::bust_campaign_caches();
 
 		return $wpdb->insert_id;

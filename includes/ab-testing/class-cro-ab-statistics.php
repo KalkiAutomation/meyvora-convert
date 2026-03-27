@@ -4,6 +4,10 @@
  * 
  * Uses Z-test for proportion comparison
  */
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 class CRO_AB_Statistics {
     
     private static $z_scores = array(

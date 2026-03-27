@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -17,6 +16,21 @@ if ( ! defined( 'WPINC' ) ) {
 class CRO_System_Status {
 
 	const REPORT_HEADER = 'Meyvora Convert System Status';
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Run all checks and return structured results.
@@ -33,6 +47,8 @@ class CRO_System_Status {
 		$checks[] = self::check_db_tables();
 		$checks[] = self::check_ai_configuration();
 		$checks[] = self::check_webhook_configuration();
+		$checks[] = self::check_klaviyo_integration();
+		$checks[] = self::check_mailchimp_integration();
 		$checks[] = self::check_active_boosters();
 		$checks[] = self::check_asset_loading_mode();
 		$checks[] = self::check_cron();
@@ -427,7 +443,14 @@ class CRO_System_Status {
 		$present = array();
 		$missing = array();
 		foreach ( $tables as $name => $full ) {
-			$exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $full ) ) === $full;
+			$ck_table = self::read_cache_key( 'table_exists_like', array( $full ) );
+			$found    = false;
+			$tbl_var  = wp_cache_get( $ck_table, self::DB_READ_CACHE_GROUP, false, $found );
+			if ( ! $found ) {
+				$tbl_var = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $full ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				wp_cache_set( $ck_table, $tbl_var, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+			}
+			$exists = ( $tbl_var === $full );
 			if ( $exists ) {
 				$present[] = $name;
 			} else {
@@ -438,13 +461,23 @@ class CRO_System_Status {
 			$col_warnings = array();
 			$campaigns_tbl = $wpdb->prefix . 'cro_campaigns';
 			$offers_tbl    = $wpdb->prefix . 'cro_offers';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check.
-			$has_fb = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $campaigns_tbl, 'fallback_delay_seconds' ) );
+			$ck_fb = self::read_cache_key( 'show_column_like', array( $campaigns_tbl, 'fallback_delay_seconds' ) );
+			$fbf = false;
+			$has_fb = wp_cache_get( $ck_fb, self::DB_READ_CACHE_GROUP, false, $fbf );
+			if ( ! $fbf ) {
+				$has_fb = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $campaigns_tbl, 'fallback_delay_seconds' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				wp_cache_set( $ck_fb, $has_fb, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+			}
 			if ( ! $has_fb ) {
 				$col_warnings[] = __( 'cro_campaigns.fallback_delay_seconds missing (run Repair Database Tables).', 'meyvora-convert' );
 			}
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Schema check.
-			$has_conflict = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $offers_tbl, 'conflict_ids' ) );
+			$ck_co = self::read_cache_key( 'show_column_like', array( $offers_tbl, 'conflict_ids' ) );
+			$fco   = false;
+			$has_conflict = wp_cache_get( $ck_co, self::DB_READ_CACHE_GROUP, false, $fco );
+			if ( ! $fco ) {
+				$has_conflict = $wpdb->get_var( $wpdb->prepare( 'SHOW COLUMNS FROM %i LIKE %s', $offers_tbl, 'conflict_ids' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				wp_cache_set( $ck_co, $has_conflict, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+			}
 			if ( ! $has_conflict ) {
 				$col_warnings[] = __( 'cro_offers.conflict_ids missing (run Repair Database Tables).', 'meyvora-convert' );
 			}
@@ -536,6 +569,69 @@ class CRO_System_Status {
 				? sprintf( __( '%d active endpoint(s) configured.', 'meyvora-convert' ), $active )
 				: __( 'No active webhook endpoints (optional).', 'meyvora-convert' ),
 			'detail'  => __( 'Configure outbound webhooks under Developer settings if you need external integrations.', 'meyvora-convert' ),
+		);
+	}
+
+	/**
+	 * Klaviyo integration (optional).
+	 *
+	 * @return array
+	 */
+	private static function check_klaviyo_integration() {
+		$int_settings = function_exists( 'cro_settings' ) ? cro_settings()->get_group( 'integrations' ) : array();
+		$enabled      = ! empty( $int_settings['klaviyo_enabled'] );
+		if ( ! $enabled ) {
+			return array(
+				'label'   => __( 'Klaviyo integration', 'meyvora-convert' ),
+				'status'  => 'ok',
+				'message' => __( 'Klaviyo integration disabled.', 'meyvora-convert' ),
+				'detail'  => '',
+			);
+		}
+		$klaviyo_key  = ! empty( $int_settings['klaviyo_api_key_enc'] ) && class_exists( 'CRO_Security' )
+			? CRO_Security::decrypt_secret( $int_settings['klaviyo_api_key_enc'] )
+			: '';
+		$klaviyo_list = isset( $int_settings['klaviyo_list_id'] ) ? trim( (string) $int_settings['klaviyo_list_id'] ) : '';
+		$ok           = $klaviyo_key !== '' && $klaviyo_list !== '';
+		return array(
+			'label'   => __( 'Klaviyo integration', 'meyvora-convert' ),
+			'status'  => $ok ? 'ok' : 'warning',
+			'message' => $ok
+				? __( 'API key and List ID configured.', 'meyvora-convert' )
+				: __( 'Enabled but API key or List ID is missing — go to Settings → Integrations.', 'meyvora-convert' ),
+			'detail'  => '',
+		);
+	}
+
+	/**
+	 * Mailchimp integration (optional).
+	 *
+	 * @return array
+	 */
+	private static function check_mailchimp_integration() {
+		$int_settings = function_exists( 'cro_settings' ) ? cro_settings()->get_group( 'integrations' ) : array();
+		$mc_enabled   = ! empty( $int_settings['mailchimp_enabled'] );
+		if ( ! $mc_enabled ) {
+			return array(
+				'label'   => __( 'Mailchimp integration', 'meyvora-convert' ),
+				'status'  => 'ok',
+				'message' => __( 'Mailchimp integration disabled.', 'meyvora-convert' ),
+				'detail'  => '',
+			);
+		}
+		$mc_key_enc = isset( $int_settings['mailchimp_api_key_enc'] ) ? $int_settings['mailchimp_api_key_enc'] : '';
+		$mc_list    = isset( $int_settings['mailchimp_list_id'] ) ? trim( (string) $int_settings['mailchimp_list_id'] ) : '';
+		$mc_key     = $mc_key_enc !== '' && class_exists( 'CRO_Security' )
+			? CRO_Security::decrypt_secret( $mc_key_enc )
+			: '';
+		$ok         = $mc_key !== '' && $mc_list !== '';
+		return array(
+			'label'   => __( 'Mailchimp integration', 'meyvora-convert' ),
+			'status'  => $ok ? 'ok' : 'warning',
+			'message' => $ok
+				? __( 'API key and Audience ID configured.', 'meyvora-convert' )
+				: __( 'Enabled but API key or Audience ID is missing — go to Settings → Integrations.', 'meyvora-convert' ),
+			'detail'  => '',
 		);
 	}
 

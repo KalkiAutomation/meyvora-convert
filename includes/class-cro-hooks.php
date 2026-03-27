@@ -141,6 +141,10 @@ class CRO_Hooks {
 					'description' => 'Fires after an A/B test variation conversion is recorded. Invalidates attribution cache.',
 					'params'      => array( '$variation_id' => 'Variation ID.', '$revenue' => 'Revenue amount.' ),
 				),
+				'cro_ab_test_winner_applied' => array(
+					'description' => 'Fires after a winning A/B variation is merged into the original live campaign (apply winner).',
+					'params'      => array( '$test_id' => 'A/B test ID.', '$variation_id' => 'Winning variation row ID.', '$original_campaign_id' => 'Campaign ID that was updated.' ),
+				),
 			),
 
 			'filters' => array(
@@ -214,6 +218,11 @@ class CRO_Hooks {
 					'params'      => array( '$bool', '$context' => 'e.g. campaigns, cart, checkout, default.' ),
 					'return'      => 'bool',
 				),
+				'cro_consent_allows_popup' => array(
+					'description' => 'Filter whether a visitor has given consent to show popups and set the visitor state cookie. Return false to suppress all popups. CRO_Consent hooks this when “Cookie consent required” is enabled in Settings.',
+					'params'      => array( '$allow' => 'bool — default true. Return false to suppress.' ),
+					'example'     => "add_filter('cro_consent_allows_popup', function( \$allow ) {\n\treturn my_cmp_has_marketing_consent() ? true : false;\n});",
+				),
 
 				// Targeting.
 				'cro_targeting_rules' => array(
@@ -226,6 +235,11 @@ class CRO_Hooks {
 					'description' => 'Final filter to allow or block campaign display.',
 					'params'      => array( '$should_show', '$campaign', '$context' ),
 					'return'      => 'bool',
+				),
+				'cro_decision_active_campaigns' => array(
+					'description' => 'Filter the list of active campaign models before priority/rules (e.g. sequences prepend a due follow-up campaign).',
+					'params'      => array( '$campaigns' => 'Array of CRO_Campaign_Model instances.', '$context' => 'CRO_Context instance.', '$visitor_state' => 'CRO_Visitor_State instance.' ),
+					'return'      => '$campaigns',
 				),
 
 				// Content / Campaign render.

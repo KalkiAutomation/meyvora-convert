@@ -4,11 +4,10 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotValidated, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 defined( 'ABSPATH' ) || exit;
 
-$test_id  = isset( $_GET['id'] ) ? absint( $_GET['id'] ) : 0;
+$test_id = CRO_Security::get_query_var_absint( 'id' );
 $ab_model = new CRO_AB_Test();
 $test     = $ab_model->get( $test_id );
 
@@ -17,7 +16,7 @@ if ( ! $test ) {
 }
 
 // Handle add variation
-if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_add_variation'] ) ) {
+if ( isset( $_SERVER['REQUEST_METHOD'] ) && 'POST' === $_SERVER['REQUEST_METHOD'] && isset( $_POST['cro_add_variation'] ) ) {
 	check_admin_referer( 'cro_add_variation' );
 
 	if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
@@ -26,10 +25,21 @@ if ( $_SERVER['REQUEST_METHOD'] === 'POST' && isset( $_POST['cro_add_variation']
 
 	global $wpdb;
 	$campaigns_table = $wpdb->prefix . 'cro_campaigns';
-	$original        = $wpdb->get_row( $wpdb->prepare(
-		"SELECT * FROM {$campaigns_table} WHERE id = %d",
-		$test->original_campaign_id
-	), ARRAY_A );
+	$cache_key_orig_a = 'meyvora_cro_' . md5( serialize( array( 'ab_test_view_original_campaign_array', $campaigns_table, $test->original_campaign_id ) ) );
+	$cached_original  = wp_cache_get( $cache_key_orig_a, 'meyvora_cro' );
+	if ( false === $cached_original ) {
+		$original = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE id = %d',
+				$campaigns_table,
+				$test->original_campaign_id
+			),
+			ARRAY_A
+		);
+		wp_cache_set( $cache_key_orig_a, $original, 'meyvora_cro', 300 );
+	} else {
+		$original = is_array( $cached_original ) ? $cached_original : null;
+	}
 
 	if ( $original ) {
 		$variation_data = $original;
@@ -71,29 +81,37 @@ $status_message = $stats && method_exists( 'CRO_AB_Statistics', 'get_status_mess
 	: '';
 
 global $wpdb;
-$campaigns_table   = $wpdb->prefix . 'cro_campaigns';
-$original_campaign = $wpdb->get_row( $wpdb->prepare(
-	"SELECT * FROM {$campaigns_table} WHERE id = %d",
-	$test->original_campaign_id
-) );
+$campaigns_table    = $wpdb->prefix . 'cro_campaigns';
+$cache_key_orig_o   = 'meyvora_cro_' . md5( serialize( array( 'ab_test_view_original_campaign_object', $campaigns_table, $test->original_campaign_id ) ) );
+$cached_orig_camp   = wp_cache_get( $cache_key_orig_o, 'meyvora_cro' );
+if ( false === $cached_orig_camp ) {
+	$original_campaign = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+		$wpdb->prepare(
+			'SELECT * FROM %i WHERE id = %d',
+			$campaigns_table,
+			$test->original_campaign_id
+		)
+	);
+	wp_cache_set( $cache_key_orig_o, $original_campaign, 'meyvora_cro', 300 );
+} else {
+	$original_campaign = is_object( $cached_orig_camp ) ? $cached_orig_camp : null;
+}
 $original_content = $original_campaign ? json_decode( $original_campaign->content, true ) : array();
 if ( ! is_array( $original_content ) ) {
 	$original_content = array();
 }
 ?>
 
-	<?php if ( isset( $_GET['message'] ) ) : ?>
+	<?php
+	$notice_msg_key = CRO_Security::get_query_var_key( 'message' );
+	if ( $notice_msg_key !== '' ) :
+		$messages = array(
+			'created'          => __( 'A/B Test created! Now add variations below.', 'meyvora-convert' ),
+			'variation_added'  => __( 'Variation added successfully.', 'meyvora-convert' ),
+		);
+		?>
 	<div class="notice notice-success is-dismissible">
-		<p>
-			<?php
-			$messages = array(
-				'created'         => __( 'A/B Test created! Now add variations below.', 'meyvora-convert' ),
-				'variation_added'  => __( 'Variation added successfully.', 'meyvora-convert' ),
-			);
-			$msg_key = sanitize_text_field( wp_unslash( $_GET['message'] ) );
-			echo esc_html( $messages[ $msg_key ] ?? '' );
-			?>
-		</p>
+		<p><?php echo esc_html( $messages[ $notice_msg_key ] ?? '' ); ?></p>
 	</div>
 	<?php endif; ?>
 
@@ -102,7 +120,7 @@ if ( ! is_array( $original_content ) ) {
 	?>
 	<?php if ( $insufficient_data ) : ?>
 	<div class="cro-ab-warning-banner" role="alert">
-		<span class="cro-ab-warning-icon" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?></span>
+		<span class="cro-ab-warning-icon" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 		<div class="cro-ab-warning-content">
 			<strong><?php esc_html_e( 'Not enough data yet', 'meyvora-convert' ); ?></strong>
@@ -179,6 +197,31 @@ if ( ! is_array( $original_content ) ) {
 
 	<h2><?php esc_html_e( 'Variations', 'meyvora-convert' ); ?></h2>
 
+	<?php
+	$variations_chart = isset( $test->variations ) && is_array( $test->variations ) ? $test->variations : array();
+	$chart_labels     = array();
+	$chart_impr       = array();
+	$chart_conv       = array();
+	foreach ( $variations_chart as $vch ) {
+		$chart_labels[] = isset( $vch->name ) ? (string) $vch->name : '';
+		$chart_impr[]   = isset( $vch->impressions ) ? (int) $vch->impressions : 0;
+		$chart_conv[]   = isset( $vch->conversions ) ? (int) $vch->conversions : 0;
+	}
+	?>
+	<?php if ( count( $chart_labels ) > 0 ) : ?>
+	<div class="cro-ab-chart-card cro-card" style="margin-bottom:1.5rem;">
+		<canvas id="cro-ab-variation-chart" height="120" aria-label="<?php esc_attr_e( 'Variations impressions and conversions', 'meyvora-convert' ); ?>"></canvas>
+	</div>
+	<?php $cro_ab_chart_json = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT; ?>
+	<script type="application/json" id="cro-ab-chart-data"><?php echo wp_json_encode( array(
+		'labels'           => $chart_labels,
+		'impressions'      => $chart_impr,
+		'conversions'      => $chart_conv,
+		'labelImpressions' => __( 'Impressions', 'meyvora-convert' ),
+		'labelConversions' => __( 'Conversions', 'meyvora-convert' ),
+	), $cro_ab_chart_json ); ?></script>
+	<?php endif; ?>
+
 	<div class="cro-variations-grid">
 		<?php
 		$variations = isset( $test->variations ) && is_array( $test->variations ) ? $test->variations : array();
@@ -190,7 +233,7 @@ if ( ! is_array( $original_content ) ) {
 		<div class="cro-variation-card <?php echo $is_control ? 'is-control' : ''; ?> <?php echo $is_winner ? 'is-winner' : ''; ?>">
 			<div class="cro-variation-header">
 				<?php if ( $is_winner ) : ?>
-					<span class="cro-badge cro-badge--winner"><?php echo CRO_Icons::svg_kses( 'trophy', array( 'class' => 'cro-ico' ) ); ?> <?php esc_html_e( 'Winner', 'meyvora-convert' ); ?></span>
+					<span class="cro-badge cro-badge--winner"><?php echo wp_kses( CRO_Icons::svg( 'trophy', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?> <?php esc_html_e( 'Winner', 'meyvora-convert' ); ?></span>
 
 				<?php elseif ( $is_control ) : ?>
 					<span class="cro-badge cro-badge--control"><?php esc_html_e( 'Control', 'meyvora-convert' ); ?></span>
@@ -404,7 +447,7 @@ if ( ! is_array( $original_content ) ) {
 				<div class="cro-field__control">
 					<?php
 					echo $test->auto_apply_winner
-						? CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ) . ' ' . esc_html__( 'Yes', 'meyvora-convert' )
+						? wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ) . ' ' . esc_html__( 'Yes', 'meyvora-convert' )
 						: esc_html__( 'No', 'meyvora-convert' );
 					?>
 				</div>
@@ -423,287 +466,3 @@ if ( ! is_array( $original_content ) ) {
 			<?php endif; ?>
 		</div>
 	</div>
-
-<style>
-.cro-ab-warning-banner {
-	display: flex;
-	align-items: flex-start;
-	gap: 12px;
-	background: #fff8e5;
-	border: 1px solid #d4a012;
-	border-left-width: 4px;
-	padding: 14px 20px;
-	margin: 20px 0;
-	border-radius: 4px;
-}
-
-.cro-ab-warning-icon {
-	font-size: 20px;
-	line-height: 1.2;
-}
-
-.cro-ab-warning-content {
-	flex: 1;
-}
-
-.cro-ab-warning-content strong {
-	display: block;
-	margin-bottom: 4px;
-	color: #333;
-}
-
-.cro-ab-warning-content p {
-	margin: 0;
-	font-size: 13px;
-	color: #50575e;
-}
-
-.cro-test-status-box {
-	background: #f5f5f5;
-	border-left: 4px solid #333;
-	padding: 15px 20px;
-	margin: 20px 0;
-}
-
-.cro-test-status-box.has-winner {
-	background: #e8e8e8;
-	border-color: #333;
-}
-
-.cro-test-status-box--insufficient {
-	border-left-color: #d4a012;
-}
-
-.cro-test-meta {
-	margin: 10px 0 0;
-	font-size: 12px;
-	color: #666;
-}
-
-.cro-variation-not-enough-data {
-	font-size: 13px;
-	color: #646970;
-	font-style: italic;
-	padding: 8px 0;
-}
-
-.cro-significance-row {
-	margin-bottom: 8px;
-}
-
-.cro-significance-label {
-	font-size: 12px;
-	color: #666;
-	margin-right: 6px;
-}
-
-.cro-significance-value.significant {
-	color: #1e4620;
-	font-weight: 600;
-}
-
-.cro-significance-value.not-significant {
-	color: #646970;
-}
-
-.cro-confidence-label {
-	display: block;
-	font-size: 12px;
-	color: #666;
-	margin-bottom: 4px;
-}
-
-.cro-confidence-value {
-	font-size: 13px;
-	margin-top: 4px;
-	display: block;
-}
-
-.cro-test-actions {
-	margin: 20px 0;
-	display: flex;
-	gap: 10px;
-	align-items: center;
-}
-
-.cro-variations-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 20px;
-	margin: 20px 0;
-}
-
-.cro-variation-card {
-	background: #fff;
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	padding: 20px;
-}
-
-.cro-variation-card.is-control {
-	border-color: #333;
-}
-
-.cro-variation-card.is-winner {
-	border-color: #333;
-	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
-}
-
-.cro-variation-header {
-	margin-bottom: 15px;
-}
-
-.cro-variation-header h3 {
-	margin: 5px 0;
-}
-
-.cro-badge {
-	display: inline-block;
-	padding: 3px 8px;
-	font-size: 11px;
-	border-radius: 3px;
-	background: #f0f0f1;
-}
-
-.cro-badge--control {
-	background: #e8e8e8;
-	color: #333;
-}
-
-.cro-badge--winner {
-	background: #e0e0e0;
-	color: #333;
-}
-
-.cro-traffic-weight {
-	font-size: 12px;
-	color: #666;
-}
-
-.cro-variation-stats {
-	display: flex;
-	gap: 20px;
-	margin-bottom: 15px;
-}
-
-.cro-stat {
-	text-align: center;
-}
-
-.cro-stat-value {
-	display: block;
-	font-size: 24px;
-	font-weight: 600;
-}
-
-.cro-stat--highlight .cro-stat-value {
-	color: #333;
-}
-
-.cro-stat-label {
-	font-size: 11px;
-	color: #666;
-}
-
-.cro-variation-comparison {
-	padding-top: 15px;
-	border-top: 1px solid #eee;
-}
-
-.cro-improvement {
-	font-weight: 600;
-	margin-bottom: 10px;
-}
-
-.cro-improvement.positive {
-	color: #333;
-}
-
-.cro-improvement.negative {
-	color: #555;
-}
-
-.cro-confidence-bar {
-	height: 8px;
-	background: #eee;
-	border-radius: 4px;
-	overflow: hidden;
-	margin-bottom: 5px;
-}
-
-.cro-confidence-fill {
-	height: 100%;
-	background: #999;
-	transition: width 0.3s;
-}
-
-.cro-confidence-fill.significant {
-	background: #333;
-}
-
-.cro-baseline {
-	color: #666;
-	font-style: italic;
-}
-
-.cro-add-variation {
-	background: #fff;
-	padding: 25px;
-	border-radius: 8px;
-	margin-top: 30px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.cro-form-row {
-	display: flex;
-	gap: 20px;
-	margin-bottom: 15px;
-}
-
-.cro-form-col {
-	flex: 1;
-}
-
-.cro-form-col--small {
-	flex: 0 0 120px;
-}
-
-.cro-form-col label {
-	display: block;
-	margin-bottom: 5px;
-	font-weight: 500;
-}
-
-.cro-form-col input {
-	width: 100%;
-	padding: 8px 12px;
-}
-
-.cro-original {
-	display: block;
-	font-size: 12px;
-	color: #666;
-	margin-top: 5px;
-}
-
-.cro-test-settings {
-	background: #fff;
-	padding: 25px;
-	border-radius: 8px;
-	margin-top: 30px;
-	box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-}
-
-.cro-test-settings h2 {
-	margin-top: 0;
-}
-
-.cro-back-link {
-	text-decoration: none;
-	color: #666;
-	font-size: 14px;
-	font-weight: normal;
-}
-
-/* Status badges use global .cro-status styles (pill + semantic colors) */
-</style>

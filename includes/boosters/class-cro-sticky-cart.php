@@ -57,14 +57,14 @@ class CRO_Sticky_Cart {
 
 		wp_enqueue_style(
 			'cro-sticky-cart',
-			CRO_PLUGIN_URL . 'public/css/cro-sticky-cart.css',
+			CRO_PLUGIN_URL . 'public/css/cro-sticky-cart' . cro_asset_min_suffix() . '.css',
 			array(),
 			CRO_VERSION
 		);
 
 		wp_enqueue_script(
 			'cro-sticky-cart',
-			CRO_PLUGIN_URL . 'public/js/cro-sticky-cart.js',
+			CRO_PLUGIN_URL . 'public/js/cro-sticky-cart' . cro_asset_min_suffix() . '.js',
 			array( 'jquery' ),
 			CRO_VERSION,
 			true
@@ -119,7 +119,8 @@ class CRO_Sticky_Cart {
 	public function ajax_add_to_cart() {
 		check_ajax_referer( 'cro_add_to_cart', 'nonce' );
 
-		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+		$rl_ip = class_exists( 'CRO_Security' ) ? CRO_Security::get_client_ip() : '';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ) . '_' . $rl_ip, 20, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 		$product_id = isset( $_POST['product_id'] ) ? absint( wp_unslash( $_POST['product_id'] ) ) : 0;

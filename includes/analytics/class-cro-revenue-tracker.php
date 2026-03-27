@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -15,6 +14,15 @@ if ( ! defined( 'WPINC' ) ) {
  * CRO_Revenue_Tracker class.
  */
 class CRO_Revenue_Tracker {
+
+	/**
+	 * @return void
+	 */
+	private static function flush_meyvora_cro_read_cache() {
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
 
 	/**
 	 * Constructor.
@@ -32,6 +40,10 @@ class CRO_Revenue_Tracker {
 	 */
 	public function attribute_order_revenue( $order_id ) {
 		if ( ! $order_id ) {
+			return;
+		}
+
+		if ( function_exists( 'cro_settings' ) && ! cro_settings()->get( 'analytics', 'track_revenue', true ) ) {
 			return;
 		}
 
@@ -57,18 +69,28 @@ class CRO_Revenue_Tracker {
 		$campaigns_table = $wpdb->prefix . 'cro_campaigns';
 
 		// Find conversions for this session.
-		$conversions = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT DISTINCT source_type, source_id, coupon_code 
-				FROM {$events_table} 
+		$since = gmdate( 'Y-m-d H:i:s', strtotime( '-24 hours' ) );
+		$cache_key_conv = 'meyvora_cro_' . md5( serialize( array( 'revenue_session_conversions_24h', $events_table, $session_id, $since ) ) );
+		$conversions    = wp_cache_get( $cache_key_conv, 'meyvora_cro' );
+		if ( false === $conversions ) {
+			$conversions = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT DISTINCT source_type, source_id, coupon_code 
+				FROM %i 
 				WHERE session_id = %s 
-				AND event_type = 'conversion'
+				AND event_type = \'conversion\'
 				AND created_at >= %s
-				ORDER BY created_at DESC",
-				$session_id,
-				gmdate( 'Y-m-d H:i:s', strtotime( '-24 hours' ) )
-			)
-		);
+				ORDER BY created_at DESC',
+					$events_table,
+					$session_id,
+					$since
+				)
+			);
+			wp_cache_set( $cache_key_conv, $conversions, 'meyvora_cro', 300 );
+		}
+		if ( ! is_array( $conversions ) ) {
+			$conversions = array();
+		}
 
 		if ( empty( $conversions ) ) {
 			return;
@@ -77,12 +99,14 @@ class CRO_Revenue_Tracker {
 		$order_total  = floatval( $order->get_total() );
 		$order_coupons = $order->get_coupon_codes();
 
+		$track_coupons = ! function_exists( 'cro_settings' ) || cro_settings()->get( 'analytics', 'track_coupons', true );
+
 		foreach ( $conversions as $conversion ) {
 			$attributed = false;
 
 			// Check if coupon from campaign was used.
 			$order_coupons_safe = is_array( $order_coupons ) ? $order_coupons : array();
-			if ( ! empty( $conversion->coupon_code ) && in_array( (string) $conversion->coupon_code, $order_coupons_safe, true ) ) {
+			if ( $track_coupons && ! empty( $conversion->coupon_code ) && in_array( (string) $conversion->coupon_code, $order_coupons_safe, true ) ) {
 				$attributed = true;
 			}
 
@@ -94,19 +118,23 @@ class CRO_Revenue_Tracker {
 
 			if ( $attributed && 'campaign' === $conversion->source_type && $conversion->source_id ) {
 				// Update campaign revenue.
-				$wpdb->query(
+				$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 					$wpdb->prepare(
-						"UPDATE {$campaigns_table} 
+						'UPDATE %i 
 						SET revenue_attributed = revenue_attributed + %f 
-						WHERE id = %d",
+						WHERE id = %d',
+						$campaigns_table,
 						$order_total,
 						$conversion->source_id
 					)
 				);
+				if ( class_exists( 'CRO_Database' ) ) {
+					CRO_Database::invalidate_table_cache_after_write( $campaigns_table );
+				}
+				self::flush_meyvora_cro_read_cache();
 
 				// Log the attribution.
-				$wpdb->update(
-					$events_table,
+				$ev_updated = $wpdb->update( $events_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 					array(
 						'order_id'    => $order_id,
 						'order_value' => $order_total,
@@ -120,6 +148,12 @@ class CRO_Revenue_Tracker {
 					array( '%d', '%f' ),
 					array( '%s', '%s', '%d', '%s' )
 				);
+				if ( false !== $ev_updated ) {
+					if ( class_exists( 'CRO_Database' ) ) {
+						CRO_Database::invalidate_table_cache_after_write( $events_table );
+					}
+					self::flush_meyvora_cro_read_cache();
+				}
 
 				// Mark order as attributed.
 				$order->update_meta_data( '_cro_attributed', true );
@@ -142,6 +176,17 @@ class CRO_Revenue_Tracker {
 	}
 
 	/**
+	 * Clamp days argument for date range queries (avoids strtotime injection / huge scans).
+	 *
+	 * @param mixed $days Raw days value.
+	 * @return int Between 1 and 730.
+	 */
+	private static function normalize_days_range( $days ) {
+		$d = (int) $days;
+		return max( 1, min( 730, $d ) );
+	}
+
+	/**
 	 * Get revenue stats for the analytics admin page (last N days).
 	 *
 	 * @param int $days Number of days to include. Default 30.
@@ -150,26 +195,39 @@ class CRO_Revenue_Tracker {
 	public static function get_revenue_stats( $days = 30 ) {
 		global $wpdb;
 		$events_table = $wpdb->prefix . 'cro_events';
-		$date_limit   = gmdate( 'Y-m-d H:i:s', strtotime( "-{$days} days" ) );
+		$days         = self::normalize_days_range( $days );
+		$date_limit   = gmdate( 'Y-m-d H:i:s', strtotime( '-' . $days . ' days' ) );
 
-		$total_revenue = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COALESCE(SUM(order_value), 0) FROM {$events_table} 
-				WHERE event_type = 'conversion' 
+		$cache_key_sum = 'meyvora_cro_' . md5( serialize( array( 'revenue_stats_sum_order_value', $events_table, $date_limit ) ) );
+		$total_revenue = wp_cache_get( $cache_key_sum, 'meyvora_cro' );
+		if ( false === $total_revenue ) {
+			$total_revenue = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COALESCE(SUM(order_value), 0) FROM %i 
+				WHERE event_type = \'conversion\' 
 				AND order_value > 0 
-				AND created_at >= %s",
-				$date_limit
-			)
-		);
-		$order_count   = $wpdb->get_var(
-			$wpdb->prepare(
-				"SELECT COUNT(DISTINCT order_id) FROM {$events_table} 
-				WHERE event_type = 'conversion' 
+				AND created_at >= %s',
+					$events_table,
+					$date_limit
+				)
+			);
+			wp_cache_set( $cache_key_sum, $total_revenue, 'meyvora_cro', 300 );
+		}
+		$cache_key_cnt = 'meyvora_cro_' . md5( serialize( array( 'revenue_stats_distinct_orders', $events_table, $date_limit ) ) );
+		$order_count   = wp_cache_get( $cache_key_cnt, 'meyvora_cro' );
+		if ( false === $order_count ) {
+			$order_count = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT COUNT(DISTINCT order_id) FROM %i 
+				WHERE event_type = \'conversion\' 
 				AND order_id IS NOT NULL 
-				AND created_at >= %s",
-				$date_limit
-			)
-		);
+				AND created_at >= %s',
+					$events_table,
+					$date_limit
+				)
+			);
+			wp_cache_set( $cache_key_cnt, $order_count, 'meyvora_cro', 300 );
+		}
 
 		return array(
 			'total_revenue' => isset( $total_revenue ) ? floatval( $total_revenue ) : 0.0,

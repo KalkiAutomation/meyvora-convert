@@ -1,6 +1,35 @@
 /**
  * CRO Offers admin – Offer Builder drawer, AJAX save, cards update.
  */
+(function () {
+	var el = document.getElementById( 'cro-offers-page-data' );
+	if ( el && el.textContent ) {
+		try {
+			var d = JSON.parse( el.textContent );
+			if ( Array.isArray( d.offersData ) ) {
+				window.croOffersData = d.offersData;
+			}
+			if ( d.maxOffers != null ) {
+				window.croOffersMaxOffers = d.maxOffers;
+			}
+			if ( d.usedCount != null ) {
+				window.croOffersUsedCount = d.usedCount;
+			}
+			if ( d.nonce ) {
+				window.croOffersNonce = d.nonce;
+			}
+			if ( d.productCategories ) {
+				window.croOffersProductCategories = d.productCategories;
+			}
+			if ( d.offerConflictChoices ) {
+				window.croOfferConflictChoices = d.offerConflictChoices;
+			}
+		} catch ( e ) {
+			// Invalid bootstrap JSON; cro-offers.js falls back to empty defaults.
+		}
+	}
+} )();
+
 (function ($) {
 	'use strict';
 
@@ -15,6 +44,14 @@
 	var maxOffers = parseInt(window.croOffersMaxOffers, 10) || 5;
 	var offersData = Array.isArray(window.croOffersData) ? window.croOffersData : [];
 	var usedCount = parseInt(window.croOffersUsedCount, 10) || 0;
+	if ( usedCount >= maxOffers ) {
+		document.addEventListener( 'DOMContentLoaded', function () {
+			var b = document.getElementById( 'cro-offers-add-btn' );
+			if ( b ) {
+				b.disabled = true;
+			}
+		} );
+	}
 	var drawerReturnFocusEl = null;
 
 	var i18n = (window.croOffersI18n || {});

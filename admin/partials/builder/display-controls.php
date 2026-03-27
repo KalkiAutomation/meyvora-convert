@@ -37,7 +37,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'sparkles', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'sparkles', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 			<?php esc_html_e( 'AI copy', 'meyvora-convert' ); ?>
 		</h3>
 		<p class="cro-hint"><?php esc_html_e( 'Generated text fills Headline, Body, and CTA on the Content tab.', 'meyvora-convert' ); ?></p>
@@ -58,7 +58,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- Frequency -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'refresh', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'refresh', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Frequency', 'meyvora-convert' ); ?>
 		</h3>
@@ -155,7 +155,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- Priority -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'trending-up', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Priority', 'meyvora-convert' ); ?>
 		</h3>
@@ -182,7 +182,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- Schedule -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'calendar', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'calendar', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Schedule', 'meyvora-convert' ); ?>
 		</h3>
@@ -254,7 +254,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- Conversion Goal -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'Conversion Goal', 'meyvora-convert' ); ?>
 		</h3>
@@ -291,7 +291,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- After Conversion -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 			<?php esc_html_e( 'After Conversion', 'meyvora-convert' ); ?>
 		</h3>
@@ -323,7 +323,7 @@ if ( class_exists( 'CRO_Campaign' ) ) {
 	<!-- Dismiss fallback chain -->
 	<div class="cro-rule-section">
 		<h3>
-			<span class="cro-section-icon"><?php echo CRO_Icons::svg_kses( 'refresh', array( 'class' => 'cro-ico' ) ); ?></span>
+			<span class="cro-section-icon"><?php echo wp_kses( CRO_Icons::svg( 'refresh', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 			<?php esc_html_e( 'Fallback after dismiss', 'meyvora-convert' ); ?>
 		</h3>
 		<p class="cro-hint"><?php esc_html_e( 'When a visitor closes this popup, optionally show another campaign after a delay.', 'meyvora-convert' ); ?></p>

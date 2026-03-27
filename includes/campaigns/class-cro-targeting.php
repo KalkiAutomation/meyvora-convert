@@ -164,7 +164,7 @@ class CRO_Targeting {
 	/**
 	 * Check page targeting rules.
 	 *
-	 * @param array $rules   Page rules (include, exclude).
+	 * @param array $rules   Page rules (include, excluded_pages).
 	 * @param array $context Context with page_type.
 	 * @return bool
 	 */
@@ -176,7 +176,7 @@ class CRO_Targeting {
 		$page_type = $context['page_type'] ?? '';
 
 		// Check exclusions first.
-		$exclude = $rules['exclude'] ?? array();
+		$exclude = class_exists( 'CRO_Campaign_Model' ) ? CRO_Campaign_Model::get_pages_excluded_slugs( $rules ) : array();
 		if ( is_array( $exclude ) && in_array( $page_type, $exclude, true ) ) {
 			return false;
 		}

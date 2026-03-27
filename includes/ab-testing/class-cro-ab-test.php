@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -30,6 +29,21 @@ class CRO_AB_Test {
 	}
 
 	/**
+	 * Invalidate CRO_Database table_exists cache for a table after a write.
+	 *
+	 * @param string $table Full table name.
+	 * @return void
+	 */
+	private function bust_cro_table_cache( $table ) {
+		if ( class_exists( 'CRO_Database' ) ) {
+			CRO_Database::invalidate_table_cache_after_write( $table );
+		}
+		if ( function_exists( 'wp_cache_flush_group' ) ) {
+			wp_cache_flush_group( 'meyvora_cro' );
+		}
+	}
+
+	/**
 	 * Create a new A/B test
 	 *
 	 * @param array $data Test data.
@@ -38,8 +52,7 @@ class CRO_AB_Test {
 	public function create( $data ) {
 		global $wpdb;
 
-		$inserted = $wpdb->insert(
-			$this->table,
+		$inserted = $wpdb->insert( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			array(
 				'name'                  => sanitize_text_field( $data['name'] ?? '' ),
 				'original_campaign_id'  => absint( $data['campaign_id'] ?? 0 ),
@@ -55,6 +68,8 @@ class CRO_AB_Test {
 		if ( ! $inserted ) {
 			return new WP_Error( 'create_failed', __( 'Failed to create A/B test.', 'meyvora-convert' ) );
 		}
+
+		$this->bust_cro_table_cache( $this->table );
 
 		$test_id = (int) $wpdb->insert_id;
 		$campaign_id = absint( $data['campaign_id'] ?? 0 );
@@ -86,11 +101,20 @@ class CRO_AB_Test {
 		if ( ! $campaign_id ) {
 			return null;
 		}
-		$table   = $wpdb->prefix . 'cro_campaigns';
-		$campaign = $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$table} WHERE id = %d",
-			$campaign_id
-		), ARRAY_A );
+		$table      = $wpdb->prefix . 'cro_campaigns';
+		$cache_key  = 'meyvora_cro_' . md5( serialize( array( 'ab_campaign_row_by_id', $table, $campaign_id ) ) );
+		$campaign   = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $campaign ) {
+			$campaign = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table,
+					$campaign_id
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $cache_key, $campaign, 'meyvora_cro', 300 );
+		}
 		return $campaign ? wp_json_encode( $campaign ) : null;
 	}
 
@@ -111,8 +135,7 @@ class CRO_AB_Test {
 		if ( is_array( $campaign_data ) || is_object( $campaign_data ) ) {
 			$campaign_data = wp_json_encode( $campaign_data );
 		}
-		$inserted = $wpdb->insert(
-			$this->variations_table,
+		$inserted = $wpdb->insert( $this->variations_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
 			array(
 				'test_id'        => $test_id,
 				'name'           => sanitize_text_field( $data['name'] ?? '' ),
@@ -122,6 +145,9 @@ class CRO_AB_Test {
 			),
 			array( '%d', '%s', '%d', '%d', '%s' )
 		);
+		if ( $inserted ) {
+			$this->bust_cro_table_cache( $this->variations_table );
+		}
 		return $inserted ? (int) $wpdb->insert_id : false;
 	}
     
@@ -137,10 +163,18 @@ class CRO_AB_Test {
 		if ( ! $test_id ) {
 			return null;
 		}
-		$test = $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$this->table} WHERE id = %d",
-			$test_id
-		) );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'abtest_by_id', $this->table, $test_id ) ) );
+		$test      = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $test ) {
+			$test = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$this->table,
+					$test_id
+				)
+			);
+			wp_cache_set( $cache_key, $test, 'meyvora_cro', 300 );
+		}
 		if ( $test ) {
 			$test->variations = $this->get_variations( $test_id );
 		}
@@ -159,17 +193,38 @@ class CRO_AB_Test {
 		if ( ! $test_id ) {
 			return array();
 		}
-		$table_exists = $wpdb->get_var( $wpdb->prepare(
-			"SHOW TABLES LIKE %s",
-			$this->variations_table
-		) );
+		$cache_key_var_exists = 'meyvora_cro_' . md5( serialize( array( 'ab_variations_table_exists', $this->variations_table ) ) );
+		$table_exists         = wp_cache_get( $cache_key_var_exists, 'meyvora_cro' );
+		if ( false === $table_exists ) {
+			$table_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SHOW TABLES LIKE %s',
+					$this->variations_table
+				)
+			);
+			wp_cache_set( $cache_key_var_exists, $table_exists, 'meyvora_cro', 300 );
+		}
 		if ( ! $table_exists ) {
 			return array();
 		}
-		return $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM {$this->variations_table} WHERE test_id = %d ORDER BY is_control DESC, id ASC",
-			$test_id
-		) );
+		$cache_key_vars = 'meyvora_cro_' . md5( serialize( array( 'ab_variations_by_test', $this->variations_table, $test_id ) ) );
+		$rows           = wp_cache_get( $cache_key_vars, 'meyvora_cro' );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE test_id = %d ORDER BY is_control DESC, id ASC',
+					$this->variations_table,
+					$test_id
+				)
+			);
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
+			wp_cache_set( $cache_key_vars, $rows, 'meyvora_cro', 300 );
+		} else {
+			$rows = is_array( $rows ) ? $rows : array();
+		}
+		return $rows;
 	}
     
 	/**
@@ -191,10 +246,17 @@ class CRO_AB_Test {
 	public function get_all( $args = array() ) {
 		global $wpdb;
 
-		$table_exists = $wpdb->get_var( $wpdb->prepare(
-			"SHOW TABLES LIKE %s",
-			$this->table
-		) );
+		$cache_key_tests_exists = 'meyvora_cro_' . md5( serialize( array( 'ab_tests_table_exists', $this->table ) ) );
+		$table_exists = wp_cache_get( $cache_key_tests_exists, 'meyvora_cro' );
+		if ( false === $table_exists ) {
+			$table_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SHOW TABLES LIKE %s',
+					$this->table
+				)
+			);
+			wp_cache_set( $cache_key_tests_exists, $table_exists, 'meyvora_cro', 300 );
+		}
 		if ( ! $table_exists ) {
 			return array();
 		}
@@ -211,20 +273,48 @@ class CRO_AB_Test {
 		$offset = $offset >= 0 ? $offset : 0;
 
 		if ( ! empty( $args['status'] ) ) {
-			$status = sanitize_text_field( $args['status'] );
-			return $wpdb->get_results( $wpdb->prepare(
-				"SELECT * FROM {$this->table} WHERE status = %s ORDER BY created_at DESC LIMIT %d OFFSET %d",
-				$status,
-				$limit,
-				$offset
-			) );
+			$status    = sanitize_text_field( $args['status'] );
+			$cache_key = 'meyvora_cro_' . md5( serialize( array( 'ab_tests_list_by_status', $this->table, $status, $limit, $offset ) ) );
+			$result    = wp_cache_get( $cache_key, 'meyvora_cro' );
+			if ( false === $result ) {
+				$result = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+					$wpdb->prepare(
+						'SELECT * FROM %i WHERE status = %s ORDER BY created_at DESC LIMIT %d OFFSET %d',
+						$this->table,
+						$status,
+						$limit,
+						$offset
+					)
+				);
+				if ( ! is_array( $result ) ) {
+					$result = array();
+				}
+				wp_cache_set( $cache_key, $result, 'meyvora_cro', 300 );
+			} else {
+				$result = is_array( $result ) ? $result : array();
+			}
+			return $result;
 		}
 
-		return $wpdb->get_results( $wpdb->prepare(
-			"SELECT * FROM {$this->table} WHERE 1=1 ORDER BY created_at DESC LIMIT %d OFFSET %d",
-			$limit,
-			$offset
-		) );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'ab_tests_list_all', $this->table, $limit, $offset ) ) );
+		$result    = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $result ) {
+			$result = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE 1=1 ORDER BY created_at DESC LIMIT %d OFFSET %d',
+					$this->table,
+					$limit,
+					$offset
+				)
+			);
+			if ( ! is_array( $result ) ) {
+				$result = array();
+			}
+			wp_cache_set( $cache_key, $result, 'meyvora_cro', 300 );
+		} else {
+			$result = is_array( $result ) ? $result : array();
+		}
+		return $result;
 	}
     
 	/**
@@ -240,8 +330,7 @@ class CRO_AB_Test {
 		if ( ! $test || ( isset( $test->variations ) && count( $test->variations ) < 2 ) ) {
 			return new WP_Error( 'invalid_test', __( 'Test must have at least 2 variations.', 'meyvora-convert' ) );
 		}
-		return $wpdb->update(
-			$this->table,
+		$result = $wpdb->update( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'status'     => 'running',
 				'started_at' => current_time( 'mysql' ),
@@ -250,6 +339,10 @@ class CRO_AB_Test {
 			array( '%s', '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $result ) {
+			$this->bust_cro_table_cache( $this->table );
+		}
+		return $result;
 	}
 
 	/**
@@ -261,13 +354,16 @@ class CRO_AB_Test {
 	public function pause( $test_id ) {
 		global $wpdb;
 		$test_id = absint( $test_id );
-		return $wpdb->update(
-			$this->table,
+		$result  = $wpdb->update( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array( 'status' => 'paused' ),
 			array( 'id' => $test_id ),
 			array( '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $result ) {
+			$this->bust_cro_table_cache( $this->table );
+		}
+		return $result;
 	}
 
 	/**
@@ -287,13 +383,16 @@ class CRO_AB_Test {
 			$data['completed_at'] = current_time( 'mysql' );
 			$format[]             = '%s';
 		}
-		return $wpdb->update(
-			$this->table,
+		$result = $wpdb->update( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			$data,
 			array( 'id' => $test_id ),
 			$format,
 			array( '%d' )
 		);
+		if ( false !== $result ) {
+			$this->bust_cro_table_cache( $this->table );
+		}
+		return $result;
 	}
 
 	/**
@@ -307,8 +406,7 @@ class CRO_AB_Test {
 		global $wpdb;
 		$test_id = absint( $test_id );
 		$winner_variation_id = $winner_variation_id !== null ? absint( $winner_variation_id ) : null;
-		return $wpdb->update(
-			$this->table,
+		$result              = $wpdb->update( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			array(
 				'status'               => 'completed',
 				'winner_variation_id'  => $winner_variation_id,
@@ -318,6 +416,10 @@ class CRO_AB_Test {
 			array( '%s', '%d', '%s' ),
 			array( '%d' )
 		);
+		if ( false !== $result ) {
+			$this->bust_cro_table_cache( $this->table );
+		}
+		return $result;
 	}
     
 	/**
@@ -332,10 +434,13 @@ class CRO_AB_Test {
 		if ( ! $test_id ) {
 			return false;
 		}
-		$wpdb->delete( $this->assignments_table, array( 'test_id' => $test_id ), array( '%d' ) );
-		$wpdb->delete( $this->variations_table, array( 'test_id' => $test_id ), array( '%d' ) );
-		$result = $wpdb->delete( $this->table, array( 'id' => $test_id ), array( '%d' ) );
+		$wpdb->delete( $this->assignments_table, array( 'test_id' => $test_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+		$this->bust_cro_table_cache( $this->assignments_table );
+		$wpdb->delete( $this->variations_table, array( 'test_id' => $test_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+		$this->bust_cro_table_cache( $this->variations_table );
+		$result = $wpdb->delete( $this->table, array( 'id' => $test_id ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 		if ( $result !== false ) {
+			$this->bust_cro_table_cache( $this->table );
 			do_action( 'cro_abtest_deleted', $test_id );
 		}
 		return $result !== false;
@@ -352,10 +457,13 @@ class CRO_AB_Test {
 		if ( ! $variation_id ) {
 			return;
 		}
-		$wpdb->query( $wpdb->prepare(
-			"UPDATE {$this->variations_table} SET impressions = impressions + 1 WHERE id = %d",
-			$variation_id
-		) );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+			$wpdb->prepare(
+				'UPDATE %i SET impressions = impressions + 1 WHERE id = %d',
+				$this->variations_table,
+				$variation_id
+			) );
+		$this->bust_cro_table_cache( $this->variations_table );
 	}
 
 	/**
@@ -371,11 +479,14 @@ class CRO_AB_Test {
 		if ( ! $variation_id ) {
 			return;
 		}
-		$wpdb->query( $wpdb->prepare(
-			"UPDATE {$this->variations_table} SET conversions = conversions + 1, revenue = revenue + %f WHERE id = %d",
-			$revenue,
-			$variation_id
-		) );
+		$wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+			$wpdb->prepare(
+				'UPDATE %i SET conversions = conversions + 1, revenue = revenue + %f WHERE id = %d',
+				$this->variations_table,
+				$revenue,
+				$variation_id
+			) );
+		$this->bust_cro_table_cache( $this->variations_table );
 		if ( function_exists( 'do_action' ) ) {
 			do_action( 'cro_ab_conversion_recorded', $variation_id, $revenue );
 		}
@@ -393,10 +504,19 @@ class CRO_AB_Test {
 		if ( ! $campaign_id ) {
 			return null;
 		}
-		return $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$this->table} WHERE original_campaign_id = %d AND status = 'running' LIMIT 1",
-			$campaign_id
-		) );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'ab_active_test_for_campaign', $this->table, $campaign_id ) ) );
+		$row       = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE original_campaign_id = %d AND status = \'running\' LIMIT 1',
+					$this->table,
+					$campaign_id
+				)
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		}
+		return $row;
 	}
 
 	/**
@@ -454,11 +574,19 @@ class CRO_AB_Test {
 		if ( ! $test_id || $visitor_id === '' ) {
 			return null;
 		}
-		$variation_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT variation_id FROM {$this->assignments_table} WHERE test_id = %d AND visitor_id = %s LIMIT 1",
-			$test_id,
-			$visitor_id
-		) );
+		$cache_key     = 'meyvora_cro_' . md5( serialize( array( 'ab_visitor_variation_assignment', $this->assignments_table, $test_id, $visitor_id ) ) );
+		$variation_id  = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $variation_id ) {
+			$variation_id = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT variation_id FROM %i WHERE test_id = %d AND visitor_id = %s LIMIT 1',
+					$this->assignments_table,
+					$test_id,
+					$visitor_id
+				)
+			);
+			wp_cache_set( $cache_key, $variation_id, 'meyvora_cro', 300 );
+		}
 		return $variation_id !== null ? (int) $variation_id : null;
 	}
 
@@ -480,14 +608,19 @@ class CRO_AB_Test {
 			return false;
 		}
 		$now = current_time( 'mysql' );
-		$result = $wpdb->query( $wpdb->prepare(
-			"INSERT INTO {$this->assignments_table} (test_id, visitor_id, variation_id, assigned_at) VALUES (%d, %s, %d, %s)
-			ON DUPLICATE KEY UPDATE variation_id = VALUES(variation_id), assigned_at = VALUES(assigned_at)",
-			$test_id,
-			$visitor_id,
-			$variation_id,
-			$now
-		) );
+		$result = $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+			$wpdb->prepare(
+				'INSERT INTO %i (test_id, visitor_id, variation_id, assigned_at) VALUES (%d, %s, %d, %s)
+			ON DUPLICATE KEY UPDATE variation_id = VALUES(variation_id), assigned_at = VALUES(assigned_at)',
+				$this->assignments_table,
+				$test_id,
+				$visitor_id,
+				$variation_id,
+				$now
+			) );
+		if ( $result !== false ) {
+			$this->bust_cro_table_cache( $this->assignments_table );
+		}
 		return $result !== false;
 	}
 
@@ -518,10 +651,19 @@ class CRO_AB_Test {
 		if ( ! $variation_id ) {
 			return null;
 		}
-		return $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$this->variations_table} WHERE id = %d",
-			$variation_id
-		) );
+		$cache_key = 'meyvora_cro_' . md5( serialize( array( 'ab_variation_by_id', $this->variations_table, $variation_id ) ) );
+		$row       = wp_cache_get( $cache_key, 'meyvora_cro' );
+		if ( false === $row ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$this->variations_table,
+					$variation_id
+				)
+			);
+			wp_cache_set( $cache_key, $row, 'meyvora_cro', 300 );
+		}
+		return $row;
 	}
 
 	/**
@@ -575,8 +717,7 @@ class CRO_AB_Test {
 		$campaigns_table = $wpdb->prefix . 'cro_campaigns';
 		$original_id    = (int) $test->original_campaign_id;
 		$formats        = array_fill( 0, count( $data ), '%s' );
-		$updated = $wpdb->update(
-			$campaigns_table,
+		$updated = $wpdb->update( $campaigns_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 			$data,
 			array( 'id' => $original_id ),
 			$formats,
@@ -584,15 +725,69 @@ class CRO_AB_Test {
 		);
 
 		if ( $updated !== false ) {
-			$wpdb->update(
-				$this->table,
+			$wpdb->update( $this->table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
 				array( 'winner_variation_id' => $variation_id ),
 				array( 'id' => $test_id ),
 				array( '%d' ),
 				array( '%d' )
 			);
+			$this->bust_cro_table_cache( $this->table );
+			// Mark winning row for reporting (columns added in DB 1.9.0).
+			$wpdb->update( $this->variations_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+				array( 'is_winner' => 0 ),
+				array( 'test_id' => $test_id ),
+				array( '%d' ),
+				array( '%d' )
+			);
+			$this->bust_cro_table_cache( $this->variations_table );
+			$wpdb->update( $this->variations_table, // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+				array(
+					'is_winner'         => 1,
+					'winner_applied_at' => current_time( 'mysql' ),
+				),
+				array( 'id' => $variation_id ),
+				array( '%d', '%s' ),
+				array( '%d' )
+			);
+			$this->bust_cro_table_cache( $this->variations_table );
+			$this->bust_cro_table_cache( $campaigns_table );
+			do_action( 'cro_ab_test_winner_applied', $test_id, $variation_id, $original_id );
+			self::maybe_email_winner_applied( $test_id, $variation_id, $original_id );
 		}
 
 		return $updated !== false;
+	}
+
+	/**
+	 * Email shop admin when a winning variation is applied to the live campaign.
+	 *
+	 * @param int $test_id       Test ID.
+	 * @param int $variation_id  Variation ID.
+	 * @param int $campaign_id   Original campaign ID.
+	 */
+	private static function maybe_email_winner_applied( $test_id, $variation_id, $campaign_id ) {
+		if ( ! function_exists( 'cro_settings' ) || ! cro_settings()->get( 'analytics', 'ab_winner_email_enabled', true ) ) {
+			return;
+		}
+		$to = cro_settings()->get( 'analytics', 'ab_winner_notify_email', '' );
+		if ( ! is_string( $to ) || ! is_email( $to ) ) {
+			$to = get_option( 'admin_email', '' );
+		}
+		if ( ! is_email( $to ) ) {
+			return;
+		}
+		$subj = sprintf(
+			/* translators: 1: site name */
+			__( '[%1$s] A/B test winner applied', 'meyvora-convert' ),
+			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
+		);
+		$body = sprintf(
+			/* translators: 1: test id, 2: variation id, 3: campaign id */
+			__( 'A/B test #%1$d: winning variation %2$d was applied to campaign #%3$d.', 'meyvora-convert' ),
+			(int) $test_id,
+			(int) $variation_id,
+			(int) $campaign_id
+		);
+		wp_mail( $to, $subj, $body );
 	}
 }

@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- AI eligibility reads only.
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -17,6 +16,21 @@ class CRO_AI_AB_Hypothesis {
 
 	const RATE_ACTION = 'ab_hypothesis';
 	const RATE_LIMIT  = 20;
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Whether campaign qualifies for AI ideas (analytics window).
@@ -52,23 +66,31 @@ class CRO_AI_AB_Hypothesis {
 		$table     = $wpdb->prefix . 'cro_events';
 		$date_to   = wp_date( 'Y-m-d' );
 		$date_from = wp_date( 'Y-m-d', strtotime( '-90 days' ) );
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				'SELECT source_id,
+		$ck_rows   = self::read_cache_key( 'low_converting_campaigns_90d', array( $table, $date_from, $date_to ) );
+		$rows      = wp_cache_get( $ck_rows, self::DB_READ_CACHE_GROUP );
+		if ( false === $rows ) {
+			$rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT source_id,
 					SUM(CASE WHEN event_type = \'impression\' THEN 1 ELSE 0 END) AS imp,
 					SUM(CASE WHEN event_type = \'conversion\' THEN 1 ELSE 0 END) AS conv
 				FROM %i
-				WHERE DATE(created_at) BETWEEN %s AND %s
+				WHERE created_at >= %s AND created_at < DATE_ADD(%s, INTERVAL 1 DAY)
 				AND source_type = \'campaign\'
 				AND event_type IN (\'impression\', \'conversion\')
 				GROUP BY source_id
 				HAVING imp >= 50 AND conv * 100 < imp * 3',
-				$table,
-				$date_from,
-				$date_to
-			),
-			ARRAY_A
-		);
+					$table,
+					$date_from,
+					$date_to
+				),
+				ARRAY_A
+			);
+			if ( ! is_array( $rows ) ) {
+				$rows = array();
+			}
+			wp_cache_set( $ck_rows, $rows, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		$out = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $r ) {
@@ -118,15 +140,21 @@ class CRO_AI_AB_Hypothesis {
 		}
 
 		global $wpdb;
-		$table = $wpdb->prefix . 'cro_campaigns';
-		$row   = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM %i WHERE id = %d',
-				$table,
-				$campaign_id
-			),
-			ARRAY_A
-		);
+		$table    = $wpdb->prefix . 'cro_campaigns';
+		$ck_row   = self::read_cache_key( 'campaign_by_id', array( $campaign_id ) );
+		$found    = false;
+		$row      = wp_cache_get( $ck_row, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$row = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table,
+					$campaign_id
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $ck_row, $row, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		if ( ! is_array( $row ) ) {
 			return new WP_Error( 'not_found', __( 'Campaign not found.', 'meyvora-convert' ) );
 		}
@@ -339,14 +367,20 @@ class CRO_AI_AB_Hypothesis {
 
 		global $wpdb;
 		$table    = $wpdb->prefix . 'cro_campaigns';
-		$original = $wpdb->get_row(
-			$wpdb->prepare(
-				'SELECT * FROM %i WHERE id = %d',
-				$table,
-				$campaign_id
-			),
-			ARRAY_A
-		);
+		$ck_orig  = self::read_cache_key( 'campaign_by_id', array( $campaign_id ) );
+		$found_o  = false;
+		$original = wp_cache_get( $ck_orig, self::DB_READ_CACHE_GROUP, false, $found_o );
+		if ( ! $found_o ) {
+			$original = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table,
+					$campaign_id
+				),
+				ARRAY_A
+			);
+			wp_cache_set( $ck_orig, $original, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 		if ( ! $original ) {
 			return false;
 		}
@@ -379,4 +413,3 @@ class CRO_AI_AB_Hypothesis {
 	}
 }
 
-// phpcs:enable

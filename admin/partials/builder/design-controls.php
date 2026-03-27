@@ -7,6 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && is_array( $campaign_data->styling ) )
 	? $campaign_data->styling
 	: array();
+$wheel_slices_json = isset( $wheel_slices_json ) ? (string) $wheel_slices_json : '';
 ?>
 
 <div class="cro-design-controls">
@@ -136,16 +137,16 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 		<label><?php esc_html_e( 'Position', 'meyvora-convert' ); ?></label>
 		<div class="cro-position-grid">
 			<button type="button" data-position="top-left" class="cro-position-btn<?php echo $position === 'top-left' ? ' active' : ''; ?>">↖</button>
-			<button type="button" data-position="top-center" class="cro-position-btn<?php echo $position === 'top-center' ? ' active' : ''; ?>"><?php echo CRO_Icons::svg_kses( 'chevron-up', array( 'class' => 'cro-ico' ) ); ?></button>
+			<button type="button" data-position="top-center" class="cro-position-btn<?php echo $position === 'top-center' ? ' active' : ''; ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			<button type="button" data-position="top-right" class="cro-position-btn<?php echo $position === 'top-right' ? ' active' : ''; ?>">↗</button>
-			<button type="button" data-position="center-left" class="cro-position-btn<?php echo $position === 'center-left' ? ' active' : ''; ?>"><?php echo CRO_Icons::svg_kses( 'chevron-left', array( 'class' => 'cro-ico' ) ); ?></button>
+			<button type="button" data-position="center-left" class="cro-position-btn<?php echo $position === 'center-left' ? ' active' : ''; ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-left', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			<button type="button" data-position="center" class="cro-position-btn<?php echo $position === 'center' ? ' active' : ''; ?>">•</button>
-			<button type="button" data-position="center-right" class="cro-position-btn<?php echo $position === 'center-right' ? ' active' : ''; ?>"><?php echo CRO_Icons::svg_kses( 'chevron-right', array( 'class' => 'cro-ico' ) ); ?></button>
+			<button type="button" data-position="center-right" class="cro-position-btn<?php echo $position === 'center-right' ? ' active' : ''; ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-right', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			<button type="button" data-position="bottom-left" class="cro-position-btn<?php echo $position === 'bottom-left' ? ' active' : ''; ?>">↙</button>
-			<button type="button" data-position="bottom-center" class="cro-position-btn<?php echo $position === 'bottom-center' ? ' active' : ''; ?>"><?php echo CRO_Icons::svg_kses( 'chevron-down', array( 'class' => 'cro-ico' ) ); ?></button>
+			<button type="button" data-position="bottom-center" class="cro-position-btn<?php echo $position === 'bottom-center' ? ' active' : ''; ?>"><?php echo wp_kses( CRO_Icons::svg( 'chevron-down', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></button>
 
 			<button type="button" data-position="bottom-right" class="cro-position-btn<?php echo $position === 'bottom-right' ? ' active' : ''; ?>">↘</button>
 		</div>
@@ -159,6 +160,23 @@ $styling = ( is_object( $campaign_data ) && isset( $campaign_data->styling ) && 
 				  rows="5"
 				  placeholder="<?php esc_attr_e( '.cro-popup { /* your styles */ }', 'meyvora-convert' ); ?>"
 		><?php echo esc_textarea( $styling['custom_css'] ?? '' ); ?></textarea>
+	</div>
+
+	<div class="cro-design-section" id="cro-wheel-config-section" style="display:none;">
+		<h4><?php esc_html_e( 'Wheel slices', 'meyvora-convert' ); ?></h4>
+		<p class="cro-hint"><?php esc_html_e( 'Configure each segment. "Win" slices give the visitor a coupon.', 'meyvora-convert' ); ?></p>
+		<table class="widefat" id="cro-wheel-slices-table" style="max-width:640px;">
+			<thead><tr>
+				<th style="width:24px;"></th>
+				<th><?php esc_html_e( 'Label', 'meyvora-convert' ); ?></th>
+				<th><?php esc_html_e( 'Type', 'meyvora-convert' ); ?></th>
+				<th><?php esc_html_e( 'Colour', 'meyvora-convert' ); ?></th>
+				<th style="width:40px;"></th>
+			</tr></thead>
+			<tbody id="cro-wheel-slices-body"></tbody>
+		</table>
+		<p><button type="button" class="button" id="cro-wheel-add-slice"><?php esc_html_e( '+ Add slice', 'meyvora-convert' ); ?></button></p>
+		<input type="hidden" name="wheel_slices" id="cro-wheel-slices-json" value="<?php echo esc_attr( $wheel_slices_json ); ?>" />
 	</div>
 
 </div>

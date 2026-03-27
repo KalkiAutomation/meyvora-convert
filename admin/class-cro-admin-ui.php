@@ -36,6 +36,10 @@ class CRO_Admin_UI {
 				'label' => __( 'Campaigns', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-campaigns' ),
 			),
+			'cro-sequences'       => array(
+				'label' => __( 'Sequences', 'meyvora-convert' ),
+				'url'   => admin_url( 'admin.php?page=cro-sequences' ),
+			),
 			'cro-offers'          => array(
 				'label' => __( 'Offers', 'meyvora-convert' ),
 				'url'   => admin_url( 'admin.php?page=cro-offers' ),
@@ -188,7 +192,7 @@ class CRO_Admin_UI {
 			echo '<div class="cro-ui-header__meta">';
 			foreach ( $header_meta as $meta ) {
 				if ( is_string( $meta ) ) {
-					echo $meta; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- caller responsibility
+					echo wp_kses_post( $meta );
 				}
 			}
 			echo '</div>';
@@ -223,11 +227,11 @@ class CRO_Admin_UI {
 			} elseif ( ! empty( $primary_action['form_id'] ) ) {
 				echo '<button type="submit" form="' . esc_attr( $primary_action['form_id'] ) . '" class="button button-primary cro-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_action['button_id'] ) ) {
-				$attr_str = '';
+				echo '<button type="button" id="' . esc_attr( $primary_action['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"';
 				foreach ( $attrs as $attr_key => $attr_val ) {
-					$attr_str .= ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
+					echo ' ' . esc_attr( $attr_key ) . '="' . esc_attr( $attr_val ) . '"';
 				}
-				echo '<button type="button" id="' . esc_attr( $primary_action['button_id'] ) . '" class="button button-primary cro-ui-btn-primary"' . $attr_str . '>' . esc_html( $primary_action['label'] ) . '</button>';
+				echo '>' . esc_html( $primary_action['label'] ) . '</button>';
 			}
 			echo '</div>';
 		}
@@ -268,9 +272,9 @@ class CRO_Admin_UI {
 		echo '<div class="cro-card cro-ui-card">';
 		echo '<header class="cro-card__header cro-ui-card__header"><h2 class="cro-card__title">' . esc_html( $title ) . '</h2></header>';
 		echo '<div class="cro-card__body cro-ui-card__body">';
-		echo $content_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- caller responsibility
+		echo wp_kses_post( $content_html );
 		if ( $actions_html !== '' ) {
-			echo '<div class="cro-card__actions cro-ui-card__actions">' . $actions_html . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			echo '<div class="cro-card__actions cro-ui-card__actions">' . wp_kses_post( $actions_html ) . '</div>';
 		}
 		echo '</div></div>';
 	}

@@ -193,14 +193,12 @@ body.cro-popup-open {
   background: var(--cro-gray-100);
 }
 
-@scope (.cro-popup) {
-  .cro-popup__image img,
-  .cro-preview-image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
+.cro-popup__image img,
+.cro-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* CTA Button */
@@ -1120,6 +1118,62 @@ body.cro-popup-open {
     width: auto;
     max-width: none;
   }
+}
+
+/* Spin to win */
+.cro-popup--gamified-wheel {
+  max-width: 420px;
+  padding: 1.5rem 1.25rem 1.75rem;
+  text-align: center;
+}
+.cro-popup--gamified-wheel .cro-wheel-body {
+  padding-top: 0.25rem;
+}
+.cro-popup--gamified-wheel .cro-wheel-headline {
+  margin: 0 0 0.5rem;
+  font-size: 1.35rem;
+  line-height: 1.25;
+}
+.cro-popup--gamified-wheel .cro-wheel-sub {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+.cro-popup--gamified-wheel .cro-wheel-wrap {
+  position: relative;
+  display: inline-block;
+  margin: 0 auto 1rem;
+}
+.cro-popup--gamified-wheel .cro-wheel-pointer {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: #111;
+  line-height: 1;
+  z-index: 2;
+}
+.cro-popup--gamified-wheel .cro-wheel-email-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+  max-width: 280px;
+  margin: 0 auto;
+}
+.cro-popup--gamified-wheel .cro-wheel-email {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 15px;
+}
+.cro-popup--gamified-wheel .cro-wheel-result {
+  margin-top: 1rem;
+}
+.cro-popup--gamified-wheel .cro-wheel-coupon-code {
+  font-weight: 600;
+  margin: 0.5rem 0 0;
 }
 
 /* =============================================

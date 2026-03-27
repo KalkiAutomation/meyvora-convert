@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.MissingUnslash, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
 
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -17,14 +16,18 @@ if ( ! class_exists( 'CRO_System_Status' ) ) {
 $checks = CRO_System_Status::run_checks();
 $report_text = CRO_System_Status::build_report( $checks );
 $run_test_url = add_query_arg( array( 'page' => 'cro-system-status', 'run' => '1' ), admin_url( 'admin.php' ) );
-$cro_repair = isset( $_GET['cro_repair'] ) ? (string) $_GET['cro_repair'] : '';
-$cro_repair_error = isset( $_GET['cro_repair_error'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_repair_error'] ) ) : '';
+$cro_repair_raw = filter_input( INPUT_GET, 'cro_repair', FILTER_UNSAFE_RAW );
+$cro_repair     = is_string( $cro_repair_raw ) ? sanitize_key( $cro_repair_raw ) : '';
+$cro_repair_err_raw = filter_input( INPUT_GET, 'cro_repair_error', FILTER_UNSAFE_RAW );
+$cro_repair_error   = is_string( $cro_repair_err_raw ) ? sanitize_text_field( wp_unslash( $cro_repair_err_raw ) ) : '';
 $verify_installation_results = get_transient( 'cro_verify_installation_results' );
 if ( $verify_installation_results !== false ) {
 	delete_transient( 'cro_verify_installation_results' );
 }
-$verify_installation_done = isset( $_GET['cro_verify_installation'] ) && $_GET['cro_verify_installation'] === '1';
-$verify_installation_fail = isset( $_GET['cro_verify_installation'] ) && $_GET['cro_verify_installation'] === '0';
+$verify_raw = filter_input( INPUT_GET, 'cro_verify_installation', FILTER_UNSAFE_RAW );
+$verify_raw = is_string( $verify_raw ) ? sanitize_key( $verify_raw ) : '';
+$verify_installation_done = ( $verify_raw === '1' );
+$verify_installation_fail = ( $verify_raw === '0' );
 ?>
 
 <?php if ( $cro_repair === '1' ) : ?>
@@ -67,10 +70,10 @@ $verify_installation_fail = isset( $_GET['cro_verify_installation'] ) && $_GET['
 				?>
 					<li>
 						<?php if ( $pass ) : ?>
-							<span class="cro-status-ok" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'check', array( 'class' => 'cro-ico' ) ); ?></span>
+							<span class="cro-status-ok" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'check', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 						<?php else : ?>
-							<span class="cro-status-warn" aria-hidden="true"><?php echo CRO_Icons::svg_kses( 'alert', array( 'class' => 'cro-ico' ) ); ?></span>
+							<span class="cro-status-warn" aria-hidden="true"><?php echo wp_kses( CRO_Icons::svg( 'alert', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></span>
 
 						<?php endif; ?>
 						<strong><?php echo esc_html( $label ); ?></strong>: <?php echo esc_html( $message ); ?>
@@ -146,36 +149,3 @@ $verify_installation_fail = isset( $_GET['cro_verify_installation'] ) && $_GET['
 			<?php esc_html_e( 'Copy the text above and paste it when contacting support.', 'meyvora-convert' ); ?>
 		</p>
 	</div>
-
-<style>
-.cro-status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
-.cro-status-ok { background: #d4edda; color: #155724; }
-.cro-status-warning { background: #fff3cd; color: #856404; }
-.cro-status-error { background: #f8d7da; color: #721c24; }
-.cro-system-status-table .description { color: #646970; font-size: 12px; }
-</style>
-
-<script>
-(function() {
-	var btn = document.getElementById('cro-copy-report');
-	if (!btn) return;
-	btn.addEventListener('click', function() {
-		var report = btn.getAttribute('data-report') || document.getElementById('cro-report-text').value;
-		if (!report) return;
-		if (navigator.clipboard && navigator.clipboard.writeText) {
-			navigator.clipboard.writeText(report).then(function() {
-				var t = btn.textContent;
-				btn.textContent = '<?php echo esc_js( __( 'Copied!', 'meyvora-convert' ) ); ?>';
-				setTimeout(function() { btn.textContent = t; }, 2000);
-			});
-		} else {
-			var ta = document.getElementById('cro-report-text');
-			ta.select();
-			document.execCommand('copy');
-			var t = btn.textContent;
-			btn.textContent = '<?php echo esc_js( __( 'Copied!', 'meyvora-convert' ) ); ?>';
-			setTimeout(function() { btn.textContent = t; }, 2000);
-		}
-	});
-})();
-</script>

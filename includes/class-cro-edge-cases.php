@@ -6,11 +6,25 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 defined( 'ABSPATH' ) || exit;
 
 class CRO_Edge_Cases {
+
+	/** @var string Object cache group for read-through DB queries. */
+	private const DB_READ_CACHE_GROUP = 'meyvora_cro';
+
+	/** @var int Read-through TTL (seconds). */
+	private const DB_READ_CACHE_TTL = 300;
+
+	/**
+	 * @param string                    $descriptor 2–4 word slug.
+	 * @param array<int|string|float> $params     Params.
+	 * @return string
+	 */
+	private static function read_cache_key( string $descriptor, array $params ): string {
+		return 'meyvora_cro_' . md5( $descriptor . '_' . implode( '_', array_map( 'strval', $params ) ) );
+	}
 
 	/**
 	 * Initialize edge case handlers
@@ -48,6 +62,10 @@ class CRO_Edge_Cases {
 	 */
 	public static function check_database_tables() {
 		global $wpdb;
+
+		if ( get_transient( 'cro_tables_ok' ) ) {
+			return;
+		}
 
 		if ( ! class_exists( 'CRO_Database' ) ) {
 			return;
@@ -91,6 +109,17 @@ class CRO_Edge_Cases {
 				}
 				break;
 			}
+		}
+
+		$tables_verified = true;
+		foreach ( $required_tables as $table ) {
+			if ( ! CRO_Database::table_exists( $table ) ) {
+				$tables_verified = false;
+				break;
+			}
+		}
+		if ( $tables_verified ) {
+			set_transient( 'cro_tables_ok', 1, HOUR_IN_SECONDS );
 		}
 	}
 
@@ -215,11 +244,20 @@ class CRO_Edge_Cases {
 		}
 
 		global $wpdb;
-		$table   = $wpdb->prefix . 'cro_campaigns';
-		$campaign = $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$table} WHERE id = %d",
-			(int) $campaign_id
-		) );
+		$table    = $wpdb->prefix . 'cro_campaigns';
+		$ck       = self::read_cache_key( 'campaign_by_id', array( (int) $campaign_id ) );
+		$found    = false;
+		$campaign = wp_cache_get( $ck, self::DB_READ_CACHE_GROUP, false, $found );
+		if ( ! $found ) {
+			$campaign = $wpdb->get_row( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+				$wpdb->prepare(
+					'SELECT * FROM %i WHERE id = %d',
+					$table,
+					(int) $campaign_id
+				)
+			);
+			wp_cache_set( $ck, $campaign, self::DB_READ_CACHE_GROUP, self::DB_READ_CACHE_TTL );
+		}
 
 		if ( ! $campaign ) {
 			if ( class_exists( 'CRO_Error_Handler' ) ) {
@@ -245,12 +283,12 @@ class CRO_Edge_Cases {
 	 * @return bool True if already recorded (duplicate), false if new.
 	 */
 	public static function prevent_duplicate_impressions( $campaign_id, $visitor_id ) {
-		$key = 'cro_impression_' . (int) $campaign_id . '_' . sanitize_key( $visitor_id ) . '_' . gmdate( 'Y-m-d-H-i' );
+		$key = 'cro_impression_' . (int) $campaign_id . '_' . sanitize_key( $visitor_id ) . '_' . gmdate( 'Y-m-d-H' );
 
 		if ( get_transient( $key ) ) {
 			return true;
 		}
-		set_transient( $key, true, 60 );
+		set_transient( $key, true, HOUR_IN_SECONDS );
 		return false;
 	}
 
@@ -292,7 +330,8 @@ class CRO_Edge_Cases {
 		if ( empty( $_POST['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'cro_edge_case' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid nonce', 'meyvora-convert' ) ), 403 );
 		}
-		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ), 20, 60 ) ) {
+		$rl_ip = class_exists( 'CRO_Security' ) ? CRO_Security::get_client_ip() : '';
+		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_ajax_' . sanitize_key( current_action() ) . '_' . $rl_ip, 20, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Too many requests. Please slow down.', 'meyvora-convert' ) ), 429 );
 		}
 

@@ -5,13 +5,21 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 if ( ! defined( 'WPINC' ) ) {
     die;
 }
 
 class CRO_Privacy {
+
+    /**
+     * @return void
+     */
+    private static function privacy_flush_read_cache() {
+        if ( function_exists( 'wp_cache_flush_group' ) ) {
+            wp_cache_flush_group( 'meyvora_cro' );
+        }
+    }
 
     public static function init() {
         add_filter( 'wp_privacy_personal_data_exporters', array( __CLASS__, 'register_exporter' ) );
@@ -40,11 +48,32 @@ class CRO_Privacy {
 
         // Export abandoned cart records
         $table = $wpdb->prefix . 'cro_abandoned_carts';
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
-            $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT id, cart_total, status, created_at, last_activity_at FROM {$table} WHERE email = %s",
-                $email_address
-            ) );
+        $cache_key_abandoned_table = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_abandoned_export', $table ) ) );
+        $abandoned_exists          = wp_cache_get( $cache_key_abandoned_table, 'meyvora_cro' );
+        if ( false === $abandoned_exists ) {
+            $abandoned_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                $wpdb->prepare( 'SHOW TABLES LIKE %s', $table )
+            );
+            wp_cache_set( $cache_key_abandoned_table, $abandoned_exists, 'meyvora_cro', 300 );
+        }
+        if ( $abandoned_exists === $table ) {
+            $cache_key_abandoned_rows = 'meyvora_cro_' . md5( serialize( array( 'privacy_export_abandoned_by_email', $table, $email_address ) ) );
+            $rows                     = wp_cache_get( $cache_key_abandoned_rows, 'meyvora_cro' );
+            if ( false === $rows ) {
+                $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare(
+                        'SELECT id, cart_total, status, created_at, last_activity_at FROM %i WHERE email = %s',
+                        $table,
+                        $email_address
+                    )
+                );
+                if ( ! is_array( $rows ) ) {
+                    $rows = array();
+                }
+                wp_cache_set( $cache_key_abandoned_rows, $rows, 'meyvora_cro', 300 );
+            } else {
+                $rows = is_array( $rows ) ? $rows : array();
+            }
             foreach ( $rows as $row ) {
                 $export_items[] = array(
                     'group_id'    => 'cro_abandoned_carts',
@@ -63,11 +92,32 @@ class CRO_Privacy {
 
         // Export captured emails
         $table_emails = $wpdb->prefix . 'cro_emails';
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_emails ) ) === $table_emails ) {
-            $rows = $wpdb->get_results( $wpdb->prepare(
-                "SELECT id, created_at FROM {$table_emails} WHERE email = %s",
-                $email_address
-            ) );
+        $cache_key_emails_table = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_captured_emails_export', $table_emails ) ) );
+        $emails_exists          = wp_cache_get( $cache_key_emails_table, 'meyvora_cro' );
+        if ( false === $emails_exists ) {
+            $emails_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_emails )
+            );
+            wp_cache_set( $cache_key_emails_table, $emails_exists, 'meyvora_cro', 300 );
+        }
+        if ( $emails_exists === $table_emails ) {
+            $cache_key_captured_rows = 'meyvora_cro_' . md5( serialize( array( 'privacy_export_captured_emails', $table_emails, $email_address ) ) );
+            $rows                    = wp_cache_get( $cache_key_captured_rows, 'meyvora_cro' );
+            if ( false === $rows ) {
+                $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare(
+                        'SELECT id, created_at FROM %i WHERE email = %s',
+                        $table_emails,
+                        $email_address
+                    )
+                );
+                if ( ! is_array( $rows ) ) {
+                    $rows = array();
+                }
+                wp_cache_set( $cache_key_captured_rows, $rows, 'meyvora_cro', 300 );
+            } else {
+                $rows = is_array( $rows ) ? $rows : array();
+            }
             foreach ( $rows as $row ) {
                 $export_items[] = array(
                     'group_id'    => 'cro_emails',
@@ -112,11 +162,32 @@ class CRO_Privacy {
         // Export analytics events by user_id
         if ( $user ) {
             $table_events = $wpdb->prefix . 'cro_events';
-            if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events ) ) === $table_events ) {
-                $rows = $wpdb->get_results( $wpdb->prepare(
-                    "SELECT id, event_type, page_url, created_at FROM {$table_events} WHERE user_id = %d LIMIT 100",
-                    $user->ID
-                ) );
+            $cache_key_events_table_export = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_events_export', $table_events ) ) );
+            $events_exists                 = wp_cache_get( $cache_key_events_table_export, 'meyvora_cro' );
+            if ( false === $events_exists ) {
+                $events_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events )
+                );
+                wp_cache_set( $cache_key_events_table_export, $events_exists, 'meyvora_cro', 300 );
+            }
+            if ( $events_exists === $table_events ) {
+                $cache_key_events_rows = 'meyvora_cro_' . md5( serialize( array( 'privacy_export_events_by_user', $table_events, $user->ID ) ) );
+                $rows                  = wp_cache_get( $cache_key_events_rows, 'meyvora_cro' );
+                if ( false === $rows ) {
+                    $rows = $wpdb->get_results( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                        $wpdb->prepare(
+                            'SELECT id, event_type, page_url, created_at FROM %i WHERE user_id = %d LIMIT 100',
+                            $table_events,
+                            $user->ID
+                        )
+                    );
+                    if ( ! is_array( $rows ) ) {
+                        $rows = array();
+                    }
+                    wp_cache_set( $cache_key_events_rows, $rows, 'meyvora_cro', 300 );
+                } else {
+                    $rows = is_array( $rows ) ? $rows : array();
+                }
                 foreach ( $rows as $row ) {
                     $export_items[] = array(
                         'group_id'    => 'cro_events',
@@ -143,23 +214,59 @@ class CRO_Privacy {
 
         // Anonymize abandoned cart rows (keep for order recovery stats, remove PII)
         $table = $wpdb->prefix . 'cro_abandoned_carts';
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) ) === $table ) {
-            $count = (int) $wpdb->get_var( $wpdb->prepare(
-                "SELECT COUNT(*) FROM {$table} WHERE email = %s", $email_address
-            ) );
+        $cache_key_abandoned_table_erase = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_abandoned_erase', $table ) ) );
+        $abandoned_exists                = wp_cache_get( $cache_key_abandoned_table_erase, 'meyvora_cro' );
+        if ( false === $abandoned_exists ) {
+            $abandoned_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                $wpdb->prepare( 'SHOW TABLES LIKE %s', $table )
+            );
+            wp_cache_set( $cache_key_abandoned_table_erase, $abandoned_exists, 'meyvora_cro', 300 );
+        }
+        if ( $abandoned_exists === $table ) {
+            $cache_key_abandoned_count = 'meyvora_cro_' . md5( serialize( array( 'privacy_erase_abandoned_count_by_email', $table, $email_address ) ) );
+            $count_raw                  = wp_cache_get( $cache_key_abandoned_count, 'meyvora_cro' );
+            if ( false === $count_raw ) {
+                $count_raw = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare(
+                        'SELECT COUNT(*) FROM %i WHERE email = %s', $table, $email_address
+                    )
+                );
+                wp_cache_set( $cache_key_abandoned_count, $count_raw, 'meyvora_cro', 300 );
+            }
+            $count = (int) $count_raw;
             if ( $count > 0 ) {
-                $wpdb->query( $wpdb->prepare(
-                    "UPDATE {$table} SET email = %s, user_id = 0, cart_contents = %s WHERE email = %s",
-                    '[deleted]', '{}', $email_address
-                ) );
+                $wpdb->query( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+                    $wpdb->prepare(
+                        'UPDATE %i SET email = %s, user_id = 0, cart_contents = %s WHERE email = %s',
+                        $table,
+                        '[deleted]', '{}', $email_address
+                    ) );
+                if ( class_exists( 'CRO_Database' ) ) {
+                    CRO_Database::invalidate_table_cache_after_write( $table );
+                }
+                self::privacy_flush_read_cache();
                 $items_removed += $count;
             }
         }
 
         // Hard-delete captured emails
         $table_emails = $wpdb->prefix . 'cro_emails';
-        if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_emails ) ) === $table_emails ) {
-            $deleted = $wpdb->delete( $table_emails, array( 'email' => $email_address ), array( '%s' ) );
+        $cache_key_emails_table_erase = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_captured_emails_erase', $table_emails ) ) );
+        $emails_exists                = wp_cache_get( $cache_key_emails_table_erase, 'meyvora_cro' );
+        if ( false === $emails_exists ) {
+            $emails_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_emails )
+            );
+            wp_cache_set( $cache_key_emails_table_erase, $emails_exists, 'meyvora_cro', 300 );
+        }
+        if ( $emails_exists === $table_emails ) {
+            $deleted = $wpdb->delete( $table_emails, array( 'email' => $email_address ), array( '%s' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+            if ( false !== $deleted ) {
+                if ( class_exists( 'CRO_Database' ) ) {
+                    CRO_Database::invalidate_table_cache_after_write( $table_emails );
+                }
+                self::privacy_flush_read_cache();
+            }
             $items_removed += (int) $deleted;
         }
 
@@ -173,14 +280,42 @@ class CRO_Privacy {
             }
 
             $table_events = $wpdb->prefix . 'cro_events';
-            if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events ) ) === $table_events ) {
-                $deleted = $wpdb->delete( $table_events, array( 'user_id' => $user->ID ), array( '%d' ) );
+            $cache_key_events_table_erase = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_events_erase', $table_events ) ) );
+            $events_exists                  = wp_cache_get( $cache_key_events_table_erase, 'meyvora_cro' );
+            if ( false === $events_exists ) {
+                $events_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_events )
+                );
+                wp_cache_set( $cache_key_events_table_erase, $events_exists, 'meyvora_cro', 300 );
+            }
+            if ( $events_exists === $table_events ) {
+                $deleted = $wpdb->delete( $table_events, array( 'user_id' => $user->ID ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+                if ( false !== $deleted ) {
+                    if ( class_exists( 'CRO_Database' ) ) {
+                        CRO_Database::invalidate_table_cache_after_write( $table_events );
+                    }
+                    self::privacy_flush_read_cache();
+                }
                 $items_removed += (int) $deleted;
             }
 
             $table_assign = $wpdb->prefix . 'cro_ab_assignments';
-            if ( $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_assign ) ) === $table_assign ) {
-                $deleted = $wpdb->delete( $table_assign, array( 'user_id' => $user->ID ), array( '%d' ) );
+            $cache_key_assign_table_erase = 'meyvora_cro_' . md5( serialize( array( 'privacy_show_table_ab_assignments_erase', $table_assign ) ) );
+            $assign_exists                  = wp_cache_get( $cache_key_assign_table_erase, 'meyvora_cro' );
+            if ( false === $assign_exists ) {
+                $assign_exists = $wpdb->get_var( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Cached above.
+                    $wpdb->prepare( 'SHOW TABLES LIKE %s', $table_assign )
+                );
+                wp_cache_set( $cache_key_assign_table_erase, $assign_exists, 'meyvora_cro', 300 );
+            }
+            if ( $assign_exists === $table_assign ) {
+                $deleted = $wpdb->delete( $table_assign, array( 'user_id' => $user->ID ), array( '%d' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Write operation; caching not applicable.
+                if ( false !== $deleted ) {
+                    if ( class_exists( 'CRO_Database' ) ) {
+                        CRO_Database::invalidate_table_cache_after_write( $table_assign );
+                    }
+                    self::privacy_flush_read_cache();
+                }
                 $items_removed += (int) $deleted;
             }
         }

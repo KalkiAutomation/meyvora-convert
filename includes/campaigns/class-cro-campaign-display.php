@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -85,12 +84,12 @@ class CRO_Campaign_Display {
 	 * @return bool
 	 */
 	private function is_preview_request() {
-		if ( ! isset( $_GET['cro_preview'] ) || (string) $_GET['cro_preview'] !== '1' ) {
+		if ( CRO_Security::get_query_var( 'cro_preview' ) !== '1' ) {
 			return false;
 		}
-		$preview_id = isset( $_GET['preview_id'] ) ? sanitize_text_field( wp_unslash( $_GET['preview_id'] ) ) : '';
-		$token      = isset( $_GET['cro_token'] ) ? sanitize_text_field( wp_unslash( $_GET['cro_token'] ) ) : '';
-		$expiry     = isset( $_GET['cro_expiry'] ) ? (int) $_GET['cro_expiry'] : 0;
+		$preview_id = CRO_Security::get_query_var( 'preview_id' );
+		$token        = CRO_Security::get_query_var( 'cro_token' );
+		$expiry       = CRO_Security::get_query_var_absint( 'cro_expiry' );
 		if ( ! $preview_id || ! $token || ! $expiry ) {
 			return false;
 		}
@@ -106,7 +105,7 @@ class CRO_Campaign_Display {
 	 * @return array|null Campaign array or null if invalid.
 	 */
 	private function get_preview_campaign_from_request() {
-		$preview_id = isset( $_GET['preview_id'] ) ? sanitize_text_field( wp_unslash( $_GET['preview_id'] ) ) : '';
+		$preview_id = CRO_Security::get_query_var( 'preview_id' );
 		if ( ! preg_match( '/^cro_[a-zA-Z0-9]+$/', $preview_id ) ) {
 			return null;
 		}
@@ -187,9 +186,22 @@ class CRO_Campaign_Display {
 	 * @return string|false Template path or false.
 	 */
 	private function get_template( $type, $campaign ) {
-		$settings      = isset( $campaign['settings'] ) ? $campaign['settings'] : array();
-		$template_name = isset( $settings['template'] ) ? $settings['template'] : ( isset( $campaign['template_type'] ) ? $campaign['template_type'] : 'centered' );
-		$template_name = is_string( $template_name ) ? str_replace( array( ' ', '_' ), '-', $template_name ) : 'centered';
+		$settings   = isset( $campaign['settings'] ) ? $campaign['settings'] : array();
+		$raw_name   = isset( $settings['template'] )
+			? $settings['template']
+			: ( isset( $campaign['template_type'] ) ? $campaign['template_type'] : 'centered' );
+		$template_name = sanitize_key( is_string( $raw_name ) ? $raw_name : 'centered' );
+		$template_name = str_replace( '_', '-', $template_name );
+		if ( $template_name === '' ) {
+			$template_name = 'centered';
+		}
+		// Defense in depth: only registered templates with an on-disk file (see CRO_Templates::get_available_for_builder()).
+		if ( class_exists( 'CRO_Templates' ) ) {
+			$available = CRO_Templates::get_available_for_builder();
+			if ( ! isset( $available[ $template_name ] ) ) {
+				$template_name = 'centered';
+			}
+		}
 
 		$template_paths = array(
 			'popup' => CRO_PLUGIN_DIR . 'templates/popups/' . $template_name . '.php',

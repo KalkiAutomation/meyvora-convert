@@ -1,6 +1,7 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
-// phpcs:disable WordPress.Security.NonceVerification.Recommended
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 /**
  * Analytics Dashboard
  *
@@ -24,14 +25,16 @@ function meyvora_kpi_change( $current, $previous ) {
 
 $analytics = new CRO_Analytics();
 
-$date_from   = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : gmdate( 'Y-m-d', strtotime( '-30 days' ) );
-$date_to     = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : gmdate( 'Y-m-d' );
-$campaign_id = isset( $_GET['campaign_id'] ) ? absint( $_GET['campaign_id'] ) : null;
+$date_from = CRO_Security::get_query_var( 'from' );
+$date_from = $date_from !== '' ? $date_from : gmdate( 'Y-m-d', strtotime( '-30 days' ) );
+$date_to   = CRO_Security::get_query_var( 'to' );
+$date_to   = $date_to !== '' ? $date_to : gmdate( 'Y-m-d' );
+$campaign_id = CRO_Security::get_query_var_absint( 'campaign_id' );
 if ( $campaign_id === 0 ) {
 	$campaign_id = null;
 }
 
-$analytics_error = isset( $_GET['error'] ) ? sanitize_text_field( wp_unslash( $_GET['error'] ) ) : '';
+$analytics_error = CRO_Security::get_query_var( 'error' );
 if ( $analytics_error === 'invalid_nonce' ) {
 	echo '<div class="cro-ui-notice cro-ui-notice--error" role="alert"><p>' . esc_html__( 'Invalid security check. Please try the export again.', 'meyvora-convert' ) . '</p></div>';
 } elseif ( $analytics_error === 'unauthorized' ) {
@@ -371,7 +374,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 		<?php endif; ?>
 		<div class="cro-kpi-card">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'eye', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'eye', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['impressions'] ) ); ?></span>
@@ -381,7 +384,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 
 		<div class="cro-kpi-card">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'mouse-pointer', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'mouse-pointer', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['clicks'] ) ); ?></span>
@@ -390,7 +393,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 
 		<div class="cro-kpi-card">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'trending-up', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'trending-up', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( $summary['ctr'] ); ?>%</span>
@@ -399,7 +402,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 
 		<div class="cro-kpi-card cro-kpi-card--revenue">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'dollar-sign', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'dollar-sign', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value js-cro-revenue-kpi-value"><?php echo wp_kses_post( $summary['revenue_formatted'] ); ?></span>
@@ -414,7 +417,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 
 		<div class="cro-kpi-card">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'shopping-cart', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'shopping-cart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['sticky_cart_adds'] ) ); ?></span>
@@ -423,7 +426,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 		</div>
 
 		<div class="cro-kpi-card">
-			<div class="cro-kpi-icon"><?php echo CRO_Icons::svg_kses( 'truck', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-kpi-icon"><?php echo wp_kses( CRO_Icons::svg( 'truck', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-kpi-content">
 				<span class="cro-kpi-value"><?php echo esc_html( number_format_i18n( $summary['shipping_bar_interactions'] ) ); ?></span>
@@ -435,7 +438,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 	<!-- Secondary stats -->
 	<div class="cro-stats-grid">
 		<div class="cro-stat-card">
-			<div class="cro-stat-icon"><?php echo CRO_Icons::svg_kses( 'target', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-stat-icon"><?php echo wp_kses( CRO_Icons::svg( 'target', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( $summary['conversions'] ) ); ?></span>
@@ -444,7 +447,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			</div>
 		</div>
 		<div class="cro-stat-card">
-			<div class="cro-stat-icon"><?php echo CRO_Icons::svg_kses( 'chart', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-stat-icon"><?php echo wp_kses( CRO_Icons::svg( 'chart', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( $summary['conversion_rate'] ); ?>%</span>
@@ -452,7 +455,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			</div>
 		</div>
 		<div class="cro-stat-card">
-			<div class="cro-stat-icon"><?php echo CRO_Icons::svg_kses( 'mail', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-stat-icon"><?php echo wp_kses( CRO_Icons::svg( 'mail', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-stat-content">
 				<span class="cro-stat-value"><?php echo esc_html( number_format_i18n( $summary['emails'] ) ); ?></span>
@@ -461,7 +464,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			</div>
 		</div>
 		<div class="cro-stat-card">
-			<div class="cro-stat-icon"><?php echo CRO_Icons::svg_kses( 'dollar-sign', array( 'class' => 'cro-ico' ) ); ?></div>
+			<div class="cro-stat-icon"><?php echo wp_kses( CRO_Icons::svg( 'dollar-sign', array( 'class' => 'cro-ico' ) ), CRO_Icons::get_svg_kses_allowed() ); ?></div>
 
 			<div class="cro-stat-content">
 				<span class="cro-stat-value js-cro-rpv-stat-value"><?php echo wp_kses_post( $summary['rpv_formatted'] ); ?></span>

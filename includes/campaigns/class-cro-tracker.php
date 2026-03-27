@@ -4,7 +4,6 @@
  *
  * @package Meyvora_Convert
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
 
 // If this file is called directly, abort.
 if ( ! defined( 'WPINC' ) ) {
@@ -122,6 +121,7 @@ class CRO_Tracker {
 	public function track_event() {
 		check_ajax_referer( 'cro-track-event', 'nonce' );
 
+		// Raw IP used intentionally for rate-limit key only — never stored; not subject to anonymise_ip setting.
 		// Rate limit by IP to prevent abuse (30 requests per 60 seconds per IP).
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_track_' . $ip, 30, 60 ) ) {
@@ -134,9 +134,19 @@ class CRO_Tracker {
 		$source_type = in_array( $raw_source, self::SOURCE_TYPES, true ) ? $raw_source : 'campaign';
 		$source_id   = $source_type === 'campaign' ? $campaign_id : 0;
 
-		$raw_event_data = isset( $_POST['event_data'] ) ? wp_unslash( $_POST['event_data'] ) : array();
-		if ( is_string( $raw_event_data ) ) {
-			$raw_event_data = json_decode( wp_unslash( $raw_event_data ), true );
+		// jQuery may send event_data as a nested array (not JSON string); use filter_input_array to avoid raw $_POST.
+		$post_all = filter_input_array( INPUT_POST );
+		if ( ! is_array( $post_all ) ) {
+			$post_all = array();
+		}
+		$raw_event_data = array_key_exists( 'event_data', $post_all ) ? wp_unslash( $post_all['event_data'] ) : array();
+		if ( is_string( $raw_event_data ) && $raw_event_data !== '' ) {
+			// Decode event data; all keys and values are sanitised in sanitize_event_data() immediately below.
+			$raw_event_data = json_decode( sanitize_textarea_field( $raw_event_data ), true );
+		} elseif ( is_array( $raw_event_data ) ) {
+			$raw_event_data = map_deep( $raw_event_data, 'sanitize_text_field' );
+		} else {
+			$raw_event_data = array();
 		}
 		$event_data = is_array( $raw_event_data ) ? $raw_event_data : array();
 		$event_data = $this->sanitize_event_data( $event_data );
@@ -199,6 +209,10 @@ class CRO_Tracker {
 			}
 		}
 
+		if ( class_exists( 'CRO_Security' ) ) {
+			$event_data['visitor_ip'] = CRO_Security::get_visitor_ip();
+		}
+
 		$table_name = $wpdb->prefix . 'cro_events';
 
 		// Map event_type to table enum: impression, conversion, dismiss, interaction.
@@ -258,7 +272,11 @@ class CRO_Tracker {
 			}
 		}
 
-		$result = $wpdb->insert( $table_name, $insert_data );
+		$result = $wpdb->insert( $table_name, $insert_data ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Write operation; caching not applicable.
+
+		if ( false !== $result && class_exists( 'CRO_Database' ) ) {
+			CRO_Database::invalidate_table_cache_after_write( $table_name );
+		}
 
 		if ( $result && function_exists( 'do_action' ) ) {
 			$event = array_merge(
@@ -282,25 +300,53 @@ class CRO_Tracker {
 	 *
 	 * @return string
 	 */
+	/**
+	 * Public session key (same cookie/transient logic as track events). Used by sequences and webhooks.
+	 *
+	 * @return string
+	 */
+	public static function client_session_id() {
+		$tracker = new self();
+		return $tracker->get_session_id();
+	}
+
 	private function get_session_id() {
-		if ( ! headers_sent() && ! ( defined( 'REST_REQUEST' ) && REST_REQUEST ) ) {
-			if ( ! session_id() ) {
-				@session_start(); // phpcs:ignore Generic.PHP.NoSilencedErrors.Discouraged
+		$cookie_name = 'cro_sess';
+
+		if ( isset( $_COOKIE[ $cookie_name ] ) ) {
+			$sid = sanitize_text_field( wp_unslash( (string) $_COOKIE[ $cookie_name ] ) );
+			if ( preg_match( '/^[a-f0-9\-]{36}$/i', $sid ) ) {
+				return $sid;
 			}
-			if ( isset( $_SESSION['cro_session_id'] ) ) {
-				return sanitize_text_field( wp_unslash( (string) $_SESSION['cro_session_id'] ) );
-			}
-			$_SESSION['cro_session_id'] = wp_generate_uuid4();
-			return (string) $_SESSION['cro_session_id'];
 		}
-		// REST / CLI: use cookie or transient keyed by IP so events from same visitor group.
-		$key = 'cro_sid_' . ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' );
-		$sid = get_transient( $key );
-		if ( $sid !== false && is_string( $sid ) ) {
+
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			// Raw IP used for session key derivation only — not stored in analytics tables.
+			$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+			$ua = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
+			$key = 'cro_sid_' . substr( md5( $ip . '|' . $ua ), 0, 32 );
+			$sid = get_transient( $key );
+			if ( $sid !== false && is_string( $sid ) && preg_match( '/^[a-f0-9\-]{36}$/i', $sid ) ) {
+				return $sid;
+			}
+			$sid = wp_generate_uuid4();
+			set_transient( $key, $sid, 2 * HOUR_IN_SECONDS );
 			return $sid;
 		}
+
 		$sid = wp_generate_uuid4();
-		set_transient( $key, $sid, 3600 );
+		if ( ! headers_sent() ) {
+			setcookie(
+				$cookie_name,
+				$sid,
+				time() + 2 * HOUR_IN_SECONDS,
+				defined( 'COOKIEPATH' ) ? COOKIEPATH : '/',
+				defined( 'COOKIE_DOMAIN' ) ? COOKIE_DOMAIN : '',
+				is_ssl(),
+				true
+			);
+		}
+
 		return $sid;
 	}
 
@@ -371,6 +417,7 @@ class CRO_Tracker {
 	public function record_dismiss() {
 		check_ajax_referer( 'cro_public_actions', 'nonce' );
 
+		// Raw IP used intentionally for rate-limit key only — never stored; not subject to anonymise_ip setting.
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_dismiss_' . $ip, 40, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'meyvora-convert' ) ), 429 );
@@ -435,6 +482,7 @@ class CRO_Tracker {
 	public function decide_fallback() {
 		check_ajax_referer( 'cro_public_actions', 'nonce' );
 
+		// Raw IP used intentionally for rate-limit key only — never stored; not subject to anonymise_ip setting.
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 		if ( class_exists( 'CRO_Security' ) && ! CRO_Security::check_rate_limit( 'cro_fb_decide_' . $ip, 30, 60 ) ) {
 			wp_send_json_error( array( 'message' => __( 'Rate limit exceeded.', 'meyvora-convert' ) ), 429 );
@@ -455,8 +503,8 @@ class CRO_Tracker {
 			wp_send_json_error( array( 'message' => __( 'Decision engine not available.', 'meyvora-convert' ) ) );
 		}
 
-		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-		$raw  = isset( $_POST['decision_context'] ) ? wp_unslash( $_POST['decision_context'] ) : '';
+		$dc_raw = filter_input( INPUT_POST, 'decision_context', FILTER_UNSAFE_RAW );
+		$raw    = is_string( $dc_raw ) ? sanitize_textarea_field( wp_unslash( $dc_raw ) ) : '';
 		$body = array();
 		if ( is_string( $raw ) && $raw !== '' ) {
 			$decoded = json_decode( $raw, true );
