@@ -5,6 +5,6 @@
  * @package Meyvora_Convert
  */
 
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }

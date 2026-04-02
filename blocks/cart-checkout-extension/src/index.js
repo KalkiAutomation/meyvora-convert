@@ -43,7 +43,7 @@ function DebugBadge() {
 	return createElement(
 		'div',
 		{
-			className: 'cro-blocks-debug-badge',
+			className: 'meyvc-blocks-debug-badge',
 			style: {
 				position: 'fixed',
 				bottom: '12px',
@@ -64,7 +64,7 @@ function DebugBadge() {
 
 function getBannerViews( cookieName ) {
 	try {
-		const name = ( cookieName || 'cro_banner_views' ) + '=';
+		const name = ( cookieName || 'meyvc_banner_views' ) + '=';
 		const ca = typeof document !== 'undefined' ? document.cookie.split( ';' ) : [];
 		for ( let i = 0; i < ca.length; i++ ) {
 			let c = ca[ i ];
@@ -104,7 +104,7 @@ function canShowBanner( type, maxPer24h, cookieName ) {
 }
 
 function recordBannerShow( type, cookieName ) {
-	const name = cookieName || 'cro_banner_views';
+	const name = cookieName || 'meyvc_banner_views';
 	const views = getBannerViews( name );
 	if ( ! Array.isArray( views[ type ] ) ) views[ type ] = [];
 	views[ type ].push( Math.floor( Date.now() / 1000 ) );
@@ -175,19 +175,19 @@ function TrustStrip( { context, cartOptimizerEnabled, checkoutOptimizerEnabled, 
 		recorded.current = true;
 	}
 	const labels = parseTrustLabels( trustMessage );
-	const cn = isCheckout ? 'cro-blocks-slot cro-checkout-trust cro-blocks-trust cro-blocks-trust-strip' : 'cro-blocks-slot cro-cart-trust cro-blocks-trust cro-blocks-trust-strip';
+	const cn = isCheckout ? 'meyvc-blocks-slot meyvc-checkout-trust meyvc-blocks-trust meyvc-blocks-trust-strip' : 'meyvc-blocks-slot meyvc-cart-trust meyvc-blocks-trust meyvc-blocks-trust-strip';
 	return createElement(
 		'div',
 		{ className: cn },
 		createElement(
 			'ul',
-			{ className: 'cro-blocks-trust__list', style: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '0.75em 1.25em', fontSize: '0.9em', color: '#555' } },
+			{ className: 'meyvc-blocks-trust__list', style: { listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexWrap: 'wrap', gap: '0.75em 1.25em', fontSize: '0.9em', color: '#555' } },
 			labels.map( ( label, i ) =>
 				createElement(
 					'li',
-					{ key: i, className: 'cro-blocks-trust__item', style: { display: 'flex', alignItems: 'center', gap: '0.35em' } },
-					createElement( 'span', { className: 'cro-blocks-trust__icon', 'aria-hidden': 'true' }, TRUST_ICONS[i] || '•' ),
-					createElement( 'span', { className: 'cro-blocks-trust__label' }, label )
+					{ key: i, className: 'meyvc-blocks-trust__item', style: { display: 'flex', alignItems: 'center', gap: '0.35em' } },
+					createElement( 'span', { className: 'meyvc-blocks-trust__icon', 'aria-hidden': 'true' }, TRUST_ICONS[i] || '•' ),
+					createElement( 'span', { className: 'meyvc-blocks-trust__label' }, label )
 				)
 			)
 		)
@@ -214,7 +214,7 @@ function UrgencyMessage( { context, cartOptimizerEnabled, cartSettings, bannerFr
 	if ( ! message ) return null;
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-slot cro-cart-urgency cro-blocks-urgency' },
+		{ className: 'meyvc-blocks-slot meyvc-cart-urgency meyvc-blocks-urgency' },
 		createElement( 'p', {}, message )
 	);
 }
@@ -228,13 +228,13 @@ function GuaranteeNote( { context, checkoutOptimizerEnabled, checkoutSettings } 
 	if ( ! text ) return null;
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-slot cro-guarantee cro-blocks-guarantee cro-blocks-guarantee-note' },
-		createElement( 'span', { className: 'cro-guarantee-icon', 'aria-hidden': 'true' }, '✓' ),
-		createElement( 'span', { className: 'cro-guarantee-text' }, text )
+		{ className: 'meyvc-blocks-slot meyvc-guarantee meyvc-blocks-guarantee meyvc-blocks-guarantee-note' },
+		createElement( 'span', { className: 'meyvc-guarantee-icon', 'aria-hidden': 'true' }, '✓' ),
+		createElement( 'span', { className: 'meyvc-guarantee-text' }, text )
 	);
 }
 
-// OfferBanner: GET /cro/v1/offer on mount and when cart changes; headline + description + Apply; POST /cro/v1/offer/apply on click. Reactive to cart; respects position (cart/checkout/both) and frequency cap.
+// OfferBanner: GET /meyvc/v1/offer on mount and when cart changes; headline + description + Apply; POST /meyvc/v1/offer/apply on click. Reactive to cart; respects position (cart/checkout/both) and frequency cap.
 function OfferBanner( {
 	cart,
 	context,
@@ -330,7 +330,7 @@ function OfferBanner( {
 
 	if ( ! enabled ) return null;
 	if ( loading && ! data ) {
-		return createElement( 'div', { className: 'cro-blocks-slot cro-blocks-offer cro-blocks-offer--loading' }, createElement( 'p', {}, __( 'Loading…', 'meyvora-convert' ) ) );
+		return createElement( 'div', { className: 'meyvc-blocks-slot meyvc-blocks-offer meyvc-blocks-offer--loading' }, createElement( 'p', {}, __( 'Loading…', 'meyvora-convert' ) ) );
 	}
 	if ( ! data?.eligible || ! data?.offer ) return null;
 	if ( ! canShowBanner( 'offer', bannerFrequencyCapMax || 0, bannerViewsCookieName ) ) return null;
@@ -346,28 +346,28 @@ function OfferBanner( {
 	if ( applied || ! data.can_apply ) {
 		return createElement(
 			'div',
-			{ className: 'cro-blocks-slot cro-blocks-offer cro-blocks-offer--applied' },
-			createElement( 'p', { className: 'cro-blocks-offer__headline' }, headline ),
-			createElement( 'p', { className: 'cro-blocks-offer__success' }, __( 'Discount applied.', 'meyvora-convert' ) )
+			{ className: 'meyvc-blocks-slot meyvc-blocks-offer meyvc-blocks-offer--applied' },
+			createElement( 'p', { className: 'meyvc-blocks-offer__headline' }, headline ),
+			createElement( 'p', { className: 'meyvc-blocks-offer__success' }, __( 'Discount applied.', 'meyvora-convert' ) )
 		);
 	}
 
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-slot cro-blocks-offer' },
-		createElement( 'p', { className: 'cro-blocks-offer__headline' }, headline ),
-		description ? createElement( 'p', { className: 'cro-blocks-offer__description' }, description ) : null,
+		{ className: 'meyvc-blocks-slot meyvc-blocks-offer' },
+		createElement( 'p', { className: 'meyvc-blocks-offer__headline' }, headline ),
+		description ? createElement( 'p', { className: 'meyvc-blocks-offer__description' }, description ) : null,
 		createElement(
 			'button',
 			{
 				type: 'button',
-				className: 'button cro-blocks-offer__apply',
+				className: 'button meyvc-blocks-offer__apply',
 				onClick: applyCoupon,
 				disabled: applying,
 			},
 			applying ? __( 'Applying…', 'meyvora-convert' ) : __( 'Apply coupon', 'meyvora-convert' )
 		),
-		error ? createElement( 'p', { className: 'cro-blocks-offer__error', role: 'alert' }, error ) : null
+		error ? createElement( 'p', { className: 'meyvc-blocks-offer__error', role: 'alert' }, error ) : null
 	);
 }
 
@@ -391,8 +391,8 @@ function ShippingProgress( { cart, freeShippingThreshold, bannerFrequencyCapMax,
 	if ( total >= freeShippingThreshold ) {
 		return createElement(
 			'div',
-			{ className: 'cro-blocks-slot cro-blocks-shipping-progress cro-blocks-shipping-achieved' },
-			createElement( 'p', { className: 'cro-blocks-shipping-achieved-message' }, __( "You've got free shipping!", 'meyvora-convert' ) )
+			{ className: 'meyvc-blocks-slot meyvc-blocks-shipping-progress meyvc-blocks-shipping-achieved' },
+			createElement( 'p', { className: 'meyvc-blocks-shipping-achieved-message' }, __( "You've got free shipping!", 'meyvora-convert' ) )
 		);
 	}
 	const remaining = freeShippingThreshold - total;
@@ -401,13 +401,13 @@ function ShippingProgress( { cart, freeShippingThreshold, bannerFrequencyCapMax,
 	const message = __( "You're {{amount}} away from free shipping", 'meyvora-convert' ).replace( '{{amount}}', amountFormatted );
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-slot cro-blocks-shipping-progress' },
-		createElement( 'p', { className: 'cro-blocks-shipping-message' }, message ),
+		{ className: 'meyvc-blocks-slot meyvc-blocks-shipping-progress' },
+		createElement( 'p', { className: 'meyvc-blocks-shipping-message' }, message ),
 		createElement(
 			'div',
-			{ className: 'cro-blocks-shipping-bar-wrap' },
+			{ className: 'meyvc-blocks-shipping-bar-wrap' },
 			createElement( 'div', {
-				className: 'cro-blocks-shipping-bar',
+				className: 'meyvc-blocks-shipping-bar',
 				style: { width: `${ percentage }%` },
 			} )
 		)
@@ -427,7 +427,7 @@ function OrderMetaFill( props ) {
 	} = data;
 
 	const capMax = data.bannerFrequencyCapMax != null ? data.bannerFrequencyCapMax : 0;
-	const capCookie = data.bannerViewsCookieName || 'cro_banner_views';
+	const capCookie = data.bannerViewsCookieName || 'meyvc_banner_views';
 	const children = [
 		createElement( TrustStrip, {
 			context,
@@ -473,7 +473,7 @@ function OrderMetaFill( props ) {
 
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-order-meta-fill' },
+		{ className: 'meyvc-blocks-order-meta-fill' },
 		children
 	);
 }
@@ -486,11 +486,11 @@ function ShippingPackagesFill( props ) {
 	const threshold = data.freeShippingThreshold || 0;
 	if ( threshold <= 0 ) return null;
 	const capMax = data.bannerFrequencyCapMax != null ? data.bannerFrequencyCapMax : 0;
-	const capCookie = data.bannerViewsCookieName || 'cro_banner_views';
+	const capCookie = data.bannerViewsCookieName || 'meyvc_banner_views';
 
 	return createElement(
 		'div',
-		{ className: 'cro-blocks-shipping-packages-fill' },
+		{ className: 'meyvc-blocks-shipping-packages-fill' },
 		createElement( ShippingProgress, {
 			cart,
 			freeShippingThreshold: threshold,

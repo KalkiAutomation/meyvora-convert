@@ -1,0 +1,127 @@
+/**
+ * Meyvora Convert - Checkout Optimizer Styles
+ *
+ * @package Meyvora_Convert
+ */
+
+/* Trust elements */
+.meyvc-checkout-trust {
+  background: #f8f9fa;
+  padding: var(--meyvc-spacing, 8px);
+  border-radius: var(--meyvc-radius, 8px);
+  margin-bottom: calc(var(--meyvc-spacing, 8px) * 2.5);
+  text-align: center;
+}
+
+.meyvc-secure-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--meyvc-spacing, 8px);
+  font-weight: 600;
+  color: var(--meyvc-primary, #333);
+}
+
+.meyvc-secure-icon {
+  font-size: 18px;
+}
+
+.meyvc-trust-message {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #666;
+}
+
+.meyvc-guarantee {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--meyvc-spacing, 8px);
+  margin-top: calc(var(--meyvc-spacing, 8px) * 2);
+  padding: var(--meyvc-spacing, 8px);
+  background: #f0f0f0;
+  border-radius: var(--meyvc-radius, 8px);
+  font-size: 13px;
+  color: var(--meyvc-primary, #333);
+}
+
+.meyvc-guarantee-icon {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Inline validation */
+.form-row.meyvc-field-valid {
+  position: relative;
+}
+
+.form-row.meyvc-field-valid input,
+.form-row.meyvc-field-valid select {
+  border-color: var(--meyvc-primary, #333) !important;
+}
+
+.form-row.meyvc-field-valid::after {
+  content: "✓";
+  position: absolute;
+  right: var(--meyvc-spacing, 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--meyvc-primary, #333);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.form-row.meyvc-field-error input,
+.form-row.meyvc-field-error select {
+  border-color: var(--meyvc-primary, #333) !important;
+}
+
+.form-row.meyvc-field-error::after {
+  content: "✗";
+  position: absolute;
+  right: var(--meyvc-spacing, 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--meyvc-primary, #333);
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Coupon form */
+.meyvc-coupon-form-wrapper {
+  margin-bottom: calc(var(--meyvc-spacing, 8px) * 2.5);
+  padding: var(--meyvc-spacing, 8px);
+  background: #f8f9fa;
+  border-radius: var(--meyvc-radius, 8px);
+}
+
+.meyvc-coupon-toggle-link {
+  color: var(--meyvc-primary, #333);
+  text-decoration: none;
+}
+
+.meyvc-coupon-toggle-link:hover {
+  text-decoration: underline;
+}
+
+.meyvc-coupon-form {
+  margin-top: 15px;
+}
+
+.meyvc-coupon-form .form-row {
+  margin-bottom: 10px;
+}
+
+/* Block-based checkout: wrappers for injected CRO content */
+.meyvc-blocks-checkout-prefix,
+.meyvc-blocks-checkout-suffix {
+  margin-bottom: 1.5em;
+}
+
+/* Lucide SVG icons (MEYVC_Icons::svg) */
+.meyvc-ico {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  display: inline-block;
+  flex-shrink: 0;
+}

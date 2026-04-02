@@ -12,7 +12,7 @@
 			var blockProps = useBlockProps();
 			var campaignId = props.attributes.campaignId;
 			var setAttributes = props.setAttributes;
-			var campaigns = (window.croCampaignBlock && window.croCampaignBlock.campaigns) || [];
+			var campaigns = (window.meyvcCampaignBlock && window.meyvcCampaignBlock.campaigns) || [];
 			var options = [
 				{ value: 0, label: '— Select campaign —' }
 			].concat(
@@ -53,7 +53,7 @@
 						  )
 						: createElement(
 								'p',
-								{ className: 'cro-campaign-placeholder', style: { padding: '1em', color: '#666', fontStyle: 'italic' } },
+								{ className: 'meyvc-campaign-placeholder', style: { padding: '1em', color: '#666', fontStyle: 'italic' } },
 								'Select a campaign in the sidebar.'
 						  )
 				)

@@ -6,8 +6,8 @@
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
@@ -16,7 +16,7 @@ if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 
 $cart = WC()->cart;
 $cart_total = $cart->get_total( 'edit' );
-$free_shipping_threshold = apply_filters( 'cro_free_shipping_threshold', 0 );
+$free_shipping_threshold = apply_filters( 'meyvc_free_shipping_threshold', 0 );
 
 if ( $free_shipping_threshold <= 0 || $cart_total >= $free_shipping_threshold ) {
 	return;
@@ -26,7 +26,7 @@ $remaining = $free_shipping_threshold - $cart_total;
 $percentage = ( $cart_total / $free_shipping_threshold ) * 100;
 ?>
 
-<div class="cro-shipping-bar">
+<div class="meyvc-shipping-bar">
 	<p>
 		<?php
 		if ( $remaining > 0 ) {
@@ -38,7 +38,7 @@ $percentage = ( $cart_total / $free_shipping_threshold ) * 100;
 		}
 		?>
 	</p>
-	<div class="cro-shipping-bar-progress">
-		<div class="cro-progress-bar" style="width: <?php echo esc_attr( $percentage ); ?>%;"></div>
+	<div class="meyvc-shipping-bar-progress">
+		<div class="meyvc-progress-bar" style="width: <?php echo esc_attr( $percentage ); ?>%;"></div>
 	</div>
 </div>

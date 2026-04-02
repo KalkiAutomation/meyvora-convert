@@ -6,8 +6,8 @@
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
@@ -19,10 +19,10 @@ $cart_total = $cart->get_total( 'edit' );
 $cart_count = $cart->get_cart_contents_count();
 ?>
 
-<div class="cro-sticky-cart">
-	<div class="cro-sticky-cart-content">
-		<div class="cro-sticky-cart-info">
-			<span class="cro-sticky-cart-count">
+<div class="meyvc-sticky-cart">
+	<div class="meyvc-sticky-cart-content">
+		<div class="meyvc-sticky-cart-info">
+			<span class="meyvc-sticky-cart-count">
 				<?php
 				printf(
 					/* translators: %d: cart item count */
@@ -31,11 +31,11 @@ $cart_count = $cart->get_cart_contents_count();
 				);
 				?>
 			</span>
-			<span class="cro-sticky-cart-total cro-cart-total">
+			<span class="meyvc-sticky-cart-total meyvc-cart-total">
 				<?php echo wp_kses_post( wc_price( $cart_total ) ); ?>
 			</span>
 		</div>
-		<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="cro-sticky-cart-button">
+		<a href="<?php echo esc_url( wc_get_cart_url() ); ?>" class="meyvc-sticky-cart-button">
 			<?php esc_html_e( 'View Cart', 'meyvora-convert' ); ?>
 		</a>
 	</div>

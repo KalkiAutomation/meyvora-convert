@@ -2,7 +2,7 @@
 /**
  * Abandoned cart recovery email template.
  *
- * Variables (set by CRO_Abandoned_Cart_Reminder::send_email):
+ * Variables (set by MEYVC_Abandoned_Cart_Reminder::send_email):
  *
  * @var string $body_content    Main email body HTML (already escaped/sanitized).
  * @var string $store_name      Store display name.
@@ -16,8 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $brand_color = apply_filters(
-	'cro_email_brand_color',
-	function_exists( 'cro_settings' ) ? cro_settings()->get( 'abandoned_cart', 'email_brand_color', '#2563eb' ) : '#2563eb'
+	'meyvc_email_brand_color',
+	function_exists( 'meyvc_settings' ) ? meyvc_settings()->get( 'abandoned_cart', 'email_brand_color', '#2563eb' ) : '#2563eb'
 );
 $brand_color = is_string( $brand_color ) && preg_match( '/^#[a-f0-9]{6}$/i', $brand_color ) ? $brand_color : '#2563eb';
 ?>

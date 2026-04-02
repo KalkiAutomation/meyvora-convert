@@ -1,0 +1,1769 @@
+/* =============================================
+   CAMPAIGN BUILDER STYLES
+   ============================================= */
+
+/* Campaign edit page: let builder use full width (template grid + preview need space) */
+.meyvc-admin-layout.meyvc-campaign-builder .meyvc-admin-layout__content,
+.meyvc-admin-layout.meyvc-campaign-builder .meyvc-admin-container {
+  max-width: none;
+  width: 100%;
+}
+.meyvc-admin-layout.meyvc-campaign-builder
+  .meyvc-admin-layout__content-wrap
+  .meyvc-admin-container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Layout */
+.meyvc-builder-wrap {
+  margin: 0;
+  padding: 0;
+  background: #f0f0f1;
+  min-height: 100vh;
+}
+
+.meyvc-builder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid #ddd;
+  position: sticky;
+  top: 32px; /* Below admin bar */
+  z-index: 100;
+}
+
+.meyvc-preview-error {
+  position: relative;
+  padding-right: 38px;
+}
+.meyvc-preview-error .meyvc-preview-error-message {
+  margin: 0;
+}
+.meyvc-preview-error .notice-dismiss {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.meyvc-builder-header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.meyvc-back-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+  color: #666;
+}
+
+.meyvc-back-link:hover {
+  color: #333;
+}
+
+.meyvc-campaign-name-input {
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  padding: 5px 10px;
+  background: transparent;
+  min-width: 300px;
+}
+
+.meyvc-campaign-name-input:focus {
+  outline: none;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.meyvc-builder-header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.meyvc-save-status {
+  font-size: 12px;
+  color: #666;
+}
+
+.meyvc-save-status.unsaved {
+  color: #333;
+}
+
+.meyvc-save-status.saved {
+  color: #333;
+}
+
+.meyvc-builder-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Main Layout */
+.meyvc-builder-main {
+  display: grid;
+  grid-template-columns: 200px 1fr 350px;
+  min-height: calc(100vh - 100px);
+}
+
+/* Sidebar Navigation */
+.meyvc-builder-sidebar {
+  background: #fff;
+  border-right: 1px solid #ddd;
+  padding: 20px 0;
+}
+
+.meyvc-builder-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.meyvc-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  text-decoration: none;
+  color: #333;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.meyvc-nav-item:hover {
+  background: #f6f7f7;
+}
+
+.meyvc-nav-item.active {
+  background: #f5f5f5;
+  border-left-color: #333;
+  color: #333;
+}
+
+.meyvc-nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  color: inherit;
+}
+
+/* Lucide SVGs inside nav — font-size alone does not scale <svg>; size .meyvc-ico explicitly */
+.meyvc-nav-icon .meyvc-ico,
+.meyvc-nav-icon svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.meyvc-nav-item.active .meyvc-nav-icon .meyvc-ico,
+.meyvc-nav-item:hover .meyvc-nav-icon .meyvc-ico {
+  color: inherit;
+}
+
+.meyvc-nav-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Content Area */
+.meyvc-builder-content {
+  padding: 28px 32px;
+  background: #f6f7f7;
+  overflow-y: auto;
+}
+
+.meyvc-section {
+  display: none;
+  max-width: 720px;
+}
+
+.meyvc-section.active {
+  display: block;
+}
+
+.meyvc-section h2 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1d;
+}
+
+.meyvc-section-desc {
+  color: #666;
+  margin-bottom: 24px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Template Grid – modern cards */
+.meyvc-template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.meyvc-template-card {
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.meyvc-template-card:hover {
+  border-color: #333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.meyvc-template-card.selected {
+  border-color: #1d1d1d;
+  background: #f8f9fa;
+  box-shadow: 0 0 0 1px #1d1d1d;
+}
+
+.meyvc-template-preview {
+  background: #f0f0f1;
+  border-radius: 6px 6px 0 0;
+  padding: 16px;
+  margin: 0;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.meyvc-template-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.meyvc-template-placeholder {
+  font-size: 12px;
+  color: #646970;
+  text-align: center;
+  padding: 8px;
+  word-break: break-word;
+}
+
+.meyvc-template-info {
+  padding: 14px 14px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meyvc-template-card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1d;
+  line-height: 1.3;
+}
+
+.meyvc-template-card__desc {
+  margin: 0;
+  font-size: 12px;
+  color: #646970;
+  line-height: 1.4;
+  flex: 1;
+}
+
+.meyvc-template-preview-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.meyvc-template-preview-btn .meyvc-ico {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.meyvc-template-check {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  background: #1d1d1d;
+  color: #fff;
+  border-radius: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.meyvc-template-check .meyvc-ico {
+  width: 14px;
+  height: 14px;
+}
+
+.meyvc-template-card.selected .meyvc-template-check {
+  display: flex;
+}
+
+.meyvc-template-empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 32px 24px;
+  background: #f8f9fa;
+  border: 1px dashed #c3c4c7;
+  border-radius: 8px;
+}
+
+.meyvc-template-empty-state__icon {
+  display: inline-flex;
+  margin-bottom: 12px;
+  color: #646970;
+}
+
+.meyvc-template-empty-state__icon .meyvc-ico {
+  width: 48px;
+  height: 48px;
+}
+
+.meyvc-template-empty-state__text {
+  margin: 0;
+  font-size: 14px;
+  color: #646970;
+}
+
+/* Form Controls – shared by Content + Design/Trigger/Targeting/Display */
+.meyvc-field-group,
+.meyvc-control-group {
+  margin-bottom: 22px;
+}
+
+.meyvc-field-group > label:not(:has(input[type="checkbox"])),
+.meyvc-control-group > label:not(:has(input[type="checkbox"])),
+.meyvc-control-group > h3 {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #1d1d1d;
+}
+
+.meyvc-control-group > h3 {
+  margin-bottom: 12px;
+  font-size: 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Checkbox/radio in label – inline alignment */
+.meyvc-label-with-checkbox,
+.meyvc-field-group > label:has(input[type="checkbox"]),
+.meyvc-field-group > label:has(input[type="radio"]),
+.meyvc-control-group > label:has(input[type="checkbox"]),
+.meyvc-control-group > label:has(input[type="radio"]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+}
+
+.meyvc-field-group input[type="text"],
+.meyvc-field-group input[type="email"],
+.meyvc-field-group input[type="url"],
+.meyvc-field-group input[type="number"],
+.meyvc-field-group textarea,
+.meyvc-field-group select,
+.meyvc-control-group input[type="text"],
+.meyvc-control-group input[type="email"],
+.meyvc-control-group input[type="url"],
+.meyvc-control-group input[type="number"],
+.meyvc-control-group textarea,
+.meyvc-control-group select {
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.meyvc-field-group input:focus,
+.meyvc-field-group textarea:focus,
+.meyvc-field-group select:focus,
+.meyvc-control-group input:focus,
+.meyvc-control-group textarea:focus,
+.meyvc-control-group select:focus {
+  border-color: #333;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
+}
+
+.meyvc-input-large {
+  font-size: 16px !important;
+  padding: 12px 15px !important;
+}
+
+.meyvc-field-hint,
+.meyvc-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.meyvc-field-hint code,
+.meyvc-hint code {
+  background: #f0f0f1;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* Inline validation errors (save feedback) */
+.meyvc-field-group.meyvc-has-error input,
+.meyvc-field-group.meyvc-has-error select,
+.meyvc-field-group.meyvc-has-error textarea {
+  border-color: #d63638;
+  box-shadow: 0 0 0 1px #d63638;
+}
+
+.meyvc-field-error-message {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #d63638;
+  line-height: 1.4;
+}
+
+/* Builder toast container (fixed within wrap) */
+.meyvc-builder-wrap .meyvc-ui-toast-container {
+  position: fixed;
+  top: 32px;
+  right: 20px;
+  z-index: 100001;
+}
+
+body.admin-bar .meyvc-builder-wrap .meyvc-ui-toast-container {
+  top: 46px;
+}
+
+.meyvc-field-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.meyvc-field-row .meyvc-field-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.meyvc-field-col label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #333;
+}
+
+.meyvc-field-col input,
+.meyvc-field-col select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Input with suffix (e.g. "seconds") */
+.meyvc-input-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.meyvc-input-with-suffix.meyvc-input-with-suffix input {
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.meyvc-suffix {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* "X times per Y hours/days" — override full-width inputs + 100% Select2 in .meyvc-control-group */
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row input[type="number"] {
+  width: auto !important;
+  min-width: 64px;
+  max-width: 120px;
+  flex: 0 0 auto;
+}
+
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row input#display-max-impressions {
+  min-width: 100px;
+  max-width: 140px;
+}
+
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row .meyvc-cap-sep {
+  flex-shrink: 0;
+  line-height: 1.45;
+}
+
+/* Select2 in this row: must not stretch to full row (see meyvc-admin-selectwoo-override.css) */
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row .select2-container {
+  width: auto !important;
+  min-width: 118px;
+  max-width: 200px;
+  flex: 0 0 auto;
+}
+
+.meyvc-builder-wrap .meyvc-control-group .meyvc-frequency-cap-row select:not(.select2-hidden-accessible) {
+  width: auto !important;
+  min-width: 118px;
+  max-width: 200px;
+  flex: 0 0 auto;
+}
+
+/* Conditional field (single input below checkbox) */
+.meyvc-field-group .meyvc-conditional-field,
+.meyvc-field-group input.meyvc-conditional-field {
+  margin-top: 12px;
+}
+
+/* Image Upload */
+.meyvc-image-upload {
+  cursor: pointer;
+}
+
+.meyvc-image-upload-preview {
+  background: #f5f5f5;
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 30px;
+  text-align: center;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.meyvc-image-upload-preview:hover {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+.meyvc-image-upload-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+}
+
+.meyvc-upload-placeholder {
+  color: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.meyvc-remove-image {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #333;
+  color: #fff;
+  border: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.meyvc-select-image-btn {
+  margin-top: 10px;
+}
+
+.meyvc-select-image-btn .dashicons {
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Conditional Fields */
+.meyvc-conditional-fields {
+  margin-top: 14px;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.meyvc-conditional-fields input[type="text"],
+.meyvc-conditional-fields input[type="number"],
+.meyvc-conditional-fields input[type="url"],
+.meyvc-conditional-fields select {
+  margin-top: 0;
+}
+
+.meyvc-checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.meyvc-checkbox-inline input {
+  flex-shrink: 0;
+}
+
+/* Range Slider */
+.meyvc-range-slider {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.meyvc-range-slider input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.meyvc-range-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #333;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.meyvc-range-value {
+  min-width: 60px;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Design / Trigger / Display / Targeting wrappers */
+.meyvc-design-controls,
+.meyvc-trigger-controls,
+.meyvc-display-controls,
+.meyvc-targeting-controls {
+  max-width: 100%;
+}
+
+/* Content section – card-style panel for form fields */
+.meyvc-content-editor {
+  margin-top: 8px;
+  padding: 24px 26px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.meyvc-content-editor .meyvc-field-group {
+  margin-bottom: 22px;
+}
+
+.meyvc-content-editor .meyvc-field-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Design & Trigger sections – card-style panel */
+.meyvc-design-controls,
+.meyvc-trigger-controls {
+  margin-top: 8px;
+  padding: 24px 26px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.meyvc-design-controls .meyvc-control-group,
+.meyvc-trigger-controls .meyvc-control-group {
+  padding-bottom: 2px;
+}
+
+/* Color Grid */
+.meyvc-color-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.meyvc-color-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meyvc-color-field label {
+  display: block;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #555;
+}
+
+.meyvc-color-field input.meyvc-color-picker {
+  width: 100%;
+  height: 40px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+/* Advanced options (trigger intent) */
+.meyvc-advanced-options {
+  margin-top: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.meyvc-signal-weight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.meyvc-signal-weight label {
+  flex: 0 0 140px;
+  font-size: 13px;
+  color: #333;
+}
+
+.meyvc-signal-weight input[type="range"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.meyvc-signal-weight span {
+  flex: 0 0 28px;
+  text-align: right;
+  font-size: 13px;
+  color: #666;
+}
+
+.meyvc-intent-signals {
+  margin-bottom: 16px;
+}
+
+/* Radio card (targeting mode) */
+.meyvc-targeting-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meyvc-radio-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.meyvc-radio-card:hover {
+  border-color: #bbb;
+}
+
+.meyvc-radio-card:has(input:checked) {
+  border-color: #333;
+  background: #f9f9f9;
+}
+
+.meyvc-radio-card input {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.meyvc-radio-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meyvc-radio-content strong {
+  font-size: 13px;
+  color: #1d1d1d;
+}
+
+.meyvc-radio-content span {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Date range (display schedule) */
+.meyvc-date-range {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.meyvc-date-range > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meyvc-date-range span {
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.meyvc-date-range input[type="date"] {
+  width: 150px;
+}
+
+/* Time range (display schedule) */
+.meyvc-time-range {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.meyvc-time-range > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meyvc-time-range span {
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.meyvc-time-range input[type="time"] {
+  width: 120px;
+}
+
+/* Day selector (schedule) */
+.meyvc-day-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.meyvc-day-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.meyvc-day-option:hover {
+  border-color: #bbb;
+}
+
+.meyvc-day-option:has(input:checked) {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+/* Page selector (targeting) */
+.meyvc-page-selector {
+  margin-top: 14px;
+}
+
+.meyvc-page-selector > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.meyvc-specific-pages {
+  margin-top: 14px;
+}
+
+.meyvc-specific-pages label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #555;
+}
+
+.meyvc-specific-pages .meyvc-selectwoo,
+.meyvc-specific-pages .meyvc-select2,
+.meyvc-specific-pages select[multiple] {
+  width: 100%;
+  min-height: 80px;
+}
+
+/* Range inputs (min/max pairs) */
+.meyvc-range-inputs {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.meyvc-range-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meyvc-range-input span {
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.meyvc-range-input input {
+  width: 90px;
+}
+
+.meyvc-currency {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Input with prefix */
+.meyvc-input-with-prefix {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.meyvc-input-with-prefix input {
+  width: 120px;
+}
+
+.meyvc-prefix {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Advanced toggle (trigger) */
+.meyvc-advanced-toggle {
+  margin-top: 8px;
+}
+
+/* Size Options */
+.meyvc-size-options {
+  display: flex;
+  gap: 10px;
+}
+
+.meyvc-size-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.meyvc-size-option:hover {
+  border-color: #333;
+}
+
+.meyvc-size-option input {
+  display: none;
+}
+
+.meyvc-size-option input:checked + span {
+  color: #333;
+  font-weight: 600;
+}
+
+.meyvc-size-option:has(input:checked) {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+/* Position Grid */
+.meyvc-position-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  gap: 5px;
+}
+
+.meyvc-position-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.meyvc-position-btn:hover {
+  border-color: #333;
+}
+
+.meyvc-position-btn.active {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+
+/* Trigger Types */
+.meyvc-trigger-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+}
+
+.meyvc-trigger-option input {
+  display: none;
+}
+
+.meyvc-trigger-card {
+  padding: 15px;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.meyvc-trigger-option:hover .meyvc-trigger-card {
+  border-color: #333;
+}
+
+.meyvc-trigger-option input:checked + .meyvc-trigger-card {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+/* Trigger-specific options (shown per trigger type) */
+.meyvc-trigger-options {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.meyvc-trigger-options .meyvc-control-group {
+  margin-bottom: 18px;
+}
+
+.meyvc-trigger-icon {
+  font-size: 28px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.meyvc-trigger-name {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.meyvc-trigger-desc {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Rule Sections (Targeting, Display) */
+.meyvc-rule-section {
+  background: #fff;
+  padding: 20px 22px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  border: 1px solid #ddd;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.meyvc-rule-section:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-rule-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1d;
+}
+
+.meyvc-section-icon {
+  font-size: 18px;
+}
+
+.meyvc-rule-section .meyvc-control-group {
+  margin-bottom: 18px;
+}
+
+.meyvc-rule-section .meyvc-control-group:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-schedule-options {
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px solid #eee;
+}
+
+.meyvc-schedule-options .meyvc-control-group {
+  margin-bottom: 18px;
+}
+
+/* Checkbox Grid */
+.meyvc-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.meyvc-checkbox-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.meyvc-checkbox-grid label:hover {
+  background: #f5f5f5;
+}
+
+/* Device Options */
+.meyvc-device-options {
+  display: flex;
+  gap: 15px;
+}
+
+.meyvc-device-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 15px;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.meyvc-device-option:hover {
+  border-color: #333;
+}
+
+.meyvc-device-option:has(input:checked) {
+  border-color: #333;
+  background: #f5f5f5;
+}
+
+.meyvc-device-icon {
+  font-size: 24px;
+}
+
+/* =============================================
+   PREVIEW PANEL - UNIFIED STYLES
+   Matches frontend popup styles exactly
+   ============================================= */
+
+/* CSS Variables for Preview */
+:root {
+  --meyvc-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --meyvc-white: #ffffff;
+  --meyvc-black: #1a1a2e;
+  --meyvc-gray-50: #f8fafc;
+  --meyvc-gray-100: #f1f5f9;
+  --meyvc-gray-200: #e2e8f0;
+  --meyvc-gray-400: #94a3b8;
+  --meyvc-gray-500: #64748b;
+  --meyvc-gray-600: #475569;
+  --meyvc-accent: #6366f1;
+  --meyvc-accent-hover: #4f46e5;
+  --meyvc-radius: 16px;
+  --meyvc-radius-sm: 8px;
+  --meyvc-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Preview Panel Container */
+.meyvc-builder-preview {
+  background: #fff;
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  min-width: 380px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Preview Header */
+.meyvc-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--meyvc-black);
+  background: #fff;
+}
+
+.meyvc-preview-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.meyvc-preview-header-actions .button-small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.meyvc-preview-header-actions .meyvc-ico {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+/* Device Toggle */
+.meyvc-preview-device-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.meyvc-preview-device-toggle button {
+  padding: 6px 12px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--meyvc-gray-500);
+  transition: all 0.2s ease;
+}
+
+.meyvc-preview-device-toggle button:hover {
+  border-color: #cbd5e1;
+  color: var(--meyvc-black);
+}
+
+.meyvc-preview-device-toggle button.active {
+  background: var(--meyvc-black);
+  color: #fff;
+  border-color: var(--meyvc-black);
+}
+
+.meyvc-preview-device-toggle button .meyvc-ico {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: -0.2em;
+}
+
+.meyvc-preview-device-toggle button.active .meyvc-ico {
+  color: inherit;
+}
+
+/* Preview Container - viewport simulation; no overflow */
+.meyvc-preview-container {
+  flex: 1;
+  padding: 24px;
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  max-height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.meyvc-preview-container--tablet {
+  --meyvc-preview-scale: 0.58;
+}
+
+.meyvc-preview-container--mobile {
+  --meyvc-preview-scale: 1;
+}
+
+.meyvc-preview-container--desktop {
+  --meyvc-preview-scale: 1;
+}
+
+/* Preview Frame - simulates viewport; resizes and never overflows */
+.meyvc-preview-frame {
+  position: relative;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+  border-radius: 12px;
+  overflow: auto;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition:
+    width 0.25s ease,
+    height 0.25s ease,
+    transform 0.25s ease,
+    border-radius 0.25s ease,
+    border 0.25s ease,
+    box-shadow 0.25s ease;
+  transform-origin: center center;
+}
+
+.meyvc-preview-frame * {
+  box-sizing: border-box;
+}
+
+/* Desktop Frame */
+.meyvc-preview-frame.desktop {
+  width: 100%;
+  max-width: 340px;
+  height: 480px;
+}
+
+/* Tablet Frame */
+.meyvc-preview-frame.tablet {
+  width: 600px;
+  max-width: none;
+  height: 450px;
+  border-radius: 16px;
+  border: 8px solid var(--meyvc-black);
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.25),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transform: scale(var(--meyvc-preview-scale, 1));
+}
+
+/* Mobile Frame */
+.meyvc-preview-frame.mobile {
+  width: 280px;
+  max-width: none;
+  height: 500px;
+  border-radius: 28px;
+  border: 10px solid var(--meyvc-black);
+  box-shadow:
+    0 20px 40px -8px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Notch */
+.meyvc-preview-frame.mobile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 24px;
+  background: var(--meyvc-black);
+  border-radius: 0 0 16px 16px;
+  z-index: 100;
+}
+
+/* Frame Variants for Different Templates */
+.meyvc-preview-frame--fullscreen {
+  max-width: 340px;
+}
+
+.meyvc-preview-frame--top-bar,
+.meyvc-preview-frame--bottom-bar {
+  max-width: 100%;
+  width: 100%;
+  height: 400px;
+}
+
+.meyvc-preview-frame--slide-bottom {
+  max-width: 100%;
+  width: 100%;
+  height: 420px;
+}
+
+.meyvc-preview-frame--corner {
+  max-width: 340px;
+}
+
+/* =============================================
+   ADMIN PREVIEW OVERRIDES
+   These styles make frontend .meyvc-popup classes 
+   work inside the admin preview frame
+   ============================================= */
+
+/* Overlay inside preview frame (matches frontend .meyvc-preview-overlay) */
+.meyvc-preview-frame .meyvc-preview-overlay,
+.meyvc-preview-frame .meyvc-overlay {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: none;
+}
+
+/* Lighter overlay for bars */
+.meyvc-preview-frame--top-bar .meyvc-preview-overlay,
+.meyvc-preview-frame--top-bar .meyvc-overlay,
+.meyvc-preview-frame--bottom-bar .meyvc-preview-overlay,
+.meyvc-preview-frame--bottom-bar .meyvc-overlay {
+  background: rgba(100, 116, 139, 0.4) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Lighter overlay for corner */
+.meyvc-preview-frame--corner .meyvc-preview-overlay,
+.meyvc-preview-frame--corner .meyvc-overlay {
+  background: rgba(100, 116, 139, 0.3) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* No visible overlay for fullscreen */
+.meyvc-preview-frame--fullscreen .meyvc-preview-overlay,
+.meyvc-preview-frame--fullscreen .meyvc-overlay {
+  display: none !important;
+}
+
+/* =============================================
+   POPUP POSITIONING IN PREVIEW FRAME
+   Override fixed positioning to absolute for preview
+   ============================================= */
+.meyvc-preview-frame .meyvc-popup {
+  position: absolute !important;
+  z-index: 10 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Centered popup in preview */
+.meyvc-preview-frame .meyvc-popup--centered {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  width: 90% !important;
+  max-width: 280px !important;
+}
+
+/* Image left in preview */
+.meyvc-preview-frame .meyvc-popup--image-left {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  width: 95% !important;
+  max-width: 320px !important;
+}
+
+/* Image right in preview */
+.meyvc-preview-frame .meyvc-popup--image-right {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  width: 95% !important;
+  max-width: 320px !important;
+}
+
+/* Fullscreen in preview */
+.meyvc-preview-frame .meyvc-popup--fullscreen {
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  border-radius: 0 !important;
+  transform: none !important;
+}
+
+/* Slide bottom in preview */
+.meyvc-preview-frame .meyvc-popup--slide-bottom {
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  transform: translateY(0) !important;
+}
+
+/* Corner in preview */
+.meyvc-preview-frame .meyvc-popup--corner {
+  top: auto !important;
+  left: auto !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  width: 240px !important;
+  max-width: calc(100% - 32px) !important;
+  transform: none !important;
+}
+
+/* Minimal in preview */
+.meyvc-preview-frame .meyvc-popup--minimal {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(1) !important;
+  width: 85% !important;
+  max-width: 240px !important;
+}
+
+/* Top bar in preview */
+.meyvc-preview-frame .meyvc-popup--top-bar {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+}
+
+/* Bottom bar in preview */
+.meyvc-preview-frame .meyvc-popup--bottom-bar {
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  max-width: none !important;
+  transform: none !important;
+}
+
+/* =============================================
+   PREVIEW SIZE ADJUSTMENTS
+   Smaller sizes for the preview panel
+   ============================================= */
+
+/* Smaller headlines in preview */
+.meyvc-preview-frame .meyvc-popup__headline {
+  font-size: 18px;
+}
+
+.meyvc-preview-frame .meyvc-popup--fullscreen .meyvc-popup__headline {
+  font-size: 24px;
+}
+
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__headline,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__headline {
+  font-size: 13px;
+  margin: 0;
+}
+
+.meyvc-preview-frame .meyvc-popup--corner .meyvc-popup__headline {
+  font-size: 15px;
+}
+
+.meyvc-preview-frame .meyvc-popup--minimal .meyvc-popup__headline {
+  font-size: 16px;
+}
+
+/* Smaller body text in preview */
+.meyvc-preview-frame .meyvc-popup__body {
+  font-size: 13px;
+}
+
+.meyvc-preview-frame .meyvc-popup--corner .meyvc-popup__body {
+  font-size: 12px;
+}
+
+/* Smaller CTA in preview for bars */
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__cta,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__cta {
+  width: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* Smaller countdown/coupon in bars */
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__countdown,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__countdown,
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__coupon,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__coupon {
+  padding: 4px 10px;
+  font-size: 11px;
+  margin: 0;
+}
+
+/* Close button positioning for bars */
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__close,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__close {
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+}
+
+/* Inner content padding adjustments */
+.meyvc-preview-frame .meyvc-popup__inner {
+  padding: 20px;
+}
+
+.meyvc-preview-frame .meyvc-popup--top-bar .meyvc-popup__inner,
+.meyvc-preview-frame .meyvc-popup--bottom-bar .meyvc-popup__inner {
+  padding: 10px 40px 10px 16px;
+}
+
+/* Image sizing in preview */
+.meyvc-preview-frame .meyvc-popup__image {
+  max-height: 140px;
+  overflow: hidden;
+}
+
+.meyvc-preview-frame .meyvc-popup--image-left .meyvc-popup__image,
+.meyvc-preview-frame .meyvc-popup--image-right .meyvc-popup__image {
+  min-height: 200px;
+  max-height: none;
+}
+
+/* =============================================
+   EMPTY STATE
+   ============================================= */
+.meyvc-preview-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: rgba(255, 255, 255, 0.7);
+  z-index: 2;
+}
+
+.meyvc-preview-empty .dashicons {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.meyvc-preview-empty h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0 0 8px 0;
+}
+
+.meyvc-preview-empty p {
+  font-size: 13px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* =============================================
+   RESPONSIVE
+   ============================================= */
+@media (max-width: 1200px) {
+  .meyvc-builder-main {
+    grid-template-columns: 60px 1fr 320px;
+  }
+
+  .meyvc-nav-label {
+    display: none;
+  }
+
+  .meyvc-nav-item {
+    justify-content: center;
+    padding: 15px;
+  }
+
+  .meyvc-nav-icon .meyvc-ico,
+  .meyvc-nav-icon svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .meyvc-builder-preview {
+    min-width: 300px;
+  }
+}
+
+/* Server-rendered preview in sandboxed iframe (optional split emphasis) */
+.meyvc-builder-split[data-mode="split"] .meyvc-builder-main {
+  grid-template-columns: 200px 1fr minmax(300px, 40%);
+}
+
+.meyvc-builder-live-preview-iframe {
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .meyvc-builder-main {
+    grid-template-columns: 1fr;
+  }
+
+  .meyvc-builder-sidebar {
+    display: none;
+  }
+
+  .meyvc-builder-preview {
+    display: none;
+  }
+}

@@ -1,0 +1,1099 @@
+/**
+ * CRO Offers admin page – 8px grid, soft borders, subtle shadows.
+ */
+
+/* --- Toast container (fixed) --- */
+.meyvc-offers-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100060;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.meyvc-offers-toast-item {
+  padding: 12px 16px;
+  min-width: 200px;
+  max-width: 360px;
+  background: #1d2327;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  animation: meyvc-toast-in 0.25s ease;
+}
+
+.meyvc-offers-toast-item.meyvc-offers-toast-out {
+  animation: meyvc-toast-out 0.2s ease forwards;
+}
+
+@keyframes meyvc-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes meyvc-toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* --- Header (8px grid) --- */
+.meyvc-offers-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.meyvc-offers-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.meyvc-offers-title {
+  margin: 0 0 8px 0;
+  font-size: 23px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.meyvc-offers-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #646970;
+  line-height: 1.5;
+  max-width: 560px;
+}
+
+.meyvc-offers-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.meyvc-offers-count {
+  font-size: 13px;
+  color: #646970;
+}
+
+.meyvc-offers-limit-note {
+  font-size: 13px;
+  color: #d63638;
+}
+
+.meyvc-offers-add-btn.button-primary {
+  white-space: nowrap;
+}
+
+.meyvc-offers-add-btn[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Empty state (8px grid) --- */
+.meyvc-offers-empty {
+  text-align: center;
+  padding: 48px 24px 56px;
+  background: #f8f9fa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.meyvc-offers-empty-illustration {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 24px;
+  background: linear-gradient(145deg, #e8eaed 0%, #dce0e5 100%);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.meyvc-offers-empty-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.meyvc-offers-empty-desc {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: #646970;
+  line-height: 1.5;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.meyvc-offers-empty-cta {
+  margin-top: 8px;
+}
+
+.meyvc-offers-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.meyvc-offers-toolbar .meyvc-offers-check-conflicts {
+  margin-left: auto;
+}
+
+.meyvc-offers-conflict-notices {
+  margin: 0 0 16px;
+}
+
+.meyvc-offers-conflict-notices .notice {
+  margin: 8px 0 0;
+}
+
+.meyvc-offer-card-conflicts-row {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #646970;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meyvc-offer-card-conflicts-label {
+  font-weight: 600;
+}
+
+.meyvc-offer-conflict-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0b849;
+  color: #1d2327;
+  line-height: 1.4;
+}
+
+.meyvc-offer-conflict-badge--none {
+  background: transparent;
+  color: #a7aaad;
+  font-weight: 400;
+  padding: 0;
+}
+
+/* --- Cards grid (8px grid) --- */
+.meyvc-offers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.meyvc-offer-card {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.meyvc-offer-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #c3c4c7;
+}
+
+.meyvc-offer-card-main {
+  padding: 24px;
+  flex: 1;
+  min-width: 0;
+}
+
+.meyvc-offer-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.meyvc-offer-card-drag-handle {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  cursor: grab;
+  color: #787c82;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.meyvc-offer-card-drag-handle:hover {
+  color: #1d2327;
+  background: #f0f0f1;
+}
+
+.meyvc-offer-card-drag-handle::before {
+  content: "";
+  display: block;
+  width: 8px;
+  height: 2px;
+  background: currentColor;
+  box-shadow:
+    0 4px 0 currentColor,
+    0 8px 0 currentColor;
+  opacity: 0.6;
+}
+
+.meyvc-offer-card-dragging {
+  opacity: 0.7;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.meyvc-offer-card-drag-over {
+  outline: 2px dashed #2271b1;
+  outline-offset: 2px;
+}
+
+.meyvc-offer-card-name {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d2327;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Status badges: Active (green), Inactive (gray) */
+.meyvc-offer-card-status {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.meyvc-offer-card-status--active {
+  background: #00a32a;
+  color: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 163, 42, 0.2);
+}
+
+.meyvc-offer-card-status--inactive {
+  background: #f0f0f1;
+  color: #646970;
+  border: 1px solid #dcdcde;
+}
+
+.meyvc-offer-card-rule,
+.meyvc-offer-card-reward,
+.meyvc-offer-card-priority {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  color: #646970;
+  line-height: 1.45;
+}
+
+.meyvc-offer-card-rule {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.meyvc-offer-card-reward {
+  font-weight: 500;
+  color: #2c3338;
+}
+
+.meyvc-offer-card-priority {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #787c82;
+}
+
+.meyvc-offer-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: #f8f9fa;
+  border-top: 1px solid #e0e0e0;
+}
+
+.meyvc-offer-card-move-btns {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.meyvc-offer-card-move-btns .meyvc-offer-move-up,
+.meyvc-offer-card-move-btns .meyvc-offer-move-down {
+  min-width: 32px;
+  padding: 4px 8px;
+}
+
+.meyvc-offer-card-toggle-form {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.meyvc-offer-card-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.meyvc-offer-card-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.meyvc-offer-card-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #c3c4c7;
+  border-radius: 24px;
+  transition: background 0.2s ease;
+}
+
+.meyvc-offer-card-toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.meyvc-offer-card-toggle input:checked + .meyvc-offer-card-toggle-slider {
+  background: #00a32a;
+}
+
+.meyvc-offer-card-toggle input:checked + .meyvc-offer-card-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+.meyvc-offer-card-actions .button-small {
+  font-size: 12px;
+  padding: 4px 12px;
+  line-height: 1.5;
+}
+
+.meyvc-offer-card-form-inline {
+  display: inline;
+  margin: 0;
+}
+
+.meyvc-offer-card-form-inline .button {
+  margin: 0;
+}
+
+.meyvc-offer-card-delete {
+  color: #b32d2e;
+  border-color: #b32d2e;
+}
+
+.meyvc-offer-card-delete:hover {
+  background: #b32d2e;
+  color: #fff;
+  border-color: #b32d2e;
+}
+
+/* Edit form section */
+.meyvc-offers-edit-form {
+  margin-top: 8px;
+}
+
+.meyvc-offers-edit-form .meyvc-offer-slot {
+  scroll-margin-top: 32px;
+}
+
+/* --- Offer Builder drawer: smooth open/close animation --- */
+.meyvc-offer-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 100050;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0.3s ease;
+}
+
+.meyvc-offer-drawer.is-open {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.meyvc-offer-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.meyvc-offer-drawer.is-open .meyvc-offer-drawer-backdrop {
+  opacity: 1;
+}
+
+.meyvc-offer-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid #e0e0e0;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.meyvc-offer-drawer.is-open .meyvc-offer-drawer-panel {
+  transform: translateX(0);
+}
+
+.meyvc-offer-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.meyvc-offer-drawer-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2327;
+}
+
+.meyvc-offer-drawer-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #646970;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.meyvc-offer-drawer-close:hover {
+  color: #1d2327;
+  background: #f0f0f1;
+}
+
+.meyvc-offer-drawer-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Accordion sections */
+.meyvc-offer-drawer-form .meyvc-offer-drawer-section {
+  border-bottom: 1px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.meyvc-offer-drawer-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 24px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  background: #fff;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+
+.meyvc-offer-drawer-section__header:hover {
+  background: #f6f7f7;
+}
+
+.meyvc-offer-drawer-section__header:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #2271b1;
+}
+
+.meyvc-offer-drawer-section-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d2327;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.meyvc-offer-drawer-section__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: #646970;
+  transition:
+    transform 0.2s ease,
+    color 0.15s ease;
+}
+
+.meyvc-offer-drawer-section.is-collapsed .meyvc-offer-drawer-section__toggle {
+  transform: rotate(-90deg);
+}
+
+.meyvc-offer-drawer-section__body {
+  overflow: hidden;
+  transition: max-height 0.25s ease-out;
+}
+
+.meyvc-offer-drawer-section.is-collapsed .meyvc-offer-drawer-section__body {
+  max-height: 0 !important;
+  overflow: hidden;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.meyvc-offer-drawer-section__body-inner {
+  padding: 0 24px 24px 24px;
+}
+
+.meyvc-offer-drawer-section:not(.is-collapsed)
+  .meyvc-offer-drawer-section__body-inner {
+  padding-top: 0;
+}
+
+/* Live summary bar at top of drawer (updates on input) */
+.meyvc-offer-drawer-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin: 0 24px 16px;
+  background: var(--meyvc-modern-bg-tabs, #f0f0f1);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--meyvc-modern-text, #2c3338);
+  transition:
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.meyvc-offer-drawer-summary-bar.meyvc-offer-drawer-summary-bar--updated {
+  box-shadow: 0 0 0 1px rgba(34, 113, 177, 0.2);
+  background: #f0f6fc;
+}
+
+.meyvc-offer-drawer-summary-label {
+  font-weight: 600;
+  color: var(--meyvc-modern-text-muted, #646970);
+  flex-shrink: 0;
+}
+
+.meyvc-offer-drawer-summary-bar .meyvc-drawer-offer-summary {
+  flex: 1;
+  min-height: 1.4em;
+}
+
+/* Inline help with Lucide info icon (tooltip) */
+.meyvc-field__label-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meyvc-field-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #646970;
+  cursor: help;
+  position: relative;
+  border-radius: 50%;
+  transition: color 0.15s ease;
+}
+
+.meyvc-field-help-trigger:hover {
+  color: #2271b1;
+}
+
+.meyvc-field-help-trigger .meyvc-ico {
+  width: 14px;
+  height: 14px;
+}
+
+.meyvc-field-help-trigger:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(100% + 8px);
+  min-width: 180px;
+  max-width: 260px;
+  padding: 8px 10px;
+  background: #1d2327;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  white-space: normal;
+  z-index: 100060;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.meyvc-offer-drawer .meyvc-field {
+  margin: 0 0 16px 0;
+}
+
+.meyvc-offer-drawer .meyvc-field:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-offer-drawer .meyvc-field .meyvc-field__label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 13px;
+  color: #1d2327;
+}
+
+.meyvc-offer-drawer .meyvc-field .meyvc-help {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #646970;
+}
+
+/* Inline error under field (exclude Select2 search input) */
+.meyvc-offer-drawer .meyvc-field.has-error input:not(.select2-search__field),
+.meyvc-offer-drawer .meyvc-field.has-error select,
+.meyvc-offer-drawer .meyvc-field.has-error textarea {
+  border-color: #d63638;
+  box-shadow: 0 0 0 1px #d63638;
+}
+
+.meyvc-offer-drawer-field-error {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #d63638;
+  line-height: 1.4;
+}
+
+/* Exclude Select2 search inputs so they don't get field styling */
+.meyvc-offer-drawer .meyvc-field input[type="text"]:not(.select2-search__field),
+.meyvc-offer-drawer .meyvc-field input[type="number"]:not(.select2-search__field),
+.meyvc-offer-drawer .meyvc-field textarea,
+.meyvc-offer-drawer .meyvc-field select {
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--meyvc-modern-input-height, 42px);
+  padding: 10px 12px;
+  border: 1px solid var(--meyvc-modern-border-light, #dcdcde);
+  border-radius: var(--meyvc-modern-input-radius, 4px);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.meyvc-offer-drawer .meyvc-field textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.meyvc-offer-drawer .meyvc-field input:not(.select2-search__field):focus,
+.meyvc-offer-drawer .meyvc-field select:focus,
+.meyvc-offer-drawer .meyvc-field textarea:focus {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+  outline: none;
+}
+
+.meyvc-offer-drawer .meyvc-field.meyvc-drawer-reward-amount-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.meyvc-offer-drawer
+  .meyvc-field.meyvc-drawer-reward-amount-wrap
+  input:not(.select2-search__field) {
+  width: auto;
+  min-width: 80px;
+}
+
+.meyvc-drawer-reward-suffix {
+  font-size: 13px;
+  color: #646970;
+}
+
+.meyvc-offer-drawer-toggle,
+.meyvc-offer-drawer-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 400;
+}
+
+.meyvc-offer-drawer-toggle .meyvc-offer-drawer-toggle-slider {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 24px;
+  background: #c3c4c7;
+  border-radius: 24px;
+  transition: background 0.2s ease;
+}
+
+.meyvc-offer-drawer-toggle .meyvc-offer-drawer-toggle-slider::after {
+  content: "";
+  position: absolute;
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.meyvc-offer-drawer-toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.meyvc-offer-drawer-toggle input:checked + .meyvc-offer-drawer-toggle-slider {
+  background: #00a32a;
+}
+
+.meyvc-offer-drawer-toggle
+  input:checked
+  + .meyvc-offer-drawer-toggle-slider::after {
+  transform: translateX(16px);
+}
+
+.meyvc-drawer-select {
+  min-height: 80px;
+}
+
+/* SelectWoo in drawer: 42px control height (single and multi) */
+#meyvc-offer-drawer
+  .meyvc-offer-drawer-panel
+  .select2-container--default
+  .select2-selection--single,
+#meyvc-offer-drawer
+  .meyvc-offer-drawer-panel
+  .select2-container--default
+  .select2-selection--multiple {
+  min-height: var(--meyvc-modern-input-height, 42px);
+  border-radius: var(--meyvc-modern-input-radius, 4px);
+}
+#meyvc-offer-drawer
+  .meyvc-offer-drawer-panel
+  .select2-container--default
+  .select2-selection--single
+  .select2-selection__rendered,
+#meyvc-offer-drawer
+  .meyvc-offer-drawer-panel
+  .select2-container--default
+  .select2-selection--multiple
+  .select2-selection__rendered {
+  line-height: calc(var(--meyvc-modern-input-height, 42px) - 2px);
+}
+#meyvc-offer-drawer
+  .meyvc-offer-drawer-panel
+  .select2-container--default
+  .select2-selection--multiple
+  .select2-selection__choice {
+  line-height: 1.2;
+}
+
+.meyvc-offer-drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+  flex-shrink: 0;
+  margin-top: auto;
+  box-shadow: 0 -1px 0 #e0e0e0;
+}
+
+.meyvc-offer-drawer-footer .button {
+  min-height: var(--meyvc-modern-input-height, 42px);
+  padding: 0 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.meyvc-offer-drawer-sections-wrap {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Drawer content: 12-col grid, baseline alignment for two-column rows */
+.meyvc-offer-drawer .meyvc-grid {
+  gap: 16px;
+  align-items: baseline;
+}
+
+.meyvc-offer-drawer .meyvc-grid .meyvc-field {
+  margin-bottom: 0;
+}
+
+.meyvc-offer-drawer .meyvc-grid .meyvc-field--toggle,
+.meyvc-offer-drawer .meyvc-grid .meyvc-field--check {
+  align-self: center;
+}
+
+.meyvc-offer-drawer-section {
+  margin-bottom: 24px;
+}
+
+.meyvc-offer-drawer-section:last-child {
+  margin-bottom: 0;
+}
+
+@media screen and (max-width: 520px) {
+  .meyvc-offer-drawer .meyvc-grid .meyvc-col-6,
+  .meyvc-offer-drawer .meyvc-grid .meyvc-col-12 {
+    grid-column: span 12;
+  }
+}
+
+/* Toggle/checkbox rows: label + control on one line */
+.meyvc-offer-drawer .meyvc-field--toggle,
+.meyvc-offer-drawer .meyvc-field--toggle.meyvc-col-6,
+.meyvc-offer-drawer .meyvc-field--toggle.meyvc-col-12 {
+  display: flex;
+  align-items: center;
+}
+
+.meyvc-offer-drawer .meyvc-field--toggle .meyvc-field__control label {
+  margin-bottom: 0;
+}
+
+.meyvc-offer-drawer .meyvc-field--toggle input {
+  flex-shrink: 0;
+}
+
+/* Checkbox rows: same one-line alignment as toggles */
+.meyvc-offer-drawer .meyvc-field--check,
+.meyvc-offer-drawer .meyvc-field--check.meyvc-col-6,
+.meyvc-offer-drawer .meyvc-field--check.meyvc-col-12 {
+  display: flex;
+  align-items: center;
+}
+
+.meyvc-offer-drawer .meyvc-field--check .meyvc-field__control label {
+  margin-bottom: 0;
+}
+
+.meyvc-offer-drawer .meyvc-field--check input {
+  flex-shrink: 0;
+}
+
+/* SelectWoo: dropdown above overlay when open */
+.select2-container--open {
+  z-index: 1000000 !important;
+}
+
+/* SelectWoo inside offer drawer: full width */
+#meyvc-offer-drawer .select2-container {
+  width: 100% !important;
+}
+
+#meyvc-offer-drawer .meyvc-offer-drawer-panel .select2-container {
+  width: 100% !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Dropdown appended to panel via dropdownParent: above overlay */
+#meyvc-offer-drawer .meyvc-offer-drawer-panel .select2-dropdown {
+  z-index: 100060;
+}
+
+/* Per-category discount rows: flex row so select + input + button align */
+.meyvc-drawer-per-category-discount-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meyvc-drawer-per-category-discount-list .meyvc-drawer-add-per-cat {
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.meyvc-drawer-per-cat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.meyvc-drawer-per-cat-row .meyvc-drawer-select,
+.meyvc-drawer-per-cat-row .select2-container {
+  flex: 1;
+  min-width: 140px;
+}
+
+.meyvc-drawer-per-cat-row .meyvc-drawer-per-cat-amount {
+  width: 80px;
+  min-width: 80px;
+}
+
+.meyvc-drawer-per-cat-row .meyvc-drawer-remove-per-cat {
+  flex-shrink: 0;
+}
+
+/* --- Test Offer panel: match block & checks --- */
+.meyvc-offer-test-match {
+  margin-top: 8px;
+  padding: 12px;
+  background: #fff;
+  border-left: 4px solid #00a32a;
+  border-radius: 0 4px 4px 0;
+}
+
+.meyvc-offer-test-match-title,
+.meyvc-offer-test-checks-title {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+}
+
+.meyvc-offer-test-match-list,
+.meyvc-offer-test-checks {
+  margin: 0;
+  padding-left: 20px;
+  list-style: disc;
+}
+
+.meyvc-offer-test-checks {
+  list-style: none;
+  padding-left: 0;
+}
+
+.meyvc-offer-test-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.meyvc-offer-test-check-icon {
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+.meyvc-offer-test-check--pass .meyvc-offer-test-check-icon {
+  color: #00a32a;
+}
+
+.meyvc-offer-test-check--fail .meyvc-offer-test-check-icon {
+  color: #d63638;
+}
+
+.meyvc-offer-test-check-detail {
+  font-size: 12px;
+  color: #646970;
+  margin-left: 2px;
+}
+
+.meyvc-offer-test-no-match-msg {
+  margin: 0 0 8px 0;
+}
+
+.meyvc-offer-test-suggestions-title {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.meyvc-offer-test-suggestions {
+  margin: 0;
+  padding-left: 20px;
+}

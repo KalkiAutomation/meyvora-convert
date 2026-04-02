@@ -1,0 +1,222 @@
+/**
+ * Onboarding wizard — Meyvora Convert admin.
+ */
+.meyvc-onboarding-wizard {
+	max-width: 820px;
+	margin: 0 auto;
+	padding: 1rem 0 2rem;
+}
+
+.meyvc-ob-progress {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	margin-bottom: 2rem;
+}
+
+.meyvc-ob-progress-track {
+	flex: 1;
+	height: 4px;
+	background: #e0e0e0;
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.meyvc-ob-progress-fill {
+	display: block;
+	height: 100%;
+	background: #2271b1;
+	border-radius: 4px;
+	transition: width 0.25s ease;
+}
+
+.meyvc-ob-progress-label {
+	font-size: 13px;
+	color: #646970;
+	white-space: nowrap;
+}
+
+.meyvc-ob-title {
+	font-size: 1.6rem;
+	margin: 0 0 0.35rem;
+	line-height: 1.25;
+}
+
+.meyvc-ob-lead {
+	color: #646970;
+	margin: 0 0 1.5rem;
+	font-size: 15px;
+}
+
+.meyvc-ob-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+	gap: 12px;
+	margin-bottom: 1.5rem;
+}
+
+.meyvc-ob-card {
+	margin: 0;
+	cursor: pointer;
+	display: block;
+}
+
+.meyvc-ob-card input {
+	position: absolute;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.meyvc-ob-card-inner {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 1rem 1.1rem;
+	border: 2px solid #dcdcde;
+	border-radius: 10px;
+	background: #fff;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	min-height: 92px;
+}
+
+.meyvc-ob-card input:focus-visible + .meyvc-ob-card-inner {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
+}
+
+.meyvc-ob-card input:checked + .meyvc-ob-card-inner {
+	border-color: #2271b1;
+	box-shadow: 0 0 0 1px #2271b1;
+}
+
+.meyvc-ob-card-title {
+	font-weight: 600;
+	font-size: 15px;
+	color: #1d2327;
+}
+
+.meyvc-ob-card-desc {
+	font-size: 13px;
+	color: #646970;
+	line-height: 1.4;
+}
+
+.meyvc-ob-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	align-items: center;
+	margin-top: 0.5rem;
+}
+
+.meyvc-ob-field {
+	margin-bottom: 1rem;
+	max-width: 420px;
+}
+
+.meyvc-ob-field-label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+	color: #1d2327;
+}
+
+.meyvc-ob-select {
+	width: 100%;
+	max-width: 420px;
+}
+
+.meyvc-ob-configuring {
+	text-align: center;
+	padding: 2rem 1rem;
+}
+
+.meyvc-ob-spinner {
+	width: 40px;
+	height: 40px;
+	margin: 0 auto 1rem;
+	border: 3px solid #dcdcde;
+	border-top-color: #2271b1;
+	border-radius: 50%;
+	animation: meyvc-ob-spin 0.7s linear infinite;
+}
+
+@keyframes meyvc-ob-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.meyvc-ob-configuring-text {
+	font-size: 16px;
+	margin: 0;
+}
+
+.meyvc-ob-summary {
+	padding: 0.5rem 0 1rem;
+}
+
+.meyvc-ob-summary-title {
+	margin: 0 0 0.75rem;
+	font-size: 1.1rem;
+}
+
+.meyvc-ob-summary-list {
+	list-style: none;
+	margin: 0 0 1.25rem;
+	padding: 0;
+}
+
+.meyvc-ob-summary-list li {
+	position: relative;
+	padding: 8px 0 8px 28px;
+	border-bottom: 1px solid #f0f0f1;
+	font-size: 14px;
+}
+
+.meyvc-ob-summary-list li::before {
+	content: "✓";
+	position: absolute;
+	left: 0;
+	color: #00a32a;
+	font-weight: bold;
+}
+
+.meyvc-ob-checklist {
+	list-style: none;
+	margin: 0 0 1.5rem;
+	padding: 0;
+}
+
+.meyvc-ob-checklist li {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	padding: 10px 12px;
+	margin-bottom: 8px;
+	background: #f6f7f7;
+	border-radius: 8px;
+	font-size: 14px;
+}
+
+.meyvc-ob-checklist li .dashicons {
+	color: #00a32a;
+	flex-shrink: 0;
+	width: 20px;
+	height: 20px;
+	font-size: 20px;
+}
+
+.meyvc-ob-skip {
+	margin-top: 2rem;
+	padding-top: 1rem;
+	border-top: 1px solid #dcdcde;
+}
+
+.meyvc-ob-skip a {
+	font-size: 13px;
+}
+
+.meyvc-is-hidden {
+	display: none !important;
+}

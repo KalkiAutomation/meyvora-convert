@@ -1,0 +1,58 @@
+/**
+ * SelectWoo / Select2 overrides for CRO admin.
+ * Base styling (colors, borders, dropdown) comes from SelectWoo. This file only:
+ * - Sets 42px min-height for alignment with other admin inputs.
+ * - Ensures full width so Select2 is not narrow in content/builder areas.
+ * - Ensures dropdown z-index so it is not clipped in drawers/modals.
+ * Load after SelectWoo + meyvc-admin-ui so SelectWoo remains the visual source of truth.
+ *
+ * @package Meyvora_Convert
+ */
+
+/* Full width: avoid narrow Select2 when original select has no width or is in a flex/grid cell */
+.meyvc-admin-layout__content .select2-container,
+.meyvc-builder-wrap .select2-container,
+.meyvc-admin-layout__content .meyvc-control-group .select2-container,
+.meyvc-builder-wrap .meyvc-control-group .select2-container {
+	width: 100% !important;
+	max-width: 100%;
+}
+
+/* 42px height only – do not override SelectWoo border/colors/border-radius */
+.meyvc-admin-layout__content .select2-container--default .select2-selection--single,
+.meyvc-builder-wrap .select2-container--default .select2-selection--single,
+.meyvc-builder-wrap .select2-container--default .select2-selection--multiple,
+#meyvc-offer-drawer .select2-container--default .select2-selection--single,
+#meyvc-offer-drawer .select2-container--default .select2-selection--multiple {
+	min-height: 42px !important;
+	height: auto !important;
+}
+
+.meyvc-admin-layout__content .select2-container--default .select2-selection--single .select2-selection__rendered,
+.meyvc-builder-wrap .select2-container--default .select2-selection--single .select2-selection__rendered,
+.meyvc-admin-layout__content .select2-container--default .select2-selection--multiple .select2-selection__rendered,
+.meyvc-builder-wrap .select2-container--default .select2-selection--multiple .select2-selection__rendered,
+#meyvc-offer-drawer .select2-container--default .select2-selection__rendered {
+	line-height: 40px !important;
+	padding-left: 12px;
+}
+
+.meyvc-admin-layout__content .select2-container--default .select2-selection--single .select2-selection__arrow,
+.meyvc-builder-wrap .select2-container--default .select2-selection--single .select2-selection__arrow,
+#meyvc-offer-drawer .select2-container--default .select2-selection--single .select2-selection__arrow {
+	height: 40px !important;
+}
+
+.meyvc-admin-layout__content .select2-container--default .select2-selection--multiple .select2-selection__choice,
+.meyvc-builder-wrap .select2-container--default .select2-selection--multiple .select2-selection__choice {
+	line-height: 1.8;
+}
+
+/* Dropdown in drawers/modals: ensure it is not clipped */
+.select2-container--open .select2-dropdown--below {
+	z-index: 1000000;
+}
+
+#meyvc-offer-drawer .select2-container--open .select2-dropdown {
+	z-index: 1000001;
+}

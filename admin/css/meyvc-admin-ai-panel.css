@@ -1,0 +1,162 @@
+/* AI sidebar — Meyvora Convert admin */
+.meyvc-ai-panel {
+	position: fixed;
+	top: calc( var(--wp-admin--admin-bar--height, 32px) + 80px );
+	right: 0;
+	z-index: 100050;
+	font-size: 13px;
+	max-width: 100vw;
+}
+
+.meyvc-ai-panel__toggle {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 12px;
+	background: #1d2327;
+	color: #fff;
+	border: none;
+	border-radius: 8px 0 0 8px;
+	cursor: pointer;
+	box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.meyvc-ai-panel__toggle-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #787c82;
+}
+
+.meyvc-ai-panel__toggle-dot.is-live {
+	background: #00ba37;
+}
+
+.meyvc-ai-panel__drawer {
+	position: absolute;
+	right: 0;
+	top: 100%;
+	margin-top: 8px;
+	width: min(360px, calc(100vw - 24px));
+	background: #fff;
+	border: 1px solid #c3c4c7;
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+	padding: 14px;
+	max-height: min(70vh, 560px);
+	overflow: auto;
+}
+
+.meyvc-ai-panel__head {
+	margin-bottom: 12px;
+}
+
+.meyvc-ai-panel__title {
+	margin: 0 0 6px;
+	font-size: 14px;
+}
+
+.meyvc-ai-panel__status-msg {
+	margin: 0;
+	color: #646970;
+	font-size: 12px;
+}
+
+.meyvc-ai-panel__card {
+	background: #f6f7f7;
+	border-radius: 6px;
+	padding: 10px;
+	margin-bottom: 12px;
+}
+
+.meyvc-ai-panel__card h4 {
+	margin: 0 0 6px;
+	font-size: 13px;
+}
+
+.meyvc-ai-panel__card p {
+	margin: 0 0 8px;
+	font-size: 12px;
+	line-height: 1.45;
+	color: #2c3338;
+}
+
+.meyvc-ai-panel__actions {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 12px;
+}
+
+.meyvc-ai-panel__actions .button {
+	text-align: center;
+	justify-content: center;
+}
+
+.meyvc-ai-panel__copy {
+	margin-bottom: 8px;
+}
+
+.meyvc-ai-panel__label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.meyvc-ai-panel__copy .widefat {
+	margin-bottom: 6px;
+}
+
+.meyvc-ai-panel__copy-result {
+	margin-top: 8px;
+	padding: 8px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+	font-size: 12px;
+}
+
+.meyvc-ai-panel__usage {
+	margin: 0;
+	font-size: 11px;
+	color: #787c82;
+}
+
+.meyvc-ai-panel__muted {
+	margin: 0;
+	color: #787c82;
+	font-size: 12px;
+}
+
+.meyvc-ai-modal-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.35);
+	z-index: 100060;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+}
+
+.meyvc-ai-modal {
+	background: #fff;
+	border-radius: 8px;
+	max-width: 520px;
+	width: 100%;
+	max-height: 80vh;
+	overflow: auto;
+	padding: 20px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.meyvc-ai-modal h4 {
+	margin-top: 0;
+}
+
+.meyvc-ai-modal__actions {
+	margin-top: 14px;
+	display: flex;
+	gap: 8px;
+	flex-wrap: wrap;
+}

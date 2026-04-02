@@ -1,0 +1,234 @@
+/* =============================================
+   CRO ANIMATION KEYFRAMES
+   ============================================= */
+
+/* Fade */
+@keyframes meyvc-fade-in {
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@keyframes meyvc-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Slide Up */
+@keyframes meyvc-slide-up-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes meyvc-slide-up-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+
+/* Slide Down */
+@keyframes meyvc-slide-down-in {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes meyvc-slide-down-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+
+/* Zoom */
+@keyframes meyvc-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes meyvc-zoom-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+
+/* Bounce */
+@keyframes meyvc-bounce-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide from sides */
+@keyframes meyvc-slide-left-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes meyvc-slide-right-in {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* =============================================
+   ANIMATION CLASSES
+   ============================================= */
+
+/* Base animation state – same transition so overlay and popup close together */
+.meyvc-popup,
+.meyvc-overlay {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.meyvc-popup--visible,
+.meyvc-overlay--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Closing state – overrides animation forwards so popup fades out with transition */
+.meyvc-popup--closing {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 0.3s ease, visibility 0.3s ease !important;
+  animation: none !important;
+}
+
+/* Fade */
+.meyvc-animate--fade {
+  animation: meyvc-fade-in 0.3s ease forwards;
+}
+
+.meyvc-animate-out--fade {
+  animation: meyvc-fade-out 0.3s ease forwards;
+}
+
+/* Slide Up */
+.meyvc-animate--slide-up {
+  animation: meyvc-slide-up-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.meyvc-animate-out--slide-up {
+  animation: meyvc-slide-up-out 0.3s ease forwards;
+}
+
+/* Slide Down */
+.meyvc-animate--slide-down {
+  animation: meyvc-slide-down-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.meyvc-animate-out--slide-down {
+  animation: meyvc-slide-down-out 0.3s ease forwards;
+}
+
+/* Zoom */
+.meyvc-animate--zoom {
+  animation: meyvc-zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.meyvc-animate-out--zoom {
+  animation: meyvc-zoom-out 0.2s ease forwards;
+}
+
+/* Bounce */
+.meyvc-animate--bounce {
+  animation: meyvc-bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Reduced motion */
+.meyvc-reduced-motion,
+.meyvc-reduced-motion * {
+  animation: none !important;
+  transition: opacity 0.1s linear !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .meyvc-popup,
+  .meyvc-overlay {
+    animation: none !important;
+    transition: opacity 0.1s linear !important;
+  }
+}
+
+/* =============================================
+   OVERLAY ANIMATION
+   ============================================= */
+
+.meyvc-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999998;
+  pointer-events: auto;
+}
+
+.meyvc-overlay--visible {
+  opacity: 1;
+}

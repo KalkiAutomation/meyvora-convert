@@ -1,0 +1,178 @@
+/**
+ * Meyvora Convert – namespace isolation
+ * All CRO components use .meyvc- prefix. Never use generic selectors (button, input, .modal, #popup).
+ */
+.meyvc-scope {
+  box-sizing: border-box;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.meyvc-scope *,
+.meyvc-scope *::before,
+.meyvc-scope *::after {
+  box-sizing: inherit;
+}
+
+/**
+ * Boosters styles
+ */
+.meyvc-shipping-bar {
+  background: #f0f0f0;
+  padding: var(--meyvc-spacing, 8px) calc(var(--meyvc-spacing, 8px) * 2);
+  text-align: center;
+  margin-bottom: calc(var(--meyvc-spacing, 8px) * 2.5);
+}
+
+.meyvc-shipping-bar-progress {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: var(--meyvc-spacing, 8px);
+  overflow: hidden;
+}
+
+.meyvc-progress-bar {
+  height: 100%;
+  background: var(--meyvc-primary, #333);
+  transition: width 0.3s ease;
+}
+
+.meyvc-trust-badges {
+  display: flex;
+  gap: calc(var(--meyvc-spacing, 8px) * 2.5);
+  margin: calc(var(--meyvc-spacing, 8px) * 2.5) 0;
+  flex-wrap: wrap;
+}
+
+.meyvc-trust-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--meyvc-spacing, 8px);
+  font-size: 14px;
+}
+
+.meyvc-trust-badge-icon {
+  font-size: 20px;
+}
+
+.meyvc-stock-urgency {
+  display: flex;
+  align-items: center;
+  gap: var(--meyvc-spacing, 8px);
+  padding: var(--meyvc-spacing, 8px);
+  background: #f0f0f0;
+  border: 1px solid #999;
+  border-radius: var(--meyvc-radius, 8px);
+  margin: calc(var(--meyvc-spacing, 8px) * 2) 0;
+  color: var(--meyvc-primary, #333);
+}
+
+.meyvc-stock-urgency-icon {
+  font-size: 18px;
+}
+
+.meyvc-stock-urgency-message {
+  font-weight: 500;
+}
+
+/* Block-based cart: wrappers for injected CRO content */
+.meyvc-blocks-cart-prefix,
+.meyvc-blocks-cart-suffix {
+  margin-bottom: 1.5em;
+}
+
+.meyvc-cart-message.meyvc-free-shipping,
+.meyvc-cart-urgency,
+.meyvc-cart-trust,
+.meyvc-cart-benefits {
+  margin-bottom: 1em;
+}
+
+.meyvc-cart-urgency.meyvc-blocks-urgency,
+.meyvc-cart-trust.meyvc-blocks-trust {
+  padding: var(--meyvc-spacing, 8px) 0;
+}
+
+.meyvc-cart-urgency.meyvc-blocks-urgency {
+  background: #f5f5f5;
+  border-radius: var(--meyvc-radius, 8px);
+  padding: calc(var(--meyvc-spacing, 8px) * 1.5) var(--meyvc-spacing);
+  color: var(--meyvc-primary, #333);
+}
+
+.meyvc-cart-trust.meyvc-blocks-trust {
+  background: #f5f5f5;
+  border-radius: var(--meyvc-radius, 8px);
+  padding: calc(var(--meyvc-spacing, 8px) * 1.5) var(--meyvc-spacing);
+  color: var(--meyvc-secondary-color, #555);
+}
+
+.meyvc-blocks-benefits {
+  list-style: none;
+  padding-left: 0;
+}
+
+.meyvc-blocks-benefits li::before {
+  content: "✓ ";
+  color: var(--meyvc-primary, #333);
+  font-weight: bold;
+}
+
+/* Trust badges on block-based product / cart / checkout */
+.meyvc-blocks-trust-badges-wrapper {
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+/* Lucide SVG icons (MEYVC_Icons::svg) */
+.meyvc-ico {
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Product recommendations (co-purchase) */
+.meyvc-recommendations {
+  margin: 2rem 0;
+}
+.meyvc-recommendations__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.meyvc-recommendations__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.meyvc-recommendations__item {
+  flex: 0 0 calc(25% - 1rem);
+  text-align: center;
+}
+.meyvc-recommendations__item img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+.meyvc-recommendations__name {
+  display: block;
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+.meyvc-recommendations__price {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  .meyvc-recommendations__item {
+    flex: 0 0 calc(50% - 0.5rem);
+  }
+}

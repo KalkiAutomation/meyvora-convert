@@ -24,9 +24,9 @@ Meyvora Convert adds conversion-focused features to your WooCommerce store witho
 * **Dynamic offers** – Rule-based personalized coupons (cart threshold, first-time/returning customer, lifetime spend, roles)
 * **Blocks support** – All conversion elements render inside WooCommerce Cart and Checkout blocks (Gutenberg)
 * **Classic support** – Same elements via hooks on classic shortcode cart/checkout
-* **Editor support** – Insert campaigns via shortcode [cro_campaign id="123"] or the Gutenberg block "Meyvora Convert / Campaign"; Classic editor "Add Meyvora Convert Campaign" button
+* **Editor support** – Insert campaigns via shortcode [meyvc_campaign id="123"] or the Gutenberg block "Meyvora Convert / Campaign"; Classic editor "Add Meyvora Convert Campaign" button
 
-Performance-first: assets load only on WooCommerce and feature-relevant pages unless overridden by the `cro_should_enqueue_assets` filter. No "Pro" or upgrade prompts.
+Performance-first: assets load only on WooCommerce and feature-relevant pages unless overridden by the `meyvc_should_enqueue_assets` filter. No "Pro" or upgrade prompts.
 
 == Installation ==
 
@@ -67,18 +67,28 @@ their email.
 Privacy policy: https://mailchimp.com/legal/privacy/
 Terms of service: https://mailchimp.com/legal/terms/
 
-**Google Fonts**
+**DM Sans (bundled fonts)**
 Used only when you enable "Load Google Fonts" under Settings → General
-(disabled by default). When enabled, the browser loads DM Sans from
-fonts.googleapis.com on storefront pages where campaigns are active.
-Privacy policy: https://policies.google.com/privacy
+(disabled by default). When enabled, the plugin loads DM Sans from WOFF2
+files shipped inside the plugin (no external font requests).
+Font license: SIL Open Font License (see packages from https://github.com/fontsource/font-files).
 
 **SortableJS** (bundled, no external connection)
 Used in the admin campaign builder and sequences admin for drag-to-reorder.
 Loaded locally from the plugin — no external requests.
 Source and license: https://github.com/SortableJS/Sortable (MIT License)
 
-== Source Code and Build Tools ==
+== Source Code ==
+
+This plugin uses compiled JavaScript for the WooCommerce Blocks checkout extension.
+The uncompiled source code is available at:
+https://github.com/niket-thapa/meyvora-convert
+
+Build tools used: Node.js, npm, webpack (@wordpress/scripts)
+
+To build: run `npm install && npm run build` inside `blocks/cart-checkout-extension/`
+
+== Source Code and Build Tools (detail) ==
 
 The compiled file `blocks/cart-checkout-extension/build/index.js` is
 generated from the source files in `blocks/cart-checkout-extension/src/`
@@ -110,7 +120,7 @@ Yes. The same conversion elements (trust strip, shipping progress, offer banner,
 
 = How do I show a campaign on a specific page? =
 
-Use the shortcode `[cro_campaign id="123"]` with your campaign ID, or add the "Meyvora Convert / Campaign" block (Gutenberg) or use "Add Meyvora Convert Campaign" in the Classic editor and pick a campaign.
+Use the shortcode `[meyvc_campaign id="123"]` with your campaign ID, or add the "Meyvora Convert / Campaign" block (Gutenberg) or use "Add Meyvora Convert Campaign" in the Classic editor and pick a campaign.
 
 = Are generated offer coupons secure? =
 
@@ -129,7 +139,7 @@ Yes. Coupons use the format MYV-{offer_id}-{random6}, are single-use, and are ra
 
 Meyvora Convert stores the following data to operate its features:
 
-* **Visitor state cookie** (`cro_visitor_state`): stores which campaigns a visitor has seen or dismissed. Contains no personally identifiable information. Expires after 30 days.
+* **Visitor state cookie** (`meyvc_visitor_state`): stores which campaigns a visitor has seen or dismissed. Contains no personally identifiable information. Expires after 30 days.
 * **Abandoned cart emails**: stored in the plugin database only when a visitor voluntarily submits their email address. Requires explicit consent before storage.
 * **Analytics events**: anonymised impression and conversion events (campaign ID, page type, device type). IP addresses are only stored when full analytics tracking is enabled by the site owner, and can be further anonymised (last octet truncated) using the "Anonymise IP addresses" setting.
 * **Klaviyo integration** (opt-in): when enabled, visitor email addresses submitted through campaign popups are transmitted to Klaviyo servers (a.klaviyo.com). See Klaviyo's privacy policy at https://www.klaviyo.com/legal/privacy.

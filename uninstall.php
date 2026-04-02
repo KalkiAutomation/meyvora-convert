@@ -1,7 +1,7 @@
 <?php
 /**
  * Fired when the plugin is uninstalled (deleted).
- * Removes all plugin data only if the option cro_remove_data_on_uninstall is set to 'yes'.
+ * Removes all plugin data only if the option meyvc_remove_data_on_uninstall is set to 'yes'.
  *
  * @package Meyvora_Convert
  */
@@ -10,7 +10,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
-if ( get_option( 'cro_remove_data_on_uninstall' ) !== 'yes' ) {
+if ( get_option( 'meyvc_remove_data_on_uninstall' ) !== 'yes' ) {
 	return;
 }
 
@@ -18,6 +18,20 @@ if ( get_option( 'cro_remove_data_on_uninstall' ) !== 'yes' ) {
 	global $wpdb;
 
 	$table_suffixes = array(
+		'meyvc_campaigns',
+		'meyvc_events',
+		'meyvc_emails',
+		'meyvc_settings',
+		'meyvc_ab_tests',
+		'meyvc_ab_variations',
+		'meyvc_ab_assignments',
+		'meyvc_daily_stats',
+		'meyvc_offers',
+		'meyvc_offer_logs',
+		'meyvc_abandoned_carts',
+		'meyvc_campaign_sequences',
+		'meyvc_sequence_enrollments',
+		// Legacy table names (pre–2.0.0 prefix migration).
 		'cro_campaigns',
 		'cro_events',
 		'cro_emails',
@@ -42,45 +56,45 @@ if ( get_option( 'cro_remove_data_on_uninstall' ) !== 'yes' ) {
 		wp_cache_flush();
 	}
 
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, 'cro_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, 'meyvc_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
 	if ( function_exists( 'wp_cache_flush_group' ) ) {
-		wp_cache_flush_group( 'meyvora_cro' );
+		wp_cache_flush_group( 'meyvora_meyvc' );
 	} else {
-		wp_cache_delete( 'meyvora_cro_uninstall_' . md5( 'delete_options_cro_' ), 'meyvora_cro' );
+		wp_cache_delete( 'meyvora_meyvc_uninstall_' . md5( 'delete_options_meyvc_' ), 'meyvora_meyvc' );
 	}
 
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, '_transient_cro_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, '_transient_meyvc_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
 	if ( function_exists( 'wp_cache_flush_group' ) ) {
-		wp_cache_flush_group( 'meyvora_cro' );
+		wp_cache_flush_group( 'meyvora_meyvc' );
 	} else {
-		wp_cache_delete( 'meyvora_cro_uninstall_' . md5( 'delete_options_transient_cro_' ), 'meyvora_cro' );
+		wp_cache_delete( 'meyvora_meyvc_uninstall_' . md5( 'delete_options_transient_meyvc_' ), 'meyvora_meyvc' );
 	}
 
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, '_transient_timeout_cro_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE option_name LIKE %s', $wpdb->options, '_transient_timeout_meyvc_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
 	if ( function_exists( 'wp_cache_flush_group' ) ) {
-		wp_cache_flush_group( 'meyvora_cro' );
+		wp_cache_flush_group( 'meyvora_meyvc' );
 	} else {
-		wp_cache_delete( 'meyvora_cro_uninstall_' . md5( 'delete_options_transient_timeout_cro_' ), 'meyvora_cro' );
+		wp_cache_delete( 'meyvora_meyvc_uninstall_' . md5( 'delete_options_transient_timeout_meyvc_' ), 'meyvora_meyvc' );
 	}
 
-	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE meta_key LIKE %s', $wpdb->usermeta, 'cro_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
+	$wpdb->query( $wpdb->prepare( 'DELETE FROM %i WHERE meta_key LIKE %s', $wpdb->usermeta, 'meyvc_%' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange -- Intentional DROP TABLE in uninstall; table name sanitized.
 	if ( function_exists( 'wp_cache_flush_group' ) ) {
-		wp_cache_flush_group( 'meyvora_cro' );
+		wp_cache_flush_group( 'meyvora_meyvc' );
 	} else {
-		wp_cache_delete( 'meyvora_cro_uninstall_' . md5( 'delete_usermeta_cro_' ), 'meyvora_cro' );
+		wp_cache_delete( 'meyvora_meyvc_uninstall_' . md5( 'delete_usermeta_meyvc_' ), 'meyvora_meyvc' );
 	}
 } )();
 
-wp_clear_scheduled_hook( 'cro_daily_cleanup' );
-wp_clear_scheduled_hook( 'cro_process_background_queue' );
-wp_clear_scheduled_hook( 'cro_cleanup_old_events' );
-wp_clear_scheduled_hook( 'cro_aggregate_daily_stats' );
-wp_clear_scheduled_hook( 'cro_check_ab_winners' );
-wp_clear_scheduled_hook( 'cro_send_abandoned_cart_reminders' );
-wp_clear_scheduled_hook( 'cro_deliver_webhook' );
+wp_clear_scheduled_hook( 'meyvc_daily_cleanup' );
+wp_clear_scheduled_hook( 'meyvc_process_background_queue' );
+wp_clear_scheduled_hook( 'meyvc_cleanup_old_events' );
+wp_clear_scheduled_hook( 'meyvc_aggregate_daily_stats' );
+wp_clear_scheduled_hook( 'meyvc_check_ab_winners' );
+wp_clear_scheduled_hook( 'meyvc_send_abandoned_cart_reminders' );
+wp_clear_scheduled_hook( 'meyvc_deliver_webhook' );
 
-delete_option( 'cro_dynamic_offers' );
-delete_option( 'cro_remove_data_on_uninstall' );
+delete_option( 'meyvc_dynamic_offers' );
+delete_option( 'meyvc_remove_data_on_uninstall' );
 
 $upload_dir = wp_upload_dir();
 if ( empty( $upload_dir['error'] ) && ! empty( $upload_dir['basedir'] ) ) {
@@ -92,15 +106,5 @@ if ( empty( $upload_dir['error'] ) && ! empty( $upload_dir['basedir'] ) ) {
 	global $wp_filesystem;
 	if ( $wp_filesystem && $wp_filesystem->exists( $log_dir ) ) {
 		$wp_filesystem->delete( $log_dir, true );
-	}
-}
-foreach ( glob( WP_CONTENT_DIR . '/meyvora-convert-errors.log*.bak' ) ?: array() as $f ) {
-	if ( is_string( $f ) && $f !== '' ) {
-		wp_delete_file( $f );
-	}
-}
-foreach ( array( WP_CONTENT_DIR . '/meyvora-convert-errors.log' ) as $f ) {
-	if ( is_string( $f ) && $f !== '' && is_file( $f ) ) {
-		wp_delete_file( $f );
 	}
 }

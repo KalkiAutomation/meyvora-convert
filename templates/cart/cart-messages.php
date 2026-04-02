@@ -6,8 +6,8 @@
  */
 
 // If this file is called directly, abort.
-if ( ! defined( 'WPINC' ) ) {
-	die;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
 }
 
 if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
@@ -16,7 +16,7 @@ if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 
 $cart = WC()->cart;
 $cart_total = $cart->get_total( 'edit' );
-$free_shipping_threshold = apply_filters( 'cro_free_shipping_threshold', 0 );
+$free_shipping_threshold = apply_filters( 'meyvc_free_shipping_threshold', 0 );
 
 if ( $free_shipping_threshold <= 0 || $cart_total >= $free_shipping_threshold ) {
 	return;
@@ -25,7 +25,7 @@ if ( $free_shipping_threshold <= 0 || $cart_total >= $free_shipping_threshold ) 
 $remaining = $free_shipping_threshold - $cart_total;
 ?>
 
-<div class="cro-cart-message cro-free-shipping">
+<div class="meyvc-cart-message meyvc-free-shipping">
 	<p>
 		<?php
 		printf(

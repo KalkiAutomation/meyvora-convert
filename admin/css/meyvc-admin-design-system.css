@@ -1,0 +1,2739 @@
+/**
+ * CRO Admin Design System – single source of truth for all CRO admin pages.
+ * Tokens (8px grid), layout, components, forms, tables, tabs, buttons, badges, empty states, toast.
+ * No duplicate rules in meyvc-admin-modern / meyvc-admin-ui / page CSS.
+ *
+ * @package Meyvora_Convert
+ */
+
+/* ==========================================================================
+   Design tokens (8px grid, border, radius, shadow, font sizes)
+   ========================================================================== */
+:root {
+  /* Spacing (8px grid) */
+  --meyvc-space-xs: 4px;
+  --meyvc-space-sm: 8px;
+  --meyvc-space-md: 16px;
+  --meyvc-space-lg: 24px;
+  --meyvc-space-xl: 32px;
+  --meyvc-space-2xl: 40px;
+
+  /* Border & radius */
+  --meyvc-border: 1px solid #c3c4c7;
+  --meyvc-border-light: 1px solid #dcdcde;
+  --meyvc-radius-sm: 4px;
+  --meyvc-radius-md: 6px;
+  --meyvc-radius-lg: 10px;
+
+  /* Shadows */
+  --meyvc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --meyvc-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --meyvc-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  /* Font sizes */
+  --meyvc-text-xs: 11px;
+  --meyvc-text-sm: 12px;
+  --meyvc-text-base: 13px;
+  --meyvc-text-md: 14px;
+  --meyvc-text-lg: 16px;
+  --meyvc-text-xl: 18px;
+
+  /* Colors — WordPress admin palette (matches wp-admin) */
+  --meyvc-bg: #ffffff;
+  --meyvc-bg-subtle: #f0f0f1;
+  --meyvc-bg-tabs: #f0f0f1;
+  --meyvc-text: #1d2327;
+  --meyvc-text-muted: #646970;
+  --meyvc-primary: #2271b1;
+  --meyvc-primary-hover: #135e96;
+  --meyvc-focus-ring: 0 0 0 2px #ffffff, 0 0 0 4px #2271b1;
+  --meyvc-success: #00a32a;
+  --meyvc-error: #d63638;
+  --meyvc-accent: #2271b1;
+  --meyvc-accent-light: #f0f6fc;
+
+  /* Form controls */
+  --meyvc-input-height: 42px;
+  --meyvc-input-padding-x: 12px;
+  --meyvc-input-radius: var(--meyvc-radius-md);
+
+  /* Layout container: header, nav, content share same width and padding */
+  --meyvc-container-max: 1920px;
+  --meyvc-container-padding-x: 24px;
+}
+
+/* ==========================================================================
+   Layout container – .meyvc-admin-container (header, nav, content inner)
+   ========================================================================== */
+.meyvc-admin-container,
+.meyvc-admin-layout__header,
+.meyvc-admin-layout__nav {
+  max-width: var(--meyvc-container-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Prevent horizontal overflow; use 100% not 100vw. No negative margins/translate on layout. */
+.meyvc-admin-layout {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+  padding-left: var(--meyvc-container-padding-x);
+  padding-right: var(--meyvc-container-padding-x);
+}
+
+.wrap.meyvc-admin-layout > .meyvc-admin-layout__header {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* ----- Header ----- */
+.meyvc-admin-layout__header {
+  width: 100%;
+  background: var(--meyvc-bg);
+  border-bottom: 1px solid #dcdcde;
+  box-shadow: 0 1px 0 #dcdcde;
+  box-sizing: border-box;
+  margin-block-end: 0;
+}
+
+.meyvc-admin-layout__header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px var(--meyvc-container-padding-x);
+  min-height: 72px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.meyvc-ui-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.meyvc-ui-header__logo {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--meyvc-radius-md);
+  background: var(--meyvc-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.meyvc-ui-header__logo svg,
+.meyvc-ui-header__logo .dashicons {
+  color: #ffffff;
+  width: 20px;
+  height: 20px;
+  font-size: 20px;
+}
+
+.meyvc-admin-layout__header-inner .meyvc-ui-header__text,
+.meyvc-ui-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.meyvc-admin-layout__header-inner .meyvc-ui-header__title,
+.meyvc-ui-header__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--meyvc-text);
+  letter-spacing: -0.01em;
+}
+
+.meyvc-admin-layout__header-inner .meyvc-ui-header__subtitle,
+.meyvc-ui-header__subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: var(--meyvc-text-muted);
+  line-height: 1.4;
+  max-width: 480px;
+}
+
+.meyvc-admin-layout__header-inner .meyvc-ui-header__meta,
+.meyvc-ui-header__meta {
+  font-size: 11px;
+  color: var(--meyvc-text-muted);
+  margin-top: 2px;
+}
+
+.meyvc-ui-header__right {
+  display: flex;
+  align-items: center;
+  gap: var(--meyvc-space-sm);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.meyvc-ui-header__pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.meyvc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--meyvc-text-muted);
+  background: var(--meyvc-bg-subtle);
+  border: 1px solid #c3c4c7;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.meyvc-pill--muted {
+  background: var(--meyvc-bg-tabs);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-pill--success {
+  background: #edfaef;
+  border-color: #68de7c;
+  color: var(--meyvc-success);
+}
+
+.meyvc-pill--accent {
+  background: var(--meyvc-accent-light);
+  border-color: #c3d7e1;
+  color: #135e96;
+  font-weight: 600;
+}
+
+.meyvc-ui-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meyvc-ui-header__actions .button-primary,
+.meyvc-ui-btn-primary {
+  background: var(--meyvc-primary);
+  border-color: var(--meyvc-primary);
+  color: #fff;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--meyvc-radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  transition: background 0.15s ease;
+}
+
+.meyvc-ui-header__actions .button-primary:hover,
+.meyvc-ui-btn-primary:hover {
+  background: var(--meyvc-primary-hover);
+  border-color: var(--meyvc-primary-hover);
+  color: #fff;
+}
+
+.meyvc-ui-header__actions .button:not(.button-primary) {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  border-radius: var(--meyvc-radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+  background: var(--meyvc-bg);
+  border: 1px solid #c3c4c7;
+  color: var(--meyvc-text);
+}
+
+@media (max-width: 782px) {
+  .meyvc-admin-layout__header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: auto;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+  .meyvc-ui-header__right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* ----- Nav (tabs): sticky under WP admin bar ----- */
+.meyvc-admin-layout__nav {
+  width: 100%;
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  box-shadow: none;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-radius: var(--meyvc-radius-md) var(--meyvc-radius-md) 0 0;
+}
+
+/* Offset when WP admin bar is present so tabs sit under it */
+body.admin-bar .meyvc-admin-layout__nav {
+  top: 32px;
+}
+@media screen and (max-width: 782px) {
+  body.admin-bar .meyvc-admin-layout__nav {
+    top: 46px;
+  }
+}
+
+/* Subtle shadow when nav is stuck (class added by JS) */
+.meyvc-admin-layout__nav.is-stuck {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Sentinel: 1px tall element above nav for IntersectionObserver */
+.meyvc-admin-layout__nav-sentinel {
+  display: block;
+  height: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.meyvc-admin-layout__nav-inner {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-left: var(--meyvc-container-padding-x);
+  padding-right: var(--meyvc-container-padding-x);
+}
+
+.meyvc-admin-layout__nav .meyvc-ui-nav__list,
+.meyvc-ui-nav__list {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  min-width: min-content;
+}
+
+.meyvc-ui-nav__item {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.meyvc-admin-layout__nav .meyvc-ui-nav__link,
+.meyvc-ui-nav__link {
+  display: block;
+  padding: 10px 16px;
+  color: var(--meyvc-text);
+  text-decoration: none;
+  font-size: var(--meyvc-text-base);
+  line-height: 1.4;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition:
+    background 0.1s ease,
+    border-color 0.1s ease,
+    color 0.1s ease;
+}
+
+.meyvc-admin-layout__nav .meyvc-ui-nav__link:hover,
+.meyvc-ui-nav__link:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--meyvc-text);
+}
+
+.meyvc-admin-layout__nav .meyvc-ui-nav__link--active,
+.meyvc-ui-nav__link--active {
+  background: var(--meyvc-accent-light);
+  color: var(--meyvc-primary);
+  font-weight: 600;
+  border-bottom-color: var(--meyvc-accent);
+  position: relative;
+  z-index: 1;
+}
+
+/* ----- Content ----- */
+.meyvc-admin-layout__content-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: clip;
+}
+
+.meyvc-admin-layout__content {
+  width: 100%;
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-top: none;
+  border-radius: 0 0 var(--meyvc-radius-md) var(--meyvc-radius-md);
+  box-shadow: var(--meyvc-shadow-sm);
+  padding: var(--meyvc-space-xl);
+  padding-left: var(--meyvc-container-padding-x);
+  padding-right: var(--meyvc-container-padding-x);
+  min-height: 200px;
+  box-sizing: border-box;
+}
+
+.meyvc-system-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* ==========================================================================
+   Grid: .meyvc-grid (12-col), .meyvc-col-6, .meyvc-col-12
+   ========================================================================== */
+.meyvc-grid {
+  display: grid;
+  gap: var(--meyvc-space-md);
+}
+
+.meyvc-grid--gap-lg {
+  gap: var(--meyvc-space-lg);
+}
+
+.meyvc-grid--12 {
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.meyvc-grid .meyvc-col-6 {
+  grid-column: span 6;
+}
+
+.meyvc-grid .meyvc-col-12 {
+  grid-column: span 12;
+}
+
+@media (max-width: 782px) {
+  .meyvc-grid .meyvc-col-6 {
+    grid-column: span 12;
+  }
+}
+
+/* ==========================================================================
+   Cards: .meyvc-card, .meyvc-card__header, .meyvc-card__body
+   ========================================================================== */
+.meyvc-card,
+.meyvc-ui-card {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-md);
+  box-shadow: var(--meyvc-shadow);
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-card:last-child,
+.meyvc-ui-card:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-card__header,
+.meyvc-ui-card__header {
+  padding: var(--meyvc-space-md) var(--meyvc-space-lg);
+  border-bottom: var(--meyvc-border-light);
+  font-size: var(--meyvc-text-md);
+  font-weight: 600;
+  color: var(--meyvc-text);
+}
+
+.meyvc-card__header h2,
+.meyvc-card__title {
+  margin: 0;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.meyvc-card__body,
+.meyvc-ui-card__body {
+  padding: var(--meyvc-space-lg);
+}
+
+.meyvc-card__body .meyvc-field + .meyvc-field {
+  margin-top: var(--meyvc-space-lg);
+}
+
+/* ==========================================================================
+   Fields: .meyvc-field, .meyvc-field__label, .meyvc-field__control, .meyvc-help
+   ========================================================================== */
+.meyvc-field {
+  display: block;
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-field:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-admin-layout__content .meyvc-field__label,
+.meyvc-field__label {
+  display: block;
+  margin-bottom: var(--meyvc-space-sm);
+  font-size: var(--meyvc-text-base);
+  font-weight: 600;
+  color: var(--meyvc-text);
+}
+
+.meyvc-field__control {
+  display: block;
+}
+
+.meyvc-field__control input[type="text"],
+.meyvc-field__control input[type="password"],
+.meyvc-field__control input[type="number"],
+.meyvc-field__control input[type="email"],
+.meyvc-field__control input[type="search"],
+.meyvc-field__control input[type="date"],
+.meyvc-field__control input[type="url"],
+.meyvc-field__control select:not(.select2-hidden-accessible),
+.meyvc-field__control textarea {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* ==========================================================================
+   Form controls: 42px height, padding, focus (exclude Select2 search field)
+   ========================================================================== */
+.meyvc-admin-layout__content input[type="text"],
+.meyvc-admin-layout__content input[type="password"],
+.meyvc-admin-layout__content input[type="number"],
+.meyvc-admin-layout__content input[type="email"],
+.meyvc-admin-layout__content input[type="search"],
+.meyvc-admin-layout__content input[type="date"],
+.meyvc-admin-layout__content input[type="url"],
+.meyvc-admin-layout__content select:not(.select2-hidden-accessible) {
+  height: var(--meyvc-input-height);
+  min-height: var(--meyvc-input-height);
+  padding: 0 var(--meyvc-input-padding-x);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-input-radius);
+  font-size: var(--meyvc-text-base);
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.meyvc-admin-layout__content input[type="text"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content input[type="password"]:focus,
+.meyvc-admin-layout__content
+  input[type="number"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content
+  input[type="email"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content
+  input[type="search"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content input[type="date"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content input[type="url"]:not(.select2-search__field):focus,
+.meyvc-admin-layout__content select:not(.select2-hidden-accessible):focus,
+.meyvc-admin-layout__content textarea:focus {
+  border-color: var(--meyvc-accent);
+  box-shadow: var(--meyvc-focus-ring);
+  outline: none;
+}
+
+.meyvc-admin-layout__content textarea {
+  min-height: 80px;
+  padding: var(--meyvc-space-sm) var(--meyvc-input-padding-x);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-input-radius);
+  font-size: var(--meyvc-text-base);
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Custom select – styled native <select> with CSS chevron
+   ========================================================================== */
+
+/*
+ * Embedded SVG paths follow Lucide icons (same geometry as the SVG files).
+ * Reference pack: lucide-main/icons (e.g. …/lucide-main/icons/chevron-down.svg).
+ *
+ * Wrap any <select> that needs custom styling in:
+ *   <div class="meyvc-select-wrap"> ... </div>
+ * Or apply .meyvc-select directly on the <select> element when unwrapped.
+ * Both approaches are supported.
+ */
+
+.meyvc-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 400px;
+}
+
+.meyvc-select-wrap select,
+.meyvc-admin-layout__content select:not(.select2-hidden-accessible),
+.meyvc-field__control select:not(.select2-hidden-accessible) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: var(--meyvc-input-height);
+  padding: 0 40px 0 var(--meyvc-input-padding-x);
+  background-color: var(--meyvc-bg);
+  /* Stronger edge than default gray so the control reads clearly */
+  border: 1px solid #8c8f94;
+  border-radius: var(--meyvc-radius-md);
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text);
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  /* lucide-main/icons/chevron-down.svg */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2350575e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+}
+
+.meyvc-admin-layout__content select:not(.select2-hidden-accessible):focus,
+.meyvc-field__control select:not(.select2-hidden-accessible):focus,
+.meyvc-select-wrap select:focus {
+  border-color: var(--meyvc-accent);
+  box-shadow:
+    var(--meyvc-focus-ring),
+    inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.meyvc-field__control .meyvc-select-wrap {
+  max-width: 400px;
+}
+
+/* WP list tables: bulk action <select> + Apply must stay on one line (not width:100%). */
+.meyvc-admin-layout__content .tablenav .bulkactions,
+.meyvc-admin-layout__content .alignleft.actions.bulkactions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.meyvc-admin-layout__content
+  .tablenav
+  .bulkactions
+  select:not(.select2-hidden-accessible),
+.meyvc-admin-layout__content
+  .alignleft.actions.bulkactions
+  select:not(.select2-hidden-accessible) {
+  width: auto;
+  min-width: 10em;
+  max-width: min(25rem, 100%);
+  flex: 0 1 auto;
+}
+
+/* ==========================================================================
+   Custom checkbox
+   ========================================================================== */
+
+/*
+ * Checked mark: Lucide check.svg (lucide-main/icons/check.svg), path M20 6 9 17l-5-5.
+ */
+
+.meyvc-admin-layout__content input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  /* Explicit color — do not use var(--meyvc-border) here (it is a full shorthand and breaks this rule). */
+  border: 2px solid #8c8f94;
+  border-radius: 4px;
+  background: var(--meyvc-bg);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+/*
+ * WordPress 6.4+ wp-admin applies a checkmark via input[type=checkbox]:checked::before.
+ * Remove those pseudo-elements so our appearance:none + background-image checkmark wins.
+ */
+.meyvc-admin-layout__content input[type="checkbox"]::before,
+.meyvc-admin-layout__content input[type="checkbox"]::after,
+.meyvc-admin-layout__content input[type="checkbox"]:checked::before,
+.meyvc-admin-layout__content input[type="checkbox"]:checked::after,
+.meyvc-admin-layout__content input[type="checkbox"]:indeterminate::before,
+.meyvc-admin-layout__content input[type="checkbox"]:indeterminate::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.meyvc-admin-layout__content input[type="checkbox"]:hover {
+  border-color: var(--meyvc-accent);
+}
+
+.meyvc-admin-layout__content input[type="checkbox"]:checked {
+  background-color: var(--meyvc-primary);
+  border-color: var(--meyvc-primary);
+  /* Same geometry as Lucide check.svg; stroke-width 3 for legibility at 12px */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 12px;
+  /* White ring separates control from page / colored backgrounds */
+  box-shadow:
+    0 0 0 1px #ffffff,
+    0 0 0 2px var(--meyvc-primary);
+}
+
+.meyvc-admin-layout__content input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+.meyvc-admin-layout__content input[type="checkbox"]:checked:focus {
+  box-shadow:
+    var(--meyvc-focus-ring),
+    0 0 0 1px #ffffff,
+    0 0 0 2px var(--meyvc-primary);
+}
+
+.meyvc-admin-layout__content .meyvc-field__control label,
+.meyvc-admin-layout__content .meyvc-toggle-large {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text);
+  line-height: 1.4;
+}
+
+.meyvc-admin-layout__content .meyvc-field__control label + br + label {
+  margin-top: 12px;
+}
+
+/* ==========================================================================
+   Custom radio
+   ========================================================================== */
+
+.meyvc-admin-layout__content input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid #8c8f94;
+  border-radius: 50%;
+  background: var(--meyvc-bg);
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+  margin: 0 6px 0 0;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+
+.meyvc-admin-layout__content input[type="radio"]:hover {
+  border-color: var(--meyvc-accent);
+}
+
+/* Filled disc + white inner ring — much clearer than inset-only dot on white */
+.meyvc-admin-layout__content input[type="radio"]:checked {
+  border: 2px solid #ffffff;
+  background-color: var(--meyvc-primary);
+  box-shadow:
+    0 0 0 1px var(--meyvc-primary),
+    inset 0 0 0 3px #ffffff;
+}
+
+.meyvc-admin-layout__content input[type="radio"]:focus {
+  outline: none;
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+.meyvc-admin-layout__content input[type="radio"]:checked:focus {
+  box-shadow:
+    var(--meyvc-focus-ring),
+    0 0 0 1px var(--meyvc-primary),
+    inset 0 0 0 3px #ffffff;
+}
+
+.meyvc-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.meyvc-radio-group--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.meyvc-radio-group label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text);
+}
+
+/* ==========================================================================
+   Tables: sticky header, row hover
+   ========================================================================== */
+.meyvc-modern-table-wrap,
+.meyvc-table-wrap {
+  overflow-x: auto;
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-md);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-modern-table,
+.meyvc-admin-layout__content .widefat,
+.meyvc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--meyvc-text-base);
+  border: none;
+}
+
+.meyvc-modern-table th,
+.meyvc-modern-table td,
+.meyvc-admin-layout__content .widefat th,
+.meyvc-admin-layout__content .widefat td,
+.meyvc-table th,
+.meyvc-table td {
+  padding: var(--meyvc-space-sm) var(--meyvc-space-md);
+  border-bottom: var(--meyvc-border-light);
+  text-align: left;
+}
+
+.meyvc-modern-table thead th,
+.meyvc-admin-layout__content .widefat thead th,
+.meyvc-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--meyvc-bg-subtle);
+  font-weight: 600;
+  color: var(--meyvc-text);
+  white-space: nowrap;
+  box-shadow: 0 1px 0 var(--meyvc-border-light);
+}
+
+.meyvc-modern-table tbody tr:hover,
+.meyvc-admin-layout__content .widefat tbody tr:hover,
+.meyvc-table tbody tr:hover {
+  background: var(--meyvc-bg-subtle);
+}
+
+/* Table actions: links and buttons in table cells */
+.meyvc-table-actions,
+.meyvc-table .meyvc-table-actions {
+  white-space: nowrap;
+}
+
+.meyvc-inline-form {
+  display: inline;
+}
+
+.meyvc-table-action-link,
+.meyvc-table-actions a:not(.button) {
+  display: inline-block;
+  margin-right: var(--meyvc-space-md);
+  padding: 0;
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.meyvc-table-action-link:hover,
+.meyvc-table-actions a:not(.button):hover {
+  color: var(--meyvc-primary-hover);
+  text-decoration: underline;
+}
+
+.meyvc-table-actions .button,
+.meyvc-table-actions .button-link {
+  margin-right: var(--meyvc-space-sm);
+  margin-bottom: 0;
+  padding: 2px var(--meyvc-space-sm);
+  font-size: var(--meyvc-text-sm);
+  line-height: 1.5;
+  vertical-align: middle;
+}
+
+.meyvc-table-actions .button-link {
+  color: var(--meyvc-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.meyvc-table-actions .button-link:hover {
+  text-decoration: underline;
+}
+
+.meyvc-table-actions .button-link.delete-link,
+.meyvc-table-action-link.delete-link {
+  color: var(--meyvc-error);
+}
+
+.meyvc-table-actions .button-link.delete-link:hover,
+.meyvc-table-action-link.delete-link:hover {
+  color: var(--meyvc-error);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+.meyvc-admin-layout__content .button,
+.meyvc-admin-layout__content .button-secondary {
+  height: var(--meyvc-input-height);
+  line-height: 1;
+  padding: 0 var(--meyvc-space-md);
+  border-radius: var(--meyvc-input-radius);
+  font-size: var(--meyvc-text-base);
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Abandoned cart “Body (HTML)”: placeholder + reset buttons — inline-block so rows wrap predictably. */
+.meyvc-admin-layout__content .meyvc-email-body-editor-wrap .button {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.meyvc-admin-layout__content .button-primary,
+.meyvc-ui-btn-primary {
+  background: var(--meyvc-primary);
+  border-color: var(--meyvc-primary);
+  color: #fff;
+}
+
+.meyvc-admin-layout__content .button-primary:hover,
+.meyvc-ui-btn-primary:hover {
+  background: var(--meyvc-primary-hover);
+  border-color: var(--meyvc-primary-hover);
+  color: #fff;
+}
+
+.meyvc-admin-layout__content .button-primary:focus,
+.meyvc-ui-btn-primary:focus {
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+/* ==========================================================================
+   Badges / pills
+   ========================================================================== */
+.meyvc-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: var(--meyvc-text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  border-radius: var(--meyvc-radius-sm);
+  background: var(--meyvc-bg-subtle);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-badge--success {
+  background: #edfaef;
+  border: 1px solid #68de7c;
+  color: #00a32a;
+}
+
+.meyvc-badge--warning {
+  background: #fcf0e3;
+  color: #b26200;
+}
+
+.meyvc-badge--error {
+  background: #fcf0f1;
+  color: var(--meyvc-error);
+}
+
+/* ==========================================================================
+   Empty states
+   ========================================================================== */
+.meyvc-empty-state,
+.meyvc-ui-empty-state,
+.meyvc-empty {
+  text-align: center;
+  padding: var(--meyvc-space-2xl) var(--meyvc-space-lg);
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.meyvc-empty-state__icon,
+.meyvc-ui-empty-state__icon,
+.meyvc-empty__icon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--meyvc-space-md);
+  color: var(--meyvc-text-muted);
+  opacity: 0.7;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.meyvc-empty-state__title,
+.meyvc-ui-empty-state__title,
+.meyvc-empty__title {
+  font-size: var(--meyvc-text-lg);
+  font-weight: 600;
+  color: var(--meyvc-text);
+  margin: 0 0 var(--meyvc-space-sm);
+}
+
+.meyvc-empty-state__text,
+.meyvc-ui-empty-state__desc,
+.meyvc-empty__desc {
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+  margin: 0 0 var(--meyvc-space-md);
+  line-height: 1.5;
+}
+
+.meyvc-empty-state__actions,
+.meyvc-ui-empty-state__actions,
+.meyvc-empty__actions {
+  margin-top: var(--meyvc-space-lg);
+}
+
+/* ==========================================================================
+   KPI cards
+   ========================================================================== */
+.meyvc-kpi,
+.meyvc-kpi-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--meyvc-space-md);
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-kpi__item,
+.meyvc-kpi-card {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-md);
+  padding: var(--meyvc-space-md);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-kpi__value,
+.meyvc-kpi-card__value {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--meyvc-text);
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.meyvc-kpi__label,
+.meyvc-kpi-card__label {
+  display: block;
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Toast (global)
+   ========================================================================== */
+.meyvc-ui-toast-container {
+  position: fixed;
+  top: 32px;
+  right: 20px;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  gap: var(--meyvc-space-sm);
+  pointer-events: none;
+}
+
+body.admin-bar .meyvc-ui-toast-container {
+  top: 46px;
+}
+
+.meyvc-ui-toast-item {
+  padding: var(--meyvc-space-md) var(--meyvc-space-lg);
+  min-width: 200px;
+  max-width: 360px;
+  background: var(--meyvc-text);
+  color: #fff;
+  font-size: var(--meyvc-text-base);
+  line-height: 1.4;
+  border-radius: var(--meyvc-radius-lg);
+  box-shadow: var(--meyvc-shadow-md);
+}
+
+/* ==========================================================================
+   Notices
+   ========================================================================== */
+.meyvc-ui-notice {
+  margin: 0 0 var(--meyvc-space-lg);
+  padding: var(--meyvc-space-md) var(--meyvc-space-lg);
+  border-left: 4px solid var(--meyvc-primary);
+  background: var(--meyvc-bg);
+  border-radius: 0 var(--meyvc-radius-sm) var(--meyvc-radius-sm) 0;
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-ui-notice--error {
+  border-left-color: var(--meyvc-error);
+}
+
+.meyvc-ui-notice p {
+  margin: 0;
+  font-size: var(--meyvc-text-base);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Icons (.meyvc-ico – Lucide inline SVG)
+   ========================================================================== */
+.meyvc-ico {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: -0.2em;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+.meyvc-ico--sm {
+  width: 14px;
+  height: 14px;
+}
+
+.meyvc-ico--md {
+  width: 20px;
+  height: 20px;
+}
+
+.meyvc-ico--lg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Icon + text alignment in headings and buttons */
+.meyvc-settings-section h2 .meyvc-ico,
+.meyvc-section-header h2 .meyvc-ico,
+.meyvc-builder-actions .meyvc-ico,
+.button .meyvc-ico {
+  margin-right: 6px;
+  vertical-align: -0.25em;
+}
+
+/* ==========================================================================
+   Utilities
+   ========================================================================== */
+.meyvc-ui-inner {
+  box-sizing: border-box;
+}
+
+.meyvc-hidden {
+  display: none;
+}
+
+.meyvc-muted {
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-max-w {
+  max-width: 640px;
+}
+
+/* ==========================================================================
+   Presets library (admin.php?page=meyvc-presets)
+   ========================================================================== */
+.meyvc-admin-presets {
+  max-width: 1200px;
+}
+
+.meyvc-presets-intro {
+  margin-bottom: var(--meyvc-space-lg);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--meyvc-space-lg);
+  margin-top: var(--meyvc-space-lg);
+}
+
+.meyvc-admin-presets .meyvc-preset-card {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  box-shadow: var(--meyvc-shadow-sm);
+  overflow: hidden;
+}
+
+.meyvc-preset-card-inner {
+  padding: var(--meyvc-space-lg);
+}
+
+.meyvc-admin-presets .meyvc-preset-name {
+  margin: 0 0 var(--meyvc-space-sm);
+  font-size: 1.15em;
+  color: var(--meyvc-text);
+}
+
+.meyvc-admin-presets .meyvc-preset-desc {
+  margin: 0 0 12px;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+  line-height: 1.5;
+}
+
+.meyvc-preset-meta {
+  margin-bottom: var(--meyvc-space-md);
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-preset-badge {
+  display: inline-block;
+  margin-left: var(--meyvc-space-sm);
+  padding: 2px var(--meyvc-space-sm);
+  background: var(--meyvc-bg-tabs);
+  border-radius: var(--meyvc-radius-sm);
+}
+
+.meyvc-preset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--meyvc-space-sm);
+  align-items: center;
+}
+
+.meyvc-preset-actions .button {
+  margin: 0;
+}
+
+.meyvc-preset-preview-content {
+  padding: 0;
+  font-size: var(--meyvc-text-base);
+}
+
+.meyvc-preset-preview-content h4 {
+  margin-top: 0;
+}
+
+/* Preset preview modal */
+.meyvc-preset-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--meyvc-space-lg);
+}
+
+.meyvc-preset-modal-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+}
+
+.meyvc-preset-modal-content {
+  position: relative;
+  background: var(--meyvc-bg);
+  border-radius: var(--meyvc-radius-sm);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.meyvc-preset-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--meyvc-text-muted);
+  cursor: pointer;
+  border-radius: var(--meyvc-radius-sm);
+}
+
+.meyvc-preset-modal-close:hover {
+  background: var(--meyvc-bg-tabs);
+  color: var(--meyvc-text);
+}
+
+.meyvc-preset-modal-title {
+  margin: 0;
+  padding: var(--meyvc-space-lg) var(--meyvc-space-lg) var(--meyvc-space-md);
+  font-size: 1.3em;
+  padding-right: 48px;
+}
+
+.meyvc-preset-modal-body {
+  padding: 0 var(--meyvc-space-lg) var(--meyvc-space-lg);
+  font-size: var(--meyvc-text-md);
+  line-height: 1.5;
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-preset-modal-body p {
+  margin: 0 0 10px;
+}
+
+.meyvc-preset-modal-footer {
+  padding: var(--meyvc-space-md) var(--meyvc-space-lg);
+  border-top: var(--meyvc-border);
+}
+
+.meyvc-preset-modal-footer .button {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Table empty state (campaigns, AB tests, etc.)
+   ========================================================================== */
+.meyvc-table-empty-state {
+  padding: var(--meyvc-space-2xl) var(--meyvc-space-lg);
+  text-align: center;
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-md);
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-table-empty-state__icon {
+  display: block;
+  font-size: 32px;
+  color: var(--meyvc-text-muted);
+  margin-bottom: var(--meyvc-space-md);
+}
+
+.meyvc-table-empty-state__title {
+  margin: 0 0 var(--meyvc-space-sm);
+  font-size: var(--meyvc-text-md);
+  font-weight: 600;
+  color: var(--meyvc-text);
+}
+
+.meyvc-table-empty-state__text {
+  margin: 0;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+}
+
+/* ==========================================================================
+   Settings sections (boosters, checkout, cart, etc.)
+   ========================================================================== */
+.meyvc-settings-section {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  padding: var(--meyvc-space-lg);
+  margin-bottom: var(--meyvc-space-xl);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--meyvc-space-md);
+  margin-bottom: var(--meyvc-space-sm);
+  flex-wrap: wrap;
+}
+
+.meyvc-section-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+  gap: var(--meyvc-space-sm);
+}
+
+.meyvc-section-header .dashicons {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--meyvc-text);
+}
+
+.meyvc-section-description {
+  margin: 0 0 20px;
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-base);
+  line-height: 1.5;
+}
+
+.meyvc-settings-fields {
+  display: block;
+}
+
+/* ==========================================================================
+   Toggle switch
+   ========================================================================== */
+.meyvc-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.meyvc-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.meyvc-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #c3c4c7;
+  border-radius: 24px;
+  transition: 0.3s;
+}
+
+.meyvc-toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: 0.3s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.meyvc-toggle input:checked + .meyvc-toggle-slider {
+  background-color: var(--meyvc-accent);
+}
+
+.meyvc-toggle input:checked + .meyvc-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.meyvc-toggle input:focus + .meyvc-toggle-slider {
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+/* Master toggle: prominent single-toggle card */
+.meyvc-master-toggle {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  padding: 20px var(--meyvc-space-lg);
+  margin-bottom: var(--meyvc-space-lg);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+/* Large toggle: label + switch side-by-side */
+.meyvc-toggle-large {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.meyvc-toggle-large .meyvc-toggle {
+  flex-shrink: 0;
+}
+
+.meyvc-toggle-label {
+  font-size: var(--meyvc-text-md);
+  font-weight: 600;
+  color: var(--meyvc-text);
+}
+
+/* ==========================================================================
+   Fields grid (2-column form layout)
+   ========================================================================== */
+.meyvc-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--meyvc-space-md) var(--meyvc-space-lg);
+}
+
+.meyvc-fields-grid .meyvc-field {
+  margin-bottom: 0;
+}
+
+.meyvc-fields-grid .meyvc-field.meyvc-col-12 {
+  grid-column: 1 / -1;
+}
+
+.meyvc-fields-grid .meyvc-field.meyvc-col-6 {
+  grid-column: span 1;
+}
+
+.meyvc-fields-grid.meyvc-fields-grid--1col {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 782px) {
+  .meyvc-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Help text
+   ========================================================================== */
+.meyvc-help {
+  display: block;
+  margin-top: var(--meyvc-space-xs);
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+  line-height: 1.5;
+}
+
+.meyvc-help:empty {
+  display: none;
+}
+
+/* ==========================================================================
+   Preview box (boosters live preview)
+   ========================================================================== */
+.meyvc-preview-box {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: var(--meyvc-border-light);
+}
+
+.meyvc-preview-box h4 {
+  margin: 0 0 12px;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-sticky-cart-preview,
+.meyvc-shipping-bar-preview {
+  min-height: 48px;
+  background: var(--meyvc-bg-subtle);
+  border-radius: var(--meyvc-radius-sm);
+  padding: 12px;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+}
+
+/* Matches storefront .meyvc-shipping-bar structure (Boosters → Free shipping bar preview). */
+.meyvc-shipping-bar-preview .meyvc-shipping-bar--admin-preview {
+  margin: 0;
+  padding: var(--meyvc-space-sm) var(--meyvc-space-md);
+  text-align: center;
+  border-radius: var(--meyvc-radius-sm);
+  overflow: hidden;
+  border: var(--meyvc-border);
+}
+
+.meyvc-shipping-bar-preview .meyvc-shipping-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--meyvc-space-sm);
+  flex-wrap: wrap;
+}
+
+.meyvc-shipping-bar-preview .meyvc-shipping-bar-message {
+  font-size: var(--meyvc-text-md);
+  color: var(--meyvc-text);
+  line-height: 1.45;
+}
+
+.meyvc-shipping-bar-preview .meyvc-shipping-bar-progress {
+  height: 4px;
+  background: #e0e0e0;
+  border-radius: 2px;
+  margin-top: var(--meyvc-space-sm);
+  overflow: hidden;
+}
+
+.meyvc-shipping-bar-preview .meyvc-shipping-bar-fill {
+  height: 100%;
+  transition: width 0.2s ease, background-color 0.15s ease;
+}
+
+.meyvc-shipping-bar-preview-hint {
+  margin: var(--meyvc-space-sm) 0 0;
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+}
+
+/* Sticky add-to-cart: matches public .meyvc-sticky-cart layout (Boosters → preview). */
+.meyvc-sticky-cart-preview .meyvc-sticky-cart--admin-preview {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 1;
+  transform: none;
+  transition: none;
+  box-shadow: none;
+  max-width: 100%;
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  max-width: 100%;
+  margin: 0;
+  padding: 12px 14px;
+  background: #fff;
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-image {
+  flex-shrink: 0;
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-image img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: var(--meyvc-radius-sm);
+  display: block;
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-preview-img-fallback {
+  display: block;
+  width: 50px;
+  height: 50px;
+  border-radius: var(--meyvc-radius-sm);
+  background: var(--meyvc-bg-muted, #e8e8e8);
+  border: 1px dashed var(--meyvc-border);
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-title {
+  font-size: var(--meyvc-text-md);
+  font-weight: 600;
+  color: var(--meyvc-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-price {
+  font-size: var(--meyvc-text-md);
+  font-weight: 700;
+  color: var(--meyvc-text);
+}
+
+.meyvc-sticky-cart-preview .meyvc-sticky-cart-button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--meyvc-radius-sm);
+  font-size: var(--meyvc-text-sm);
+  font-weight: 600;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.meyvc-sticky-cart-preview-hint {
+  margin: var(--meyvc-space-sm) 0 0;
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+}
+
+/* ==========================================================================
+   Impact notice (checkout, cart pages)
+   ========================================================================== */
+.meyvc-impact-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border);
+  border-left: 4px solid var(--meyvc-text);
+  border-radius: var(--meyvc-radius-sm);
+  padding: 14px 18px;
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-impact-notice .dashicons,
+.meyvc-impact-notice .meyvc-ico {
+  font-size: 22px;
+  width: 22px;
+  height: 22px;
+  color: var(--meyvc-text);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.meyvc-impact-notice p {
+  margin: 0;
+  font-size: var(--meyvc-text-base);
+  line-height: 1.5;
+  color: var(--meyvc-text);
+}
+
+/* ==========================================================================
+   Checkbox card (checkout field toggles)
+   ========================================================================== */
+.meyvc-checkbox-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-sm);
+  cursor: pointer;
+  max-width: 420px;
+}
+
+.meyvc-checkbox-card:hover {
+  background: var(--meyvc-bg);
+  border-color: var(--meyvc-text);
+}
+
+/* ==========================================================================
+   Status badges (campaigns, AB tests)
+   ========================================================================== */
+.meyvc-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--meyvc-radius-sm);
+  font-size: var(--meyvc-text-xs);
+  font-weight: 500;
+  line-height: 1.4;
+  vertical-align: middle;
+}
+
+.meyvc-status--draft,
+.meyvc-status-badge.meyvc-status--draft {
+  background: var(--meyvc-bg-tabs);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-status--running,
+.meyvc-status--active,
+.meyvc-status-badge.meyvc-status--running,
+.meyvc-status-badge.meyvc-status--active {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.meyvc-status--paused,
+.meyvc-status-badge.meyvc-status--paused {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.meyvc-status--completed,
+.meyvc-status-badge.meyvc-status--completed {
+  background: #d4edda;
+  color: #155724;
+}
+
+.meyvc-status--failed,
+.meyvc-status-badge.meyvc-status--failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ==========================================================================
+   Quick start block (onboarding prompt)
+   ========================================================================== */
+.meyvc-quick-start {
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  padding: var(--meyvc-space-lg);
+  margin: var(--meyvc-space-lg) 0;
+}
+
+.meyvc-quick-start h2 {
+  margin-top: 0;
+}
+
+.meyvc-quick-start ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+.meyvc-quick-start li {
+  margin-bottom: 20px;
+}
+
+.meyvc-quick-start li strong {
+  display: block;
+  margin-bottom: var(--meyvc-space-xs);
+}
+
+.meyvc-quick-start li p {
+  margin: 0 0 var(--meyvc-space-sm);
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-quick-start li a {
+  font-size: var(--meyvc-text-base);
+}
+
+/* ==========================================================================
+   Page-specific descriptors (boosters, checkout)
+   ========================================================================== */
+.meyvc-boosters-page .meyvc-page-description,
+.meyvc-checkout-page .meyvc-page-description {
+  color: var(--meyvc-text-muted);
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+/* ==========================================================================
+   Utility classes
+   ========================================================================== */
+.meyvc-mt-1 {
+  margin-top: var(--meyvc-space-sm);
+}
+.meyvc-mt-2 {
+  margin-top: var(--meyvc-space-md);
+}
+.meyvc-mt-3 {
+  margin-top: var(--meyvc-space-lg);
+}
+.meyvc-mb-1 {
+  margin-bottom: var(--meyvc-space-sm);
+}
+.meyvc-mb-2 {
+  margin-bottom: var(--meyvc-space-md);
+}
+.meyvc-section-desc {
+  margin-top: 0;
+  margin-bottom: var(--meyvc-space-md);
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-base);
+  line-height: 1.5;
+}
+.meyvc-fw-600 {
+  font-weight: 600;
+}
+.meyvc-select-min {
+  min-width: 200px;
+}
+.meyvc-select-min--wide {
+  min-width: 260px;
+}
+
+/* ==========================================================================
+   Onboarding wizard
+   ========================================================================== */
+.meyvc-onboarding {
+  max-width: 720px;
+  margin: var(--meyvc-space-lg) 0;
+}
+
+.meyvc-onboarding-header {
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-onboarding-header h1 {
+  margin-bottom: 0.25em;
+}
+
+.meyvc-onboarding-subtitle {
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-md);
+  margin: 0;
+}
+
+.meyvc-onboarding-steps {
+  display: flex;
+  list-style: none;
+  margin: 0 0 var(--meyvc-space-xl);
+  padding: 0;
+  gap: var(--meyvc-space-sm);
+  border-bottom: var(--meyvc-border);
+}
+
+.meyvc-onboarding-steps li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 0;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-onboarding-steps li.active {
+  color: var(--meyvc-text);
+  font-weight: 600;
+}
+
+.meyvc-onboarding-steps li.done .meyvc-step-num {
+  background: var(--meyvc-success);
+  color: #fff;
+}
+
+.meyvc-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #dcdcde;
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-sm);
+  font-weight: 600;
+}
+
+.meyvc-onboarding-steps li.active .meyvc-step-num {
+  background: var(--meyvc-primary);
+  color: #fff;
+}
+
+.meyvc-onboarding-content {
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  padding: var(--meyvc-space-lg);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-onboarding-panel h2 {
+  margin: 0 0 var(--meyvc-space-sm);
+  font-size: 1.3em;
+}
+
+.meyvc-onboarding-panel .description {
+  margin-bottom: 20px;
+  color: var(--meyvc-text-muted);
+}
+
+.meyvc-onboarding-toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-onboarding-toggles .meyvc-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.meyvc-onboarding-toggles .meyvc-toggle-row input {
+  margin: 0;
+}
+
+.meyvc-onboarding-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: var(--meyvc-space-lg);
+}
+
+.meyvc-onboarding-actions {
+  margin: var(--meyvc-space-lg) 0 0;
+  padding-top: 20px;
+  border-top: var(--meyvc-border-light);
+}
+
+.meyvc-onboarding-actions .button {
+  margin-right: var(--meyvc-space-sm);
+}
+
+.meyvc-onboarding-skip {
+  margin-top: var(--meyvc-space-lg);
+  text-align: center;
+}
+
+.meyvc-onboarding-skip a {
+  color: var(--meyvc-text-muted);
+  text-decoration: none;
+}
+
+.meyvc-onboarding-skip a:hover {
+  color: var(--meyvc-primary);
+}
+
+/* Onboarding checklist */
+.meyvc-onboarding-checklist-list {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-sm);
+  box-shadow: var(--meyvc-shadow-sm);
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: var(--meyvc-space-md) 20px;
+  border-bottom: var(--meyvc-border-light);
+  margin: 0;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-item:last-child {
+  border-bottom: none;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dcdcde;
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-base);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-item.done .meyvc-checklist-num {
+  background: var(--meyvc-success);
+  color: #fff;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-label {
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--meyvc-space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-label input[type="checkbox"] {
+  margin: 0;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-desc {
+  width: 100%;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+  margin-left: 40px;
+}
+
+.meyvc-onboarding-checklist-list .meyvc-checklist-item .button {
+  margin-left: auto;
+}
+
+/* ==========================================================================
+   Developer page
+   ========================================================================== */
+.meyvc-developer-section {
+  margin-bottom: var(--meyvc-space-xl);
+}
+
+.meyvc-developer-section__header {
+  display: flex;
+  align-items: center;
+  gap: var(--meyvc-space-sm);
+}
+
+.meyvc-developer-section__header .meyvc-section-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.meyvc-developer-code-block {
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-sm);
+  padding: 10px 14px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: var(--meyvc-text-base);
+  overflow-x: auto;
+}
+
+.meyvc-developer-code-block code {
+  background: none;
+  padding: 0;
+}
+
+.meyvc-developer-code-block var {
+  color: var(--meyvc-error);
+  font-style: normal;
+}
+
+.meyvc-developer-hooks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.meyvc-developer-hook-item {
+  padding-bottom: var(--meyvc-space-md);
+  border-bottom: var(--meyvc-border-light);
+}
+
+.meyvc-developer-hook-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.meyvc-developer-hook-name {
+  font-size: var(--meyvc-text-base);
+  background: var(--meyvc-bg-tabs);
+  padding: 2px 8px;
+  border-radius: var(--meyvc-radius-sm);
+  font-weight: 500;
+}
+
+.meyvc-developer-hook-params,
+.meyvc-developer-hook-return {
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+  margin-left: 6px;
+}
+
+.meyvc-developer-hook-desc {
+  margin: var(--meyvc-space-sm) 0 0;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text-muted);
+  line-height: 1.5;
+}
+
+.meyvc-developer-snippet {
+  margin: 10px 0 0;
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-sm);
+  padding: 12px 14px;
+  font-size: var(--meyvc-text-sm);
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.meyvc-developer-snippet code {
+  background: none;
+  padding: 0;
+  font-family: Consolas, Monaco, monospace;
+}
+
+.meyvc-developer-snippets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--meyvc-space-md);
+}
+
+.meyvc-developer-snippet-card {
+  background: var(--meyvc-bg-subtle);
+  border: var(--meyvc-border-light);
+  border-radius: var(--meyvc-radius-md);
+  padding: 14px;
+}
+
+.meyvc-developer-snippet-card h4 {
+  margin: 0 0 10px;
+  font-size: var(--meyvc-text-base);
+  font-weight: 600;
+  color: var(--meyvc-text);
+}
+
+.meyvc-developer-snippet-card .meyvc-developer-snippet {
+  margin: 0;
+}
+
+/* ==========================================================================
+   Per-category discount rows (cart page)
+   ========================================================================== */
+.meyvc-per-category-discount-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--meyvc-space-sm);
+}
+
+.meyvc-per-category-discount-list .meyvc-add-per-cat {
+  margin-top: var(--meyvc-space-xs);
+  align-self: flex-start;
+}
+
+.meyvc-per-cat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--meyvc-space-sm);
+  margin-bottom: 0;
+}
+
+.meyvc-per-cat-row .meyvc-per-cat-select,
+.meyvc-per-cat-row .select2-container {
+  flex: 1;
+  min-width: 140px;
+}
+
+.meyvc-per-cat-row .meyvc-input-num {
+  width: 80px;
+  min-width: 80px;
+}
+
+.meyvc-per-cat-row .meyvc-remove-per-cat {
+  flex-shrink: 0;
+}
+
+.meyvc-input-num {
+  width: 80px;
+}
+
+/* ==========================================================================
+   System status & tools helpers
+   ========================================================================== */
+.meyvc-list-plain {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.meyvc-list-plain li {
+  margin-bottom: var(--meyvc-space-sm);
+}
+
+.meyvc-status-ok {
+  color: var(--meyvc-success);
+}
+
+.meyvc-status-warn,
+.meyvc-status-error {
+  color: var(--meyvc-error);
+}
+
+.meyvc-status-warning {
+  color: #b26200;
+}
+
+.meyvc-max-w-800 {
+  max-width: 800px;
+}
+
+.meyvc-col-check {
+  width: 220px;
+}
+
+.meyvc-col-status {
+  width: 120px;
+}
+
+.meyvc-admin-message {
+  padding: var(--meyvc-space-lg);
+  background: var(--meyvc-bg);
+  border: var(--meyvc-border);
+  box-shadow: var(--meyvc-shadow);
+}
+
+.meyvc-admin-message p {
+  margin: 0;
+}
+
+/* A/B test result label */
+.meyvc-result-insufficient {
+  color: var(--meyvc-text-muted);
+  font-style: italic;
+}
+
+/* A/B test winner highlight */
+.meyvc-winner {
+  color: var(--meyvc-success);
+  font-weight: 600;
+}
+
+/* Destructive action link */
+.meyvc-action-delete {
+  color: var(--meyvc-error);
+}
+
+.meyvc-action-delete:hover {
+  color: var(--meyvc-error);
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Image previews
+   ========================================================================== */
+.meyvc-image-preview img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==========================================================================
+   Captions / separators
+   ========================================================================== */
+.meyvc-cap-sep {
+  color: var(--meyvc-text-muted);
+  font-size: var(--meyvc-text-base);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Meyvora AI chat (admin)
+   ========================================================================== */
+.meyvc-admin-layout__nav-inner--with-chat-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.meyvc-admin-layout__nav-inner--with-chat-toggle .meyvc-ui-nav__list {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.meyvc-aichat-nav-toggle {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.meyvc-aichat-launcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 24px;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  line-height: 1.3;
+}
+
+.meyvc-aichat-launcher:hover,
+.meyvc-aichat-launcher:focus {
+  color: #fff;
+  background: #1557b0;
+  outline: 2px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+.meyvc-aichat-panel {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 480px;
+  max-height: calc(100vh - 120px);
+  z-index: 9999;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.meyvc-aichat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.meyvc-aichat-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  color: #64748b;
+}
+
+.meyvc-aichat-close:hover {
+  color: #1a1a1a;
+}
+
+.meyvc-aichat-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px;
+  min-height: 0;
+}
+
+.meyvc-aichat-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meyvc-aichat-starters--hidden {
+  display: none;
+}
+
+.meyvc-aichat-pill {
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 13px;
+  color: #334155;
+}
+
+.meyvc-aichat-pill:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.meyvc-aichat-msg-wrap {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.meyvc-aichat-msg-wrap--user {
+  justify-content: flex-end;
+}
+
+.meyvc-aichat-msg-wrap--assistant {
+  justify-content: flex-start;
+}
+
+.meyvc-aichat-bubble {
+  max-width: 85%;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.meyvc-aichat-bubble--user {
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 12px 12px 2px 12px;
+}
+
+.meyvc-aichat-bubble--assistant {
+  background: #f0f4f8;
+  color: #1a1a1a;
+  border-radius: 12px 12px 12px 2px;
+}
+
+.meyvc-aichat-bubble--assistant p {
+  margin: 0 0 0.5em;
+}
+
+.meyvc-aichat-bubble--assistant p:last-child {
+  margin-bottom: 0;
+}
+
+.meyvc-aichat-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid #e2e8f0;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.meyvc-aichat-input-row .meyvc-aichat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.meyvc-aichat-footer {
+  flex: 0 0 auto;
+  padding: 6px 12px 10px;
+  font-size: 11px;
+  color: #64748b;
+  text-align: center;
+  border-top: 1px solid #f1f5f9;
+}
+
+/* ==========================================================================
+   Delay grid (abandoned-cart page)
+   ========================================================================== */
+
+.meyvc-delay-grid {
+  display: flex;
+  gap: var(--meyvc-space-md);
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: var(--meyvc-space-sm);
+}
+
+.meyvc-delay-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 90px;
+}
+
+.meyvc-delay-label {
+  font-size: var(--meyvc-text-sm);
+  font-weight: 600;
+  color: var(--meyvc-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.meyvc-delay-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-md);
+  background: var(--meyvc-bg);
+  padding: 0 10px 0 0;
+  overflow: hidden;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.meyvc-delay-input-wrap:focus-within {
+  border-color: var(--meyvc-accent);
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+.meyvc-delay-hours-input {
+  width: 64px;
+  height: 38px;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 8px;
+  font-size: var(--meyvc-text-base);
+  color: var(--meyvc-text);
+  background: transparent;
+  -moz-appearance: textfield;
+}
+
+.meyvc-delay-hours-input::-webkit-outer-spin-button,
+.meyvc-delay-hours-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.meyvc-delay-unit {
+  font-size: 11px;
+  color: var(--meyvc-text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   Inline input + button group (test email, AI preview)
+   ========================================================================== */
+
+.meyvc-inline-input-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  max-width: 420px;
+  border: var(--meyvc-border);
+  border-radius: var(--meyvc-radius-md);
+  overflow: hidden;
+  background: var(--meyvc-bg);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.meyvc-inline-input-group:focus-within {
+  border-color: var(--meyvc-accent);
+  box-shadow: var(--meyvc-focus-ring);
+}
+
+.meyvc-inline-input-group__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--meyvc-input-height) !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 var(--meyvc-input-padding-x) !important;
+  font-size: var(--meyvc-text-base) !important;
+  color: var(--meyvc-text) !important;
+  border-radius: 0 !important;
+}
+
+.meyvc-inline-input-group__btn {
+  flex: 0 0 auto;
+  height: var(--meyvc-input-height);
+  padding: 0 var(--meyvc-space-md);
+  border: none !important;
+  border-left: var(--meyvc-border) !important;
+  border-radius: 0 !important;
+  background: var(--meyvc-bg-subtle) !important;
+  color: var(--meyvc-text) !important;
+  font-size: var(--meyvc-text-base);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: none !important;
+}
+
+.meyvc-inline-input-group__btn:hover {
+  background: var(--meyvc-accent-light) !important;
+  color: var(--meyvc-primary) !important;
+}
+
+/* ==========================================================================
+   AI preview controls
+   ========================================================================== */
+
+.meyvc-ai-preview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--meyvc-space-md);
+  align-items: flex-start;
+}
+
+.meyvc-ai-preview-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meyvc-ai-preview-btns .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--meyvc-radius-md);
+  font-weight: 500;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.meyvc-ai-preview-btns .button:hover {
+  background: var(--meyvc-accent-light);
+  border-color: var(--meyvc-accent);
+  color: var(--meyvc-primary);
+}
+
+.meyvc-ai-preview-section {
+  background: linear-gradient(
+    135deg,
+    var(--meyvc-bg) 0%,
+    var(--meyvc-accent-light) 100%
+  );
+  border-color: #c3c4c7;
+}
+
+/* ==========================================================================
+   Field control layout helpers
+   ========================================================================== */
+
+/* When .meyvc-field__control contains multiple sibling elements (e.g. input + button),
+   use flexbox so they don't wrap chaotically */
+.meyvc-field__control--flex {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--meyvc-space-sm);
+}
+
+/* Number input inside a flex field row */
+.meyvc-field__control--flex input[type="number"],
+.meyvc-field__control--flex input[type="text"],
+.meyvc-field__control--flex input[type="password"],
+.meyvc-field__control--flex input[type="email"] {
+  flex: 1 1 auto;
+  min-width: 80px;
+}
+
+/* Unit/suffix text */
+.meyvc-field__unit {
+  font-size: var(--meyvc-text-sm);
+  color: var(--meyvc-text-muted);
+  white-space: nowrap;
+  line-height: var(--meyvc-input-height);
+}
