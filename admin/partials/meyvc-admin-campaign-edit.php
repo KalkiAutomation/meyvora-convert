@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $campaign_id = MEYVC_Security::get_query_var_absint( 'campaign_id' );
 $campaign = $campaign_id > 0 ? MEYVC_Campaign::get( $campaign_id ) : null;
 

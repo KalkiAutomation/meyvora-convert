@@ -1,9 +1,9 @@
-# Copyright (C) 2026 Kalki Automations
+# Copyright (C) 2026 kalkiautomation
 # This file is distributed under the GPL v2 or later.
 msgid ""
 msgstr ""
 "Project-Id-Version: Meyvora Convert 1.0.0\n"
-"Report-Msgid-Bugs-To: https://kalkiautomations.com\n"
+"Report-Msgid-Bugs-To: https://kalkiautomation.com/\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -26,12 +26,12 @@ msgstr ""
 
 #. Author of the plugin
 #: meyvora-convert.php
-msgid "Kalki Automations"
+msgid "kalkiautomation"
 msgstr ""
 
 #. Author URI of the plugin
 #: meyvora-convert.php
-msgid "https://kalkiautomations.com"
+msgid "https://kalkiautomation.com/"
 msgstr ""
 
 #: admin/class-cro-admin-layout.php:33

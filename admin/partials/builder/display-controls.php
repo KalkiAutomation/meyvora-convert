@@ -1,5 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 /**
  * Display controls partial for the campaign builder.
  * Expects $campaign_data (object with optional frequency_rules and schedule).

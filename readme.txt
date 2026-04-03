@@ -1,6 +1,6 @@
 === Meyvora Convert – Conversion Rate Optimizer for WooCommerce ===
 
-Contributors: niketthapa
+Contributors: kalkiautomation
 Tags: woocommerce, conversion, popup, exit intent, abandoned cart
 Requires at least: 6.2
 Tested up to: 6.9

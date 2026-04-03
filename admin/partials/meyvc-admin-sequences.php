@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $sequences = class_exists( 'MEYVC_Sequence_Engine' ) ? MEYVC_Sequence_Engine::get_all() : array();
 $campaigns = class_exists( 'MEYVC_Campaign' ) ? MEYVC_Campaign::get_all() : array();
 

@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $doc = class_exists( 'MEYVC_Hooks' ) ? MEYVC_Hooks::get_hooks_documentation() : array( 'actions' => array(), 'filters' => array() );
 $actions = isset( $doc['actions'] ) && is_array( $doc['actions'] ) ? $doc['actions'] : array();
 $filters = isset( $doc['filters'] ) && is_array( $doc['filters'] ) ? $doc['filters'] : array();

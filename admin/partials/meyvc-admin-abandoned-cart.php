@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $settings = meyvc_settings();
 $opts    = $settings->get_abandoned_cart_settings();
 $currency_code = function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : 'USD';

@@ -1,11 +1,10 @@
 <?php
 /**
  * Plugin Name: Meyvora Convert – Conversion Rate Optimizer for WooCommerce
- * Plugin URI: https://meyvora.com/convert
  * Description: Complete conversion rate optimization for WooCommerce — exit intent popups, abandoned cart recovery, sticky cart, shipping bar, trust badges, dynamic offers, A/B testing, and analytics. Built for Meyvora stores and beyond.
  * Version: 1.0.0
- * Author: Kalki Automations
- * Author URI: https://kalkiautomations.com
+ * Author: kalkiautomation
+ * Author URI: https://kalkiautomation.com/
  * License: GPL v2 or later
  * Text Domain: meyvora-convert
  * Domain Path: /languages
@@ -27,9 +26,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 if ( ! function_exists( 'get_plugin_data' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 }
-$_meyvc_data = get_plugin_data( __FILE__, false, false );
-define( 'MEYVC_VERSION', ! empty( $_meyvc_data['Version'] ) ? $_meyvc_data['Version'] : '1.0.0' );
-unset( $_meyvc_data );
+$meyvc_plugin_file_header = get_plugin_data( __FILE__, false, false );
+define( 'MEYVC_VERSION', ! empty( $meyvc_plugin_file_header['Version'] ) ? $meyvc_plugin_file_header['Version'] : '1.0.0' );
+unset( $meyvc_plugin_file_header );
 define( 'MEYVC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MEYVC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'MEYVC_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -146,7 +145,7 @@ add_action( 'wp_initialize_site', function( $new_site ) {
 	}
 } );
 
-register_deactivation_hook( __FILE__, 'deactivate_meyvora_convert' );
+register_deactivation_hook( __FILE__, 'meyvc_deactivate_plugin' );
 
 /**
  * Check if WooCommerce is active
@@ -219,7 +218,7 @@ add_filter( 'plugin_action_links_' . MEYVC_PLUGIN_BASENAME, 'meyvc_plugin_action
 /**
  * The code that runs during plugin deactivation.
  */
-function deactivate_meyvora_convert() {
+function meyvc_deactivate_plugin() {
 	require_once MEYVC_PLUGIN_DIR . 'includes/class-meyvc-deactivator.php';
 	MEYVC_Deactivator::deactivate();
 }
@@ -246,14 +245,8 @@ function meyvc_init_plugin() {
 	require_once MEYVC_PLUGIN_DIR . 'includes/class-meyvc-webhook.php';
 	MEYVC_Webhook::init();
 
-	/**
-	 * Begins execution of the plugin.
-	 */
-	function run_meyvora_convert() {
-		$plugin = new MEYVC_Loader();
-		$plugin->run();
-	}
-	run_meyvora_convert();
+	$meyvc_loader = new MEYVC_Loader();
+	$meyvc_loader->run();
 
 	if ( defined( 'WP_CLI' ) && WP_CLI ) {
 		require_once MEYVC_PLUGIN_DIR . 'includes/class-meyvc-cli.php';

@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $days = MEYVC_Security::get_query_var_absint( 'meyvc_insights_days' );
 if ( ! $days ) {
 	$days = 30;

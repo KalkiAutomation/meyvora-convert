@@ -96,15 +96,15 @@ wp_clear_scheduled_hook( 'meyvc_deliver_webhook' );
 delete_option( 'meyvc_dynamic_offers' );
 delete_option( 'meyvc_remove_data_on_uninstall' );
 
-$upload_dir = wp_upload_dir();
-if ( empty( $upload_dir['error'] ) && ! empty( $upload_dir['basedir'] ) ) {
-	$log_dir = trailingslashit( $upload_dir['basedir'] ) . 'meyvora-convert/';
+$meyvc_upload_dir = wp_upload_dir();
+if ( empty( $meyvc_upload_dir['error'] ) && ! empty( $meyvc_upload_dir['basedir'] ) ) {
+	$meyvc_log_dir = trailingslashit( $meyvc_upload_dir['basedir'] ) . 'meyvora-convert/';
 	if ( ! function_exists( 'WP_Filesystem' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 	}
 	WP_Filesystem();
 	global $wp_filesystem;
-	if ( $wp_filesystem && $wp_filesystem->exists( $log_dir ) ) {
-		$wp_filesystem->delete( $log_dir, true );
+	if ( $wp_filesystem && $wp_filesystem->exists( $meyvc_log_dir ) ) {
+		$wp_filesystem->delete( $meyvc_log_dir, true );
 	}
 }

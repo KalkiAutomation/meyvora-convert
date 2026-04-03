@@ -8,6 +8,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 // Extract data
 $content     = is_array( $campaign ) ? ( $campaign['content'] ?? [] ) : ( $campaign->content ?? [] );
 $styling     = is_array( $campaign ) ? ( $campaign['styling'] ?? [] ) : ( $campaign->styling ?? [] );

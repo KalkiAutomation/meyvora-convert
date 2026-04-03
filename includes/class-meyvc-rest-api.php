@@ -1142,6 +1142,7 @@ class MEYVC_REST_API {
 		if ( ! function_exists( 'WC' ) || ! WC()->cart ) {
 			return array();
 		}
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core filter name.
 		return apply_filters( 'woocommerce_add_to_cart_fragments', array() );
 	}
 

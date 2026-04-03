@@ -136,20 +136,21 @@ class MEYVC_Activator {
 		foreach ( $suffix_map as $old_suffix => $new_suffix ) {
 			$old_t = $wpdb->prefix . $old_suffix;
 			$new_t = $wpdb->prefix . $new_suffix;
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- SHOW TABLES LIKE with escaped table name.
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off migration: SHOW TABLES during upgrade.
 			$old_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $old_t ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off migration: SHOW TABLES during upgrade.
 			$new_exists = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $new_t ) );
 			if ( $old_exists === $old_t && $new_exists !== $new_t ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Table names validated against suffix map.
+				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off migration: RENAME TABLE with escaped names from suffix map.
 				$wpdb->query( 'RENAME TABLE `' . esc_sql( $old_t ) . '` TO `' . esc_sql( $new_t ) . '`' );
 			}
 		}
 
-		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared -- Dynamic LIKE patterns on options table.
+		// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-off migration: bulk option_name updates.
 		$wpdb->query( "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, 'cro_', 'meyvc_') WHERE option_name LIKE 'cro\\_%'" );
 		$wpdb->query( "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, '_transient_cro_', '_transient_meyvc_') WHERE option_name LIKE '\\_transient\\_cro\\_%'" );
 		$wpdb->query( "UPDATE {$wpdb->options} SET option_name = REPLACE(option_name, '_transient_timeout_cro_', '_transient_timeout_meyvc_') WHERE option_name LIKE '\\_transient\\_timeout\\_cro\\_%'" );
-		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 		$legacy_cron = array(
 			'cro_process_background_queue',

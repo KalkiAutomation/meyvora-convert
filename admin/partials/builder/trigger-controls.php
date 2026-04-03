@@ -1,5 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 /**
  * Trigger controls partial for the campaign builder.
  * Expects $campaign_data (object with optional trigger_rules array).

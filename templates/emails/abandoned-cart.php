@@ -15,6 +15,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $brand_color = apply_filters(
 	'meyvc_email_brand_color',
 	function_exists( 'meyvc_settings' ) ? meyvc_settings()->get( 'abandoned_cart', 'email_brand_color', '#2563eb' ) : '#2563eb'

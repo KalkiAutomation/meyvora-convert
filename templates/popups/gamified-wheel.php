@@ -6,6 +6,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $content     = is_array( $campaign ) ? ( $campaign['content'] ?? array() ) : ( $campaign->content ?? array() );
 $campaign_id = is_array( $campaign ) ? ( $campaign['id'] ?? 0 ) : ( $campaign->id ?? 0 );
 $is_preview  = ! empty( $campaign['is_preview'] );

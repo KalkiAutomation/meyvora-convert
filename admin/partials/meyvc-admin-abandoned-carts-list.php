@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 if ( ! class_exists( 'MEYVC_Abandoned_Cart_Tracker' ) ) {
 	echo '<div class="meyvc-admin-message"><p>' . esc_html__( 'Abandoned cart module is not available.', 'meyvora-convert' ) . '</p></div>';
 	return;

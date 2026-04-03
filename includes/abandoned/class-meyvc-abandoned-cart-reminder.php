@@ -346,6 +346,7 @@ class MEYVC_Abandoned_Cart_Reminder {
 			$need  = self::get_delay_hours( 1, $seg );
 			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
 			if ( $due_ts <= $ts_now ) {
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook is meyvc_abandoned_cart_reminder (self::HOOK).
 				do_action( self::HOOK, (int) $r->id, 1 );
 			}
 		}
@@ -374,6 +375,7 @@ class MEYVC_Abandoned_Cart_Reminder {
 			$need   = self::get_delay_hours( 2, $seg );
 			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
 			if ( $due_ts <= $ts_now ) {
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook is meyvc_abandoned_cart_reminder (self::HOOK).
 				do_action( self::HOOK, (int) $r->id, 2 );
 			}
 		}
@@ -402,6 +404,7 @@ class MEYVC_Abandoned_Cart_Reminder {
 			$need   = self::get_delay_hours( 3, $seg );
 			$due_ts = strtotime( $r->last_activity_at ) + (int) round( $need * HOUR_IN_SECONDS );
 			if ( $due_ts <= $ts_now ) {
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Hook is meyvc_abandoned_cart_reminder (self::HOOK).
 				do_action( self::HOOK, (int) $r->id, 3 );
 			}
 		}

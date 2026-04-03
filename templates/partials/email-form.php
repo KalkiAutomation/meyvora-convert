@@ -7,6 +7,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $placeholder  = isset( $content['email_placeholder'] ) ? $content['email_placeholder'] : __( 'Enter your email', 'meyvora-convert' );
 $button_text  = isset( $content['email_button_text'] ) ? $content['email_button_text'] : __( 'Subscribe', 'meyvora-convert' );
 $campaign_id  = isset( $campaign_id ) ? $campaign_id : '';

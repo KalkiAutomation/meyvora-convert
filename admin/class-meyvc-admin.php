@@ -3432,7 +3432,7 @@ class MEYVC_Admin {
 	}
 
 	/**
-	 * Markup for KPI period-over-period change (matches meyvora_kpi_change in analytics partial).
+	 * Markup for KPI period-over-period change (matches meyvc_kpi_change in analytics partial).
 	 *
 	 * @param float|int $current  Current value.
 	 * @param float|int $previous Previous value.

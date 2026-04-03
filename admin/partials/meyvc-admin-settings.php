@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $meyvc_settings_tab = isset( $_GET['settings_tab'] ) ? sanitize_key( wp_unslash( $_GET['settings_tab'] ) ) : 'general';
 if ( ! in_array( $meyvc_settings_tab, array( 'general', 'styles', 'analytics', 'ai' ), true ) ) {
 	$meyvc_settings_tab = 'general';

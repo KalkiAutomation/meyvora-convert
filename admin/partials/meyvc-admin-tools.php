@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $campaigns = array();
 if ( class_exists( 'MEYVC_Campaign' ) ) {
 	$campaigns = MEYVC_Campaign::get_all( array( 'limit' => 500 ) );

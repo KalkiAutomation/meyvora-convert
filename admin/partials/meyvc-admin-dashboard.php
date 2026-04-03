@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $settings = function_exists( 'meyvc_settings' ) ? meyvc_settings() : null;
 
 require_once MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-ai-panel.php';

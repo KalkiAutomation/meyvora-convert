@@ -7,6 +7,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $test_id = MEYVC_Security::get_query_var_absint( 'id' );
 $ab_model = new MEYVC_AB_Test();
 $test     = $ab_model->get( $test_id );

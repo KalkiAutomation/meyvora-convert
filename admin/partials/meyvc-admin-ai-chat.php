@@ -8,6 +8,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 ?>
 <div id="meyvc-aichat-launcher" class="meyvc-aichat-launcher" role="button" tabindex="0" aria-expanded="false" aria-controls="meyvc-aichat-panel">
 	<?php esc_html_e( '✦ Ask AI', 'meyvora-convert' ); ?>

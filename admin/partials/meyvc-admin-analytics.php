@@ -2,13 +2,15 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 /**
  * Analytics Dashboard
  *
  * @package Meyvora_Convert
  */
 
-function meyvora_kpi_change( $current, $previous ) {
+function meyvc_kpi_change( $current, $previous ) {
 	if ( ! $previous ) {
 		return '';
 	}
@@ -379,7 +381,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			<div class="meyvc-kpi-content">
 				<span class="meyvc-kpi-value"><?php echo esc_html( number_format_i18n( $summary['impressions'] ) ); ?></span>
 				<span class="meyvc-kpi-label"><?php esc_html_e( 'Impressions', 'meyvora-convert' ); ?></span>
-				<?php echo wp_kses_post( meyvora_kpi_change( $summary['impressions'], $summary['prev_impressions'] ) ); ?>
+				<?php echo wp_kses_post( meyvc_kpi_change( $summary['impressions'], $summary['prev_impressions'] ) ); ?>
 			</div>
 		</div>
 
@@ -412,7 +414,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 					<span class="dashicons dashicons-info meyvc-kpi-tip js-meyvc-revenue-kpi-tip" title="<?php echo esc_attr( $revenue_tooltip ); ?>"></span>
 					<?php endif; ?>
 				</span>
-				<span class="js-meyvc-revenue-kpi-change"><?php echo wp_kses_post( meyvora_kpi_change( $summary['revenue'], $summary['prev_revenue'] ) ); ?></span>
+				<span class="js-meyvc-revenue-kpi-change"><?php echo wp_kses_post( meyvc_kpi_change( $summary['revenue'], $summary['prev_revenue'] ) ); ?></span>
 			</div>
 		</div>
 
@@ -443,7 +445,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			<div class="meyvc-stat-content">
 				<span class="meyvc-stat-value"><?php echo esc_html( number_format_i18n( $summary['conversions'] ) ); ?></span>
 				<span class="meyvc-stat-label"><?php esc_html_e( 'Conversions', 'meyvora-convert' ); ?></span>
-				<?php echo wp_kses_post( meyvora_kpi_change( $summary['conversions'], $summary['prev_conversions'] ) ); ?>
+				<?php echo wp_kses_post( meyvc_kpi_change( $summary['conversions'], $summary['prev_conversions'] ) ); ?>
 			</div>
 		</div>
 		<div class="meyvc-stat-card">
@@ -460,7 +462,7 @@ $cohort_tot_rate = $cohort_tot_ab > 0 ? round( ( $cohort_tot_re / $cohort_tot_ab
 			<div class="meyvc-stat-content">
 				<span class="meyvc-stat-value"><?php echo esc_html( number_format_i18n( $summary['emails'] ) ); ?></span>
 				<span class="meyvc-stat-label"><?php esc_html_e( 'Emails Captured', 'meyvora-convert' ); ?></span>
-				<?php echo wp_kses_post( meyvora_kpi_change( $summary['emails'], $summary['prev_emails'] ) ); ?>
+				<?php echo wp_kses_post( meyvc_kpi_change( $summary['emails'], $summary['prev_emails'] ) ); ?>
 			</div>
 		</div>
 		<div class="meyvc-stat-card">

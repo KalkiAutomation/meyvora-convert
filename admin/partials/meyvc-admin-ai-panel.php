@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $insights_url  = admin_url( 'admin.php?page=meyvc-insights' );
 $offers_url    = admin_url( 'admin.php?page=meyvc-offers' );
 $campaign_new  = admin_url( 'admin.php?page=meyvc-campaign-edit' );

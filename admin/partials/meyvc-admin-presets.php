@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $presets = class_exists( 'MEYVC_Presets' ) ? MEYVC_Presets::get_all() : array();
 
 $preset_applied      = MEYVC_Security::get_query_var( 'preset_applied' ) === '1';

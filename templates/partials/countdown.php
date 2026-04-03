@@ -6,6 +6,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $minutes = isset( $content['countdown_minutes'] ) ? intval( $content['countdown_minutes'] ) : 15;
 $inline  = isset( $inline ) && $inline;
 ?>

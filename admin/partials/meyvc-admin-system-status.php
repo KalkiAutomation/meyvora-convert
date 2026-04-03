@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 if ( ! class_exists( 'MEYVC_System_Status' ) ) {
 	require_once MEYVC_PLUGIN_DIR . 'includes/class-meyvc-system-status.php';
 }

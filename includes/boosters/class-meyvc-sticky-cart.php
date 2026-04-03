@@ -143,6 +143,7 @@ class MEYVC_Sticky_Cart {
 
 		// Return fragments and cart hash for WooCommerce compatibility.
 		$data = array(
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core filter name.
 			'fragments' => apply_filters( 'woocommerce_add_to_cart_fragments', array() ),
 			'cart_hash' => WC()->cart->get_cart_hash(),
 		);

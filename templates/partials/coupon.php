@@ -6,6 +6,8 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $coupon_code = isset( $content['coupon_code'] ) ? $content['coupon_code'] : '';
 $inline      = isset( $inline ) && $inline;
 $coupon_label = '';

@@ -7,6 +7,8 @@
 
 defined( 'ABSPATH' ) || exit;
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $ai_prefill_campaign_id = isset( $_GET['campaign_id'] ) ? absint( wp_unslash( $_GET['campaign_id'] ) ) : 0;
 $ai_prefill             = null;
 if ( isset( $_GET['ai_variant'] ) ) {

@@ -9,6 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $dashboard_url = admin_url( 'admin.php?page=meyvora-convert' );
 $skip_url      = wp_nonce_url( admin_url( 'admin.php?page=meyvora-convert&meyvc_skip_onboarding=1' ), 'meyvc_skip_onboarding' );
 ?>

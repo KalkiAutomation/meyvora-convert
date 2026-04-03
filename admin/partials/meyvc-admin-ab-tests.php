@@ -1,5 +1,7 @@
 <?php
 if ( ! defined( 'ABSPATH' ) ) exit;
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 $ab_model = new MEYVC_AB_Test();
 $tests = $ab_model->get_all();
 $tests = is_array( $tests ) ? $tests : array();

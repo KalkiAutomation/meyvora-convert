@@ -252,12 +252,14 @@ class MEYVC_Offer_Banner {
 			ob_start();
 			woocommerce_mini_cart();
 			$mini_cart = ob_get_clean();
+			// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce core filter name (not ours to prefix).
 			$fragments = apply_filters(
 				'woocommerce_add_to_cart_fragments',
 				array(
 					'div.widget_shopping_cart_content' => '<div class="widget_shopping_cart_content">' . $mini_cart . '</div>',
 				)
 			);
+			// phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 			$cart_hash = WC()->cart->get_cart_hash();
 		}
 		wp_send_json_success( array(

@@ -17,6 +17,8 @@
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 ?>
 <div class="meyvc-post-purchase-upsell" data-order-id="<?php echo esc_attr( (string) $order_id ); ?>">
 	<h3 class="meyvc-post-purchase-upsell__title"><?php echo esc_html( $headline ); ?></h3>
