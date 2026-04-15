@@ -1,6 +1,6 @@
 {
   "name": "meyvora-convert-cart-checkout-extension",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "WooCommerce Cart/Checkout Blocks extension for Meyvora Convert",
   "private": true,
   "scripts": {

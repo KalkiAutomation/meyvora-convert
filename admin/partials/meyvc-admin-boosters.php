@@ -16,7 +16,7 @@ $settings = meyvc_settings();
 
 // Handle form submission.
 $nonce_valid = isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'meyvc_boosters_nonce' );
-if ( isset( $_POST['meyvc_save_boosters'] ) && $nonce_valid ) {
+if ( isset( $_POST['meyvc_save_boosters'] ) && $nonce_valid && current_user_can( 'manage_meyvora_convert' ) ) {
 
 	// Sticky Cart Settings.
 	$settings->set( 'general', 'sticky_cart_enabled', ! empty( $_POST['sticky_cart_enabled'] ) );

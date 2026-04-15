@@ -20,12 +20,40 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   max-width: 1200px;
   margin: 0 auto;
   padding: calc(var(--meyvc-spacing, 8px) * 2) calc(var(--meyvc-spacing, 8px) * 2.5);
   background: #fff;
   border-top: 1px solid #ddd;
   gap: calc(var(--meyvc-spacing, 8px) * 2);
+}
+
+.meyvc-sticky-cart-variable-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.meyvc-sticky-variation-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  max-width: min(100vw - 32px, 420px);
+}
+
+.meyvc-sticky-variation-row select.meyvc-sticky-cart-attr {
+  min-width: 120px;
+  max-width: 100%;
+  padding: 6px 8px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: var(--meyvc-radius, 8px);
+  background: #fff;
 }
 
 .meyvc-sticky-cart-image {

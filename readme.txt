@@ -5,7 +5,7 @@ Tags: woocommerce, conversion, popup, exit intent, abandoned cart
 Requires at least: 6.2
 Tested up to: 6.9
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 Requires Plugins: woocommerce
 WC tested up to: 10.6
 License: GPLv2 or later
@@ -150,10 +150,30 @@ Meyvora Convert supports WordPress's built-in personal data export and erasure t
 
 == Changelog ==
 
+= 1.0.1 =
+**Spin-to-win (gamified wheel)**
+* Fixed canvas not initializing when the campaign ID was read with jQuery `.data()` — scripts now use the `data-campaign-id` attribute so the wheel draws reliably on the storefront and in minified assets.
+* Fixed final spin rotation so the on-screen pointer (12 o’clock) lines up with the winning slice returned by the server (canvas arc math).
+* Detect wheel campaigns when `template_type` is stored as `gamified_wheel` or `gamified-wheel` so spin scripts and styles load correctly.
+* More robust parsing of `data-slices` JSON on the canvas (including HTML-encoded attributes).
+* Kept production `.min.css` / `.min.js` in sync with sources; release zip build regenerates minified public assets before packaging.
+* Inline campaign embeds: styles so the gamified wheel is visible inside `.meyvc-campaign-shortcode` without the overlay controller.
+* Preview URLs (`?meyvc_preview=1`): load and initialize the spin wheel when the campaign is previewed off a draft.
+
+**Sticky add-to-cart**
+* Variable products: variation dropdowns in the sticky bar and AJAX add-to-cart with `variation_id` and selected attributes.
+* More reliable sticky bar when `meyvcStickyCart` is built from DOM (`data-ajax-url`, `data-nonce`, attribute-based product ID) and broader enqueue rules on single product pages.
+
+**Admin — campaign builder live preview**
+* Fixed empty spin wheel in the right-hand Live Preview (and in split iframe mode) by resolving `data-campaign-id` correctly and drawing the wheel after HTML injection.
+
+**Code quality**
+* Plugin Check: use `wp_parse_url()` instead of `parse_url()`, plugin text domain for sticky variation placeholder copy, avoid unnecessary writes to the global `$product` in sticky-cart resolution.
+
 = 1.0.0 =
 * First public release — conversion campaigns (exit intent, scroll, time, spin-to-win wheel with server-signed tokens), boosters (sticky cart, shipping bar, trust badges, stock urgency, social proof, recommendations), cart/checkout optimizations, dynamic offers, A/B testing, abandoned cart email recovery, sequences, geo and UTM/referrer targeting, cookie-consent awareness, analytics and live dashboard panel, REST API, shortcode and block, Klaviyo/Mailchimp integrations, optional AI (Anthropic), onboarding and presets, System Status and uninstall options.
 
 == Upgrade Notice ==
 
-= 1.0.0 =
-First public release of Meyvora Convert for WooCommerce.
+= 1.0.1 =
+Maintenance and UX release: spin wheel rendering and alignment, variable-product sticky cart, admin live preview wheel, minified asset parity, and Plugin Check fixes. Recommended for all sites on 1.0.0.

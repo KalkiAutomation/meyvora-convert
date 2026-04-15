@@ -186,7 +186,12 @@ class MEYVC_Admin_Layout {
 			if ( $cta_url !== '' ) {
 				echo '<a href="' . esc_url( $cta_url ) . '" class="button button-primary meyvc-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</a>';
 			} elseif ( ! empty( $primary_cta['form_id'] ) ) {
-				echo '<button type="submit" form="' . esc_attr( $primary_cta['form_id'] ) . '" class="button button-primary meyvc-ui-btn-primary">' . esc_html( $primary_cta['label'] ) . '</button>';
+				$submit_name = isset( $primary_cta['submit_name'] ) ? sanitize_key( (string) $primary_cta['submit_name'] ) : '';
+				echo '<button type="submit" form="' . esc_attr( $primary_cta['form_id'] ) . '" class="button button-primary meyvc-ui-btn-primary"';
+				if ( $submit_name !== '' ) {
+					echo ' name="' . esc_attr( $submit_name ) . '" value="1"';
+				}
+				echo '>' . esc_html( $primary_cta['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_cta['button_id'] ) ) {
 				echo '<button type="button" id="' . esc_attr( $primary_cta['button_id'] ) . '" class="button button-primary meyvc-ui-btn-primary"';
 				foreach ( $attrs as $attr_key => $attr_val ) {

@@ -15,7 +15,6 @@ if ( ! defined( 'ABSPATH' ) ) {
 class MEYVC_AI_Offer_Suggester {
 
 	const OPTION_KEY       = 'meyvc_dynamic_offers';
-	const MAX_OFFERS       = 5;
 	const SYNTHETIC_BASE   = 9000;
 	const RATE_ACTION      = 'offer_suggest';
 	const RATE_LIMIT       = 10;
@@ -159,13 +158,14 @@ class MEYVC_AI_Offer_Suggester {
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function get_existing_active_offers(): array {
+		$max    = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
 		$offers = get_option( self::OPTION_KEY, array() );
 		if ( ! is_array( $offers ) ) {
 			return array();
 		}
-		$offers = array_pad( $offers, self::MAX_OFFERS, array() );
+		$offers = array_pad( $offers, $max, array() );
 		$out    = array();
-		for ( $i = 0; $i < self::MAX_OFFERS; $i++ ) {
+		for ( $i = 0; $i < $max; $i++ ) {
 			$o = isset( $offers[ $i ] ) && is_array( $offers[ $i ] ) ? $offers[ $i ] : array();
 			if ( empty( $o['enabled'] ) ) {
 				continue;
@@ -261,13 +261,14 @@ class MEYVC_AI_Offer_Suggester {
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function get_offer_conversion_rates_30d(): array {
+		$max    = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
 		$offers = get_option( self::OPTION_KEY, array() );
 		if ( ! is_array( $offers ) ) {
 			return array();
 		}
-		$offers = array_pad( $offers, self::MAX_OFFERS, array() );
+		$offers = array_pad( $offers, $max, array() );
 		$rates  = array();
-		for ( $i = 0; $i < self::MAX_OFFERS; $i++ ) {
+		for ( $i = 0; $i < $max; $i++ ) {
 			$o = isset( $offers[ $i ] ) && is_array( $offers[ $i ] ) ? $offers[ $i ] : array();
 			$name = isset( $o['headline'] ) ? trim( (string) $o['headline'] ) : '';
 			if ( $name === '' ) {

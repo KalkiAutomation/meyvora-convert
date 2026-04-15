@@ -108,10 +108,11 @@ class MEYVC_Visitor_State {
 	 * Load visitor state from cookie (compact keys).
 	 */
 	private function load_state() {
-		$cookie_raw = filter_input( INPUT_COOKIE, self::COOKIE_NAME, FILTER_UNSAFE_RAW );
-		if ( is_string( $cookie_raw ) && $cookie_raw !== '' ) {
+		$cookie_name = self::COOKIE_NAME;
+		$cookie_raw  = isset( $_COOKIE[ $cookie_name ] ) ? sanitize_text_field( wp_unslash( (string) $_COOKIE[ $cookie_name ] ) ) : '';
+		if ( $cookie_raw !== '' ) {
 			// Un-escape URL encoding that some environments apply to cookie values; decode before sanitizing.
-			$raw = wp_unslash( $cookie_raw );
+			$raw = $cookie_raw;
 			$raw = is_string( $raw ) ? sanitize_text_field( $raw ) : '';
 			$raw = $raw !== '' ? str_replace( ' ', '+', $raw ) : '';
 			$decoded = json_decode( base64_decode( $raw, true ), true );

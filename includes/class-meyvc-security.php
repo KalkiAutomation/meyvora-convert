@@ -74,21 +74,21 @@ class MEYVC_Security {
 	}
 
 	/**
-	 * Read a GET query parameter with sanitization via filter_input().
-	 *
-	 * Avoids touching superglobals for read-only admin/query vars.
+	 * Read a GET query parameter with sanitization.
 	 *
 	 * @param string $key Query variable name.
 	 * @return string Sanitized string; empty if missing.
 	 */
 	public static function get_query_var( string $key ): string {
-		$raw = filter_input( INPUT_GET, $key, FILTER_UNSAFE_RAW );
-		if ( null === $raw || false === $raw ) {
-			return '';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only GET parameter; not a form submission.
+		if ( ! isset( $_GET[ $key ] ) || is_array( $_GET[ $key ] ) ) {
+			$out = '';
+		} else {
+			$out = sanitize_text_field( wp_unslash( (string) $_GET[ $key ] ) );
 		}
-		$raw = is_string( $raw ) ? $raw : (string) $raw;
+		// phpcs:enable
 
-		return sanitize_text_field( wp_unslash( $raw ) );
+		return $out;
 	}
 
 	/**

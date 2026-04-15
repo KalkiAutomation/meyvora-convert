@@ -1595,6 +1595,31 @@ body.admin-bar .meyvc-builder-wrap .meyvc-ui-toast-container {
   transform: none !important;
 }
 
+/* Gamified wheel in preview */
+.meyvc-preview-frame .meyvc-popup--gamified-wheel {
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 95% !important;
+  max-width: 300px !important;
+  padding: 1rem 0.75rem 1.25rem !important;
+  overflow-y: auto !important;
+  max-height: calc(100% - 16px) !important;
+}
+.meyvc-preview-frame .meyvc-popup--gamified-wheel .meyvc-wheel-wrap canvas {
+  width: 180px !important;
+  height: 180px !important;
+}
+.meyvc-preview-frame .meyvc-popup--gamified-wheel .meyvc-wheel-headline {
+  font-size: 1rem !important;
+}
+.meyvc-preview-frame .meyvc-popup--gamified-wheel .meyvc-wheel-sub {
+  font-size: 0.8rem !important;
+}
+.meyvc-preview-frame .meyvc-popup--gamified-wheel .meyvc-wheel-email-step {
+  max-width: 220px !important;
+}
+
 /* =============================================
    PREVIEW SIZE ADJUSTMENTS
    Smaller sizes for the preview panel

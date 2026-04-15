@@ -427,6 +427,11 @@
 			if (!form || typeof meyvcAbandonedCart === 'undefined') {
 				return;
 			}
+			form.addEventListener('submit', function() {
+				if (typeof tinymce !== 'undefined' && tinymce.get('meyvc_email_body_template')) {
+					tinymce.triggerSave();
+				}
+			});
 			var AC = meyvcAbandonedCart;
 			var S = AC.strings || {};
 			var subjectInput = document.getElementById('meyvc_email_subject_template');

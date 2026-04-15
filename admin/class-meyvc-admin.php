@@ -16,18 +16,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 class MEYVC_Admin {
 
 	/**
-	 * Sanitized GET query string (uses filter_input for static analysis).
+	 * Sanitized GET query string.
 	 *
 	 * @param string $key     Query parameter name.
 	 * @param string $default Default if missing.
 	 * @return string
 	 */
 	private static function get_get_text( $key, $default = '' ) {
-		$raw = filter_input( INPUT_GET, $key, FILTER_UNSAFE_RAW );
-		if ( ! is_string( $raw ) ) {
-			return $default;
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin URL query args; not a form POST.
+		if ( ! isset( $_GET[ $key ] ) || is_array( $_GET[ $key ] ) ) {
+			$out = $default;
+		} else {
+			$out = sanitize_text_field( wp_unslash( (string) $_GET[ $key ] ) );
 		}
-		return sanitize_text_field( wp_unslash( $raw ) );
+		// phpcs:enable
+
+		return $out;
 	}
 
 	/**
@@ -37,11 +41,15 @@ class MEYVC_Admin {
 	 * @return int
 	 */
 	private static function get_get_absint( $key ) {
-		$raw = filter_input( INPUT_GET, $key, FILTER_UNSAFE_RAW );
-		if ( ! is_string( $raw ) ) {
-			return 0;
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin URL query args; not a form POST.
+		if ( ! isset( $_GET[ $key ] ) || is_array( $_GET[ $key ] ) ) {
+			$out = 0;
+		} else {
+			$out = absint( wp_unslash( $_GET[ $key ] ) );
 		}
-		return absint( wp_unslash( $raw ) );
+		// phpcs:enable
+
+		return $out;
 	}
 
 	/**
@@ -50,8 +58,15 @@ class MEYVC_Admin {
 	 * @return bool
 	 */
 	private static function is_meyvc_onboarding_query() {
-		$raw = filter_input( INPUT_GET, 'meyvc_onboarding', FILTER_UNSAFE_RAW );
-		return is_string( $raw ) && wp_unslash( $raw ) === '1';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin URL query flag; not a form POST.
+		if ( ! isset( $_GET['meyvc_onboarding'] ) || is_array( $_GET['meyvc_onboarding'] ) ) {
+			$ok = false;
+		} else {
+			$ok = sanitize_text_field( wp_unslash( (string) $_GET['meyvc_onboarding'] ) ) === '1';
+		}
+		// phpcs:enable
+
+		return $ok;
 	}
 
 	/**
@@ -84,6 +99,8 @@ class MEYVC_Admin {
 		add_action( 'admin_init', array( $this, 'handle_bulk_campaigns' ) );
 		add_action( 'admin_init', array( $this, 'handle_campaign_actions' ) );
 		add_action( 'admin_init', array( $this, 'handle_ab_test_actions' ) );
+		// Abandoned Cart Emails settings: POST handling only on that screen (load hook), not in the view partial.
+		add_action( 'load-meyvora-convert_page_meyvc-abandoned-cart', array( $this, 'handle_abandoned_cart_email_settings_save' ) );
 		add_action( 'admin_post_meyvc_save_sequence', array( $this, 'handle_save_sequence' ) );
 		add_action( 'admin_post_meyvc_delete_sequence', array( $this, 'handle_delete_sequence' ) );
 		// Front-end error reporting (graceful error handling).
@@ -486,10 +503,57 @@ class MEYVC_Admin {
 			'title'           => get_admin_page_title() ?: __( 'Abandoned Cart Emails', 'meyvora-convert' ),
 			'subtitle'        => __( 'Configure reminder emails sent when a customer leaves items in their cart. Use the placeholders below in subject and body.', 'meyvora-convert' ),
 			'active_tab'      => 'meyvc-abandoned-cart',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'meyvc-abandoned-cart-form' ),
+			'primary_action'  => array(
+				'label'       => __( 'Save settings', 'meyvora-convert' ),
+				'form_id'     => 'meyvc-abandoned-cart-form',
+				'submit_name' => 'meyvc_save_abandoned_cart',
+			),
 			'content_partial' => MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-abandoned-cart.php',
 			'wrap_class'      => 'meyvc-abandoned-cart-emails',
 		) );
+	}
+
+	/**
+	 * Save Abandoned Cart Emails settings (POST). Runs on load-{screen} only — not on every request.
+	 *
+	 * @return void
+	 */
+	public function handle_abandoned_cart_email_settings_save() {
+		if ( ! isset( $_POST['meyvc_save_abandoned_cart'] ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
+			wp_die( esc_html__( 'You do not have permission to save these settings.', 'meyvora-convert' ), esc_html__( 'Forbidden', 'meyvora-convert' ), array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'meyvc_abandoned_cart_save' );
+
+		if ( ! function_exists( 'meyvc_settings' ) ) {
+			return;
+		}
+		$settings = meyvc_settings();
+		$opts     = $settings->get_abandoned_cart_settings();
+		$opts     = wp_parse_args(
+			$opts,
+			array(
+				'email_subject_template' => __( 'You left something in your cart – {store_name}', 'meyvora-convert' ),
+			)
+		);
+
+		$settings->set( 'abandoned_cart', 'enable_abandoned_cart_emails', ! empty( $_POST['meyvc_abandoned_cart_enabled'] ) );
+		$settings->set( 'abandoned_cart', 'require_opt_in', ! empty( $_POST['meyvc_abandoned_cart_require_opt_in'] ) );
+		$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_1_delay_hours'] ?? 1 ) ) ) ) );
+		$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_2_delay_hours'] ?? 24 ) ) ) ) );
+		$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_3_delay_hours'] ?? 72 ) ) ) ) );
+		$settings->set( 'abandoned_cart', 'high_value_threshold', max( 0, (float) sanitize_text_field( wp_unslash( $_POST['meyvc_high_value_threshold'] ?? '100' ) ) ) );
+		$settings->set( 'abandoned_cart', 'email_subject_template', isset( $_POST['meyvc_email_subject_template'] ) ? sanitize_text_field( wp_unslash( $_POST['meyvc_email_subject_template'] ) ) : $opts['email_subject_template'] );
+		$settings->set( 'abandoned_cart', 'email_body_template', isset( $_POST['meyvc_email_body_template'] ) ? wp_kses_post( wp_unslash( $_POST['meyvc_email_body_template'] ) ) : '' );
+		$brand_hex = isset( $_POST['email_brand_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['email_brand_color'] ) ) : '';
+		$settings->set( 'abandoned_cart', 'email_brand_color', $brand_hex ? $brand_hex : '#2563eb' );
+
+		// Always use a concrete admin URL (avoids null/empty from menu_page_url during load hook; prevents PHP 8.1+ deprecations in redirect helpers).
+		$redirect = admin_url( 'admin.php?page=meyvc-abandoned-cart' );
+		wp_safe_redirect( add_query_arg( 'meyvc_ac_saved', '1', $redirect ) );
+		exit;
 	}
 
 	/**
@@ -733,7 +797,7 @@ class MEYVC_Admin {
 			wp_enqueue_style(
 				'meyvc-admin-insights',
 				MEYVC_PLUGIN_URL . 'admin/css/meyvc-admin-insights.css',
-				array( 'meyvc-admin-design-system' ),
+				array( 'meyvc-admin-ui', 'meyvc-admin-design-system' ),
 				MEYVC_VERSION
 			);
 		}
@@ -1235,14 +1299,14 @@ class MEYVC_Admin {
 			wp_enqueue_script(
 				'meyvc-insights-page',
 				MEYVC_PLUGIN_URL . 'admin/js/meyvc-insights-page.js',
-				array( 'jquery' ),
+				array( 'jquery', 'meyvc-admin' ),
 				MEYVC_VERSION,
 				true
 			);
 			wp_enqueue_script(
 				'meyvc-ai-insights',
 				MEYVC_PLUGIN_URL . 'admin/js/meyvc-ai-insights.js',
-				array( 'jquery' ),
+				array( 'jquery', 'meyvc-admin' ),
 				MEYVC_VERSION,
 				true
 			);
@@ -1379,7 +1443,11 @@ class MEYVC_Admin {
 					'close'             => __( 'Close', 'meyvora-convert' ),
 					'notifications'     => __( 'Notifications', 'meyvora-convert' ),
 					'offersUsed'      => __( 'offers used', 'meyvora-convert' ),
-					'limitReached'    => __( 'Offer limit reached (5).', 'meyvora-convert' ),
+					'limitReached'    => sprintf(
+						/* translators: %d: maximum number of dynamic offers */
+						__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+						function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50
+					),
 					'noOffersYet'     => __( 'No offers yet', 'meyvora-convert' ),
 					'emptyDesc'       => __( 'Create your first offer to show a dynamic reward on cart and checkout.', 'meyvora-convert' ),
 					'createFirst'     => __( 'Create your first offer', 'meyvora-convert' ),
@@ -1445,12 +1513,13 @@ class MEYVC_Admin {
 				)
 			);
 
-			$offers_opt   = get_option( 'meyvc_dynamic_offers', array() );
-			$offers_opt   = is_array( $offers_opt ) ? array_pad( $offers_opt, 5, array() ) : array_pad( array(), 5, array() );
+			$max_offer_slots = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
+			$offers_opt      = get_option( 'meyvc_dynamic_offers', array() );
+			$offers_opt      = is_array( $offers_opt ) ? array_pad( $offers_opt, $max_offer_slots, array() ) : array_pad( array(), $max_offer_slots, array() );
 			$offers_used  = 0;
 			$first_empty  = 0;
 			$found_empty  = false;
-			for ( $oi = 0; $oi < 5; $oi++ ) {
+			for ( $oi = 0; $oi < $max_offer_slots; $oi++ ) {
 				$oo = isset( $offers_opt[ $oi ] ) && is_array( $offers_opt[ $oi ] ) ? $offers_opt[ $oi ] : array();
 				if ( ! empty( trim( (string) ( $oo['headline'] ?? '' ) ) ) ) {
 					++$offers_used;
@@ -1479,8 +1548,8 @@ class MEYVC_Admin {
 					'aiReady'        => (bool) $ai_offer_ready,
 					'firstEmptySlot' => (int) $first_empty,
 					'offersUsed'     => (int) $offers_used,
-					'maxOffers'      => 5,
-					'atCapacity'     => $offers_used >= 5,
+					'maxOffers'      => (int) $max_offer_slots,
+					'atCapacity'     => $offers_used >= $max_offer_slots,
 					'strings'        => array(
 						'loading'       => __( 'Analysing your offers…', 'meyvora-convert' ),
 						'error'         => __( 'Could not get a suggestion. Please try again.', 'meyvora-convert' ),
@@ -1653,7 +1722,11 @@ class MEYVC_Admin {
 			'title'           => __( 'On-Page Conversion Boosters', 'meyvora-convert' ),
 			'subtitle'        => __( 'These elements appear on your product and cart pages to encourage conversions.', 'meyvora-convert' ),
 			'active_tab'      => 'meyvc-boosters',
-			'primary_action'  => array( 'label' => __( 'Save changes', 'meyvora-convert' ), 'form_id' => 'meyvc-boosters-form' ),
+			'primary_action'  => array(
+				'label'       => __( 'Save changes', 'meyvora-convert' ),
+				'form_id'     => 'meyvc-boosters-form',
+				'submit_name' => 'meyvc_save_boosters',
+			),
 			'content_partial' => MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-boosters.php',
 			'wrap_class'      => 'meyvc-boosters-page',
 		) );
@@ -1667,7 +1740,11 @@ class MEYVC_Admin {
 			'title'           => __( 'Cart Page Optimizer', 'meyvora-convert' ),
 			'subtitle'        => __( 'The cart page is high-intent real estate. Use it to build confidence and reduce hesitation.', 'meyvora-convert' ),
 			'active_tab'      => 'meyvc-cart',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'meyvc-cart-form' ),
+			'primary_action'  => array(
+				'label'       => __( 'Save settings', 'meyvora-convert' ),
+				'form_id'     => 'meyvc-cart-form',
+				'submit_name' => 'meyvc_save_cart',
+			),
 			'content_partial' => MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-cart.php',
 			'wrap_class'      => 'meyvc-cart-page',
 		) );
@@ -1679,7 +1756,7 @@ class MEYVC_Admin {
 	public function display_offers() {
 		$offers = get_option( 'meyvc_dynamic_offers', array() );
 		$offers = is_array( $offers ) ? $offers : array();
-		$max_offers = 5;
+		$max_offers = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
 		$used = count( $offers );
 		$pills = array();
 		$pills[] = sprintf(
@@ -1711,7 +1788,11 @@ class MEYVC_Admin {
 			'title'           => __( 'Checkout Page Optimizer', 'meyvora-convert' ),
 			'subtitle'        => __( 'Reduce friction and build trust on the checkout page.', 'meyvora-convert' ),
 			'active_tab'      => 'meyvc-checkout',
-			'primary_action'  => array( 'label' => __( 'Save settings', 'meyvora-convert' ), 'form_id' => 'meyvc-checkout-form' ),
+			'primary_action'  => array(
+				'label'       => __( 'Save settings', 'meyvora-convert' ),
+				'form_id'     => 'meyvc-checkout-form',
+				'submit_name' => 'meyvc_save_checkout',
+			),
 			'content_partial' => MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-checkout.php',
 			'wrap_class'      => 'meyvc-checkout-page',
 		) );
@@ -1931,7 +2012,7 @@ class MEYVC_Admin {
 			wp_safe_redirect( add_query_arg( 'sequence_error', 'unavailable', admin_url( 'admin.php?page=meyvc-sequences' ) ) );
 			exit;
 		}
-		$post_in = filter_input_array( INPUT_POST );
+		$post_in = wp_unslash( $_POST );
 		if ( ! is_array( $post_in ) ) {
 			$post_in = array();
 		}
@@ -2562,9 +2643,10 @@ class MEYVC_Admin {
 		$max_campaigns   = 50;
 
 		$json_string = '';
-		$import_json_raw = filter_input( INPUT_POST, 'import_json', FILTER_UNSAFE_RAW );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; JSON blob validated after json_decode.
+		$import_json_raw = isset( $_POST['import_json'] ) ? wp_unslash( (string) $_POST['import_json'] ) : '';
 		if ( is_string( $import_json_raw ) && $import_json_raw !== '' ) {
-			$pasted = wp_unslash( $import_json_raw );
+			$pasted = $import_json_raw;
 			if ( strlen( $pasted ) > $max_paste_bytes ) {
 				add_action(
 					'admin_notices',
@@ -2576,7 +2658,7 @@ class MEYVC_Admin {
 			}
 			$json_string = $pasted;
 		} else {
-			$files = filter_input_array( INPUT_FILES );
+			$files = $_FILES;
 			if ( is_array( $files ) && isset( $files['import_file'] ) && is_array( $files['import_file'] ) ) {
 				$import_file = $files['import_file'];
 				$file_error  = isset( $import_file['error'] ) ? (int) $import_file['error'] : UPLOAD_ERR_NO_FILE;
@@ -3041,8 +3123,8 @@ class MEYVC_Admin {
 	 * Handle front-end error logging (graceful error handling).
 	 */
 	public function handle_log_error() {
-		$nonce_raw = filter_input( INPUT_POST, 'nonce', FILTER_UNSAFE_RAW );
-		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified below.
+		$nonce = isset( $_POST['nonce'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'meyvc_log_error' ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid nonce' ), 403 );
 		}
@@ -3056,9 +3138,10 @@ class MEYVC_Admin {
 			}
 		}
 
-		$data_raw = filter_input( INPUT_POST, 'data', FILTER_UNSAFE_RAW );
-		$raw        = is_string( $data_raw ) ? wp_unslash( $data_raw ) : '';
-		if ( strlen( $raw ) > 4096 ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Nonce verified above; JSON blob utf8-checked and fields sanitized before logging.
+		$raw = isset( $_POST['data'] ) ? wp_unslash( (string) $_POST['data'] ) : '';
+		$raw = is_string( $raw ) ? wp_check_invalid_utf8( $raw, true ) : '';
+		if ( ! is_string( $raw ) || strlen( $raw ) > 4096 ) {
 			wp_send_json_success();
 			return;
 		}
@@ -3093,18 +3176,18 @@ class MEYVC_Admin {
 			wp_send_json_error( array( 'message' => __( 'You do not have permission.', 'meyvora-convert' ) ), 403 );
 		}
 
-		$nonce_raw = filter_input( INPUT_POST, 'meyvc_save_offer_nonce', FILTER_UNSAFE_RAW );
-		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified below.
+		$nonce = isset( $_POST['meyvc_save_offer_nonce'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['meyvc_save_offer_nonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'meyvc_save_offer_nonce' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ) ), 403 );
 		}
 
-		$post_in = filter_input_array( INPUT_POST );
+		$post_in = wp_unslash( $_POST );
 		if ( ! is_array( $post_in ) ) {
 			$post_in = array();
 		}
 
-		$max_offers = 5;
+		$max_offers = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
 		$option_key = 'meyvc_dynamic_offers';
 
 		$offers = get_option( $option_key, array() );
@@ -3115,7 +3198,7 @@ class MEYVC_Admin {
 
 		$offer_index = isset( $post_in['meyvc_offer_index'] ) ? sanitize_text_field( wp_unslash( (string) $post_in['meyvc_offer_index'] ) ) : '';
 		if ( $offer_index === '' ) {
-			// Add: use first empty slot. Enforce MAX_OFFERS server-side.
+			// Add: use first empty slot. Enforce max dynamic offers server-side.
 			for ( $i = 0; $i < $max_offers; $i++ ) {
 				$slot = isset( $offers[ $i ] ) && is_array( $offers[ $i ] ) ? $offers[ $i ] : array();
 				if ( empty( trim( (string) ( $slot['headline'] ?? '' ) ) ) ) {
@@ -3139,7 +3222,11 @@ class MEYVC_Admin {
 					}
 				}
 				wp_send_json_error( array(
-					'message'          => __( 'Offer limit reached (5).', 'meyvora-convert' ),
+					'message'          => sprintf(
+						/* translators: %d: maximum number of dynamic offers */
+						__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+						$max_offers
+					),
 					'offers'           => $result_offers,
 					'offers_used_count' => $offers_used_count,
 					'max_offers'       => $max_offers,
@@ -3597,8 +3684,8 @@ class MEYVC_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
-		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified below; admin_post action link.
+		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'meyvc_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
@@ -3616,8 +3703,8 @@ class MEYVC_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
-		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified below; admin_post action link.
+		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'meyvc_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}
@@ -3635,8 +3722,8 @@ class MEYVC_Admin {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
 			wp_die( esc_html__( 'You do not have permission.', 'meyvora-convert' ), 403 );
 		}
-		$nonce_raw = filter_input( INPUT_GET, '_wpnonce', FILTER_UNSAFE_RAW );
-		$nonce     = is_string( $nonce_raw ) ? sanitize_text_field( wp_unslash( $nonce_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified below; admin_post action link.
+		$nonce = isset( $_GET['_wpnonce'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['_wpnonce'] ) ) : '';
 		if ( ! wp_verify_nonce( $nonce, 'meyvc_abandoned_carts_list' ) ) {
 			wp_die( esc_html__( 'Invalid request.', 'meyvora-convert' ), 403 );
 		}

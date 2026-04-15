@@ -18,18 +18,17 @@ if ( ! class_exists( 'MEYVC_System_Status' ) ) {
 $checks = MEYVC_System_Status::run_checks();
 $report_text = MEYVC_System_Status::build_report( $checks );
 $run_test_url = add_query_arg( array( 'page' => 'meyvc-system-status', 'run' => '1' ), admin_url( 'admin.php' ) );
-$meyvc_repair_raw = filter_input( INPUT_GET, 'meyvc_repair', FILTER_UNSAFE_RAW );
-$meyvc_repair     = is_string( $meyvc_repair_raw ) ? sanitize_key( $meyvc_repair_raw ) : '';
-$meyvc_repair_err_raw = filter_input( INPUT_GET, 'meyvc_repair_error', FILTER_UNSAFE_RAW );
-$meyvc_repair_error   = is_string( $meyvc_repair_err_raw ) ? sanitize_text_field( wp_unslash( $meyvc_repair_err_raw ) ) : '';
+// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Read-only admin query args for notices.
+$meyvc_repair = isset( $_GET['meyvc_repair'] ) ? sanitize_key( wp_unslash( (string) $_GET['meyvc_repair'] ) ) : '';
+$meyvc_repair_error = isset( $_GET['meyvc_repair_error'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['meyvc_repair_error'] ) ) : '';
 $verify_installation_results = get_transient( 'meyvc_verify_installation_results' );
 if ( $verify_installation_results !== false ) {
 	delete_transient( 'meyvc_verify_installation_results' );
 }
-$verify_raw = filter_input( INPUT_GET, 'meyvc_verify_installation', FILTER_UNSAFE_RAW );
-$verify_raw = is_string( $verify_raw ) ? sanitize_key( $verify_raw ) : '';
+$verify_raw = isset( $_GET['meyvc_verify_installation'] ) ? sanitize_key( wp_unslash( (string) $_GET['meyvc_verify_installation'] ) ) : '';
 $verify_installation_done = ( $verify_raw === '1' );
 $verify_installation_fail = ( $verify_raw === '0' );
+// phpcs:enable WordPress.Security.NonceVerification.Recommended
 ?>
 
 <?php if ( $meyvc_repair === '1' ) : ?>

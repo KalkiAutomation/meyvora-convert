@@ -16,7 +16,7 @@ $settings = meyvc_settings();
 
 // Handle form submission.
 $nonce_valid = isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'meyvc_checkout_nonce' );
-if ( isset( $_POST['meyvc_save_checkout'] ) && $nonce_valid ) {
+if ( isset( $_POST['meyvc_save_checkout'] ) && $nonce_valid && current_user_can( 'manage_meyvora_convert' ) ) {
 
 	$settings->set( 'general', 'checkout_optimizer_enabled', ! empty( $_POST['checkout_enabled'] ) );
 

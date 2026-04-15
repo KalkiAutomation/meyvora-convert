@@ -169,6 +169,29 @@ class MEYVC_Compatibility {
 		}
 
 		meyvc_settings()->set( 'compatibility', 'theme', $theme_slug );
+		meyvc_settings()->set( 'compatibility', 'is_block_theme', $this->is_block_theme() );
+	}
+
+	/**
+	 * Detect if the active theme is a Full Site Editing (block) theme.
+	 *
+	 * @return bool
+	 */
+	public function is_block_theme(): bool {
+		if ( function_exists( 'wp_is_block_theme' ) ) {
+			return (bool) wp_is_block_theme();
+		}
+		$theme = wp_get_theme();
+		return (bool) $theme->get( 'BlockTemplates' );
+	}
+
+	/**
+	 * Static helper — check block theme without needing the singleton.
+	 *
+	 * @return bool
+	 */
+	public static function current_theme_is_block(): bool {
+		return self::get_instance()->is_block_theme();
 	}
 
 	/**

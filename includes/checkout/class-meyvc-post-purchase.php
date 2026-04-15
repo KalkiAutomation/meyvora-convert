@@ -350,9 +350,9 @@ class MEYVC_Post_Purchase {
 		}
 		$tracker = new MEYVC_Tracker();
 		$page_url = '';
-		$req_uri  = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_UNSAFE_RAW );
-		if ( is_string( $req_uri ) && $req_uri !== '' ) {
-			$page_url = esc_url_raw( home_url( wp_unslash( $req_uri ) ) );
+		if ( isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) {
+			$req_uri  = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
+			$page_url = esc_url_raw( home_url( $req_uri ) );
 		}
 		$data    = array_merge(
 			array(

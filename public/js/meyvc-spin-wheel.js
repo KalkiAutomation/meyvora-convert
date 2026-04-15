@@ -12,7 +12,13 @@
 
   function MEYVCSpinWheel(popup) {
     this.$popup = $(popup);
-    this.campaignId = this.$popup.data("campaign-id");
+    // Use the attribute / dataset, not jQuery .data("campaign-id"): jQuery maps data-* to
+    // camelCase internally, so .data("campaign-id") is often undefined while data-campaign-id exists.
+    var root = this.$popup[0];
+    this.campaignId =
+      (root && root.getAttribute("data-campaign-id")) ||
+      this.$popup.attr("data-campaign-id") ||
+      "";
     var canvasId = "meyvc-wheel-canvas-" + this.campaignId;
     this.canvas = document.getElementById(canvasId);
     if (!this.canvas || !this.canvas.getContext) {
@@ -21,12 +27,25 @@
     this.ctx = this.canvas.getContext("2d");
     this.slices = [];
     try {
-      this.slices = JSON.parse(this.canvas.dataset.slices || "[]");
+      var raw =
+        this.canvas.getAttribute("data-slices") ||
+        this.canvas.dataset.slices ||
+        "[]";
+      raw = String(raw).replace(/&quot;/g, '"');
+      this.slices = JSON.parse(raw);
     } catch (e) {
       this.slices = [];
     }
     if (!this.slices.length) {
-      return;
+      // Use default placeholder slices so wheel renders; real slices come from spin_init AJAX
+      this.slices = [
+        { label: "Win!", type: "win", color: "#2563eb" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" },
+        { label: "Win!", type: "win", color: "#7c3aed" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" },
+        { label: "Win!", type: "win", color: "#059669" },
+        { label: "Try again", type: "lose", color: "#e5e7eb" }
+      ];
     }
     this.numSlices = this.slices.length;
     this.sliceAngle = (2 * Math.PI) / this.numSlices;
@@ -35,6 +54,9 @@
     this.hasSpun = false;
     this.draw(0);
     this.bindEvents();
+    if (root) {
+      root.dataset.meyvcWheelInit = "1";
+    }
   }
 
   MEYVCSpinWheel.prototype.draw = function (rotation) {
@@ -90,8 +112,11 @@
     var $btn = this.$popup.find(".meyvc-wheel-spin-btn");
     var cfg = getSpinConfig();
     $btn.prop("disabled", true);
+    self.hasSpun = true;
+    var ajaxUrl = cfg.ajaxUrl || window.ajaxurl || "";
+    if (!ajaxUrl) { $btn.prop("disabled", false); self.hasSpun = false; return; }
     $.post(
-      cfg.ajaxUrl || "",
+      ajaxUrl,
       {
         action: "meyvc_spin_init",
         nonce: cfg.nonce || "",
@@ -109,12 +134,14 @@
           self.slices = r.data.slices;
           self.numSlices = self.slices.length;
           self.sliceAngle = (2 * Math.PI) / self.numSlices;
+          self.currentAngle = 0;
           self.draw(0);
         }
         self.spin(email);
       }
     ).fail(function () {
       $btn.prop("disabled", false);
+      self.hasSpun = false;
     });
   };
 
@@ -124,12 +151,23 @@
     this.hasSpun = true;
     var winIndex =
       typeof self.winningIndex === "number" ? self.winningIndex : 0;
-    var targetAngle =
-      2 * Math.PI * 5 +
-      (2 * Math.PI - winIndex * self.sliceAngle - self.sliceAngle / 2);
+    // Canvas: angle 0 = 3 o'clock; slices start at rotation + i*sliceAngle clockwise.
+    // The wheel pointer in the UI is at 12 o'clock = 3π/2 (not 3 o'clock).
+    var twoPi = 2 * Math.PI;
+    var pointerAngle = (3 * Math.PI) / 2;
+    var destRotation =
+      pointerAngle - (winIndex + 0.5) * self.sliceAngle;
+    while (destRotation < 0) destRotation += twoPi;
+    while (destRotation >= twoPi) destRotation -= twoPi;
+    var startRot = self.currentAngle;
+    var startNorm = startRot % twoPi;
+    if (startNorm < 0) startNorm += twoPi;
+    var delta = destRotation - startNorm;
+    if (delta < 0) delta += twoPi;
+    var fullSpins = 5 * twoPi;
+    var targetAngle = fullSpins + delta;
     var start = null;
     var duration = 4000;
-    var startRot = self.currentAngle;
     function easeOut(t) {
       return 1 - Math.pow(1 - t, 4);
     }
@@ -140,7 +178,9 @@
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
-        self.currentAngle = (startRot + targetAngle) % (2 * Math.PI);
+        var end = startRot + targetAngle;
+        self.currentAngle = end - twoPi * Math.floor(end / twoPi);
+        if (self.currentAngle < 0) self.currentAngle += twoPi;
         self.spinning = false;
         self.onSpinEnd(email, winIndex);
       }
@@ -159,7 +199,8 @@
         : i18n.try_again || "Better luck next time!"
     );
     var cfg = getSpinConfig();
-    $.post(cfg.ajaxUrl || "", {
+    var spinAjaxUrl = cfg.ajaxUrl || window.ajaxurl || "";
+    $.post(spinAjaxUrl, {
       action: "meyvc_spin_capture",
       nonce: cfg.nonce || "",
       email: email,
@@ -198,8 +239,20 @@
     if (popupEl.dataset.meyvcWheelInit) {
       return;
     }
-    popupEl.dataset.meyvcWheelInit = "1";
-    new MEYVCSpinWheel(popupEl);
+    var campaignId =
+      popupEl.getAttribute("data-campaign-id") ||
+      popupEl.dataset.campaignId ||
+      "";
+    var canvasId = "meyvc-wheel-canvas-" + campaignId;
+    var attempts = 0;
+    function tryInit() {
+      if (document.getElementById(canvasId)) {
+        new MEYVCSpinWheel(popupEl);
+      } else if (++attempts < 30) {
+        requestAnimationFrame(tryInit);
+      }
+    }
+    tryInit();
   }
 
   document.addEventListener("meyvc:campaign_shown", function (ev) {
@@ -215,7 +268,8 @@
   });
 
   $(function () {
-    $(".meyvc-popup--gamified-wheel.meyvc-popup--preview").each(function () {
+    // Draw any wheel already in the DOM (shortcode, preview link, or before controller fires).
+    $(".meyvc-popup--gamified-wheel").each(function () {
       maybeInitWheel(this);
     });
   });

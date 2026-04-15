@@ -1,7 +1,7 @@
 <?php
 /**
  * Secure admin AJAX handlers for offers (list, create, update, delete, duplicate, toggle).
- * Capability: manage_meyvora_convert. Nonce required. Option: meyvc_dynamic_offers (max 5 offers).
+ * Capability: manage_meyvora_convert. Nonce required. Option: meyvc_dynamic_offers (slot count via meyvc_get_max_dynamic_offers()).
  *
  * @package Meyvora_Convert
  */
@@ -16,8 +16,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 class MEYVC_Offers_Admin_Ajax {
 
 	const OPTION_KEY   = 'meyvc_dynamic_offers';
-	const MAX_OFFERS   = 5;
 	const NONCE_ACTION = 'meyvc_offers_ajax';
+
+	/**
+	 * Max dynamic offer slots (same as meyvc_get_max_dynamic_offers()).
+	 *
+	 * @return int
+	 */
+	private function get_max_offers() {
+		return function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
+	}
 
 	/**
 	 * Register AJAX actions.
@@ -63,17 +71,18 @@ class MEYVC_Offers_Admin_Ajax {
 	}
 
 	/**
-	 * Get raw offers from option (flat format with id, updated_at). Pad to MAX_OFFERS.
+	 * Get raw offers from option (flat format with id, updated_at). Pad to max slots.
 	 * Ensures each used offer has an id (migrates legacy offers without id).
 	 *
 	 * @return array
 	 */
 	private function get_offers_raw() {
+		$max    = $this->get_max_offers();
 		$offers = get_option( self::OPTION_KEY, array() );
 		if ( ! is_array( $offers ) ) {
 			$offers = array();
 		}
-		$offers = array_pad( $offers, self::MAX_OFFERS, array() );
+		$offers = array_pad( $offers, $max, array() );
 		$dirty = false;
 		foreach ( $offers as $i => $o ) {
 			if ( ! is_array( $o ) ) {
@@ -94,13 +103,14 @@ class MEYVC_Offers_Admin_Ajax {
 	}
 
 	/**
-	 * Save raw offers to option (only non-empty slots up to MAX_OFFERS, then pad).
+	 * Save raw offers to option (only non-empty slots up to max, then pad).
 	 *
 	 * @param array $offers Array of offer arrays (flat format).
 	 */
 	private function save_offers_raw( $offers ) {
+		$max = $this->get_max_offers();
 		$out = array();
-		for ( $i = 0; $i < self::MAX_OFFERS; $i++ ) {
+		for ( $i = 0; $i < $max; $i++ ) {
 			$out[] = isset( $offers[ $i ] ) && is_array( $offers[ $i ] ) ? $offers[ $i ] : array();
 		}
 		update_option( self::OPTION_KEY, $out );
@@ -316,7 +326,7 @@ class MEYVC_Offers_Admin_Ajax {
 		return array(
 			'offers'           => $items,
 			'offers_used_count' => count( $items ),
-			'max_offers'       => self::MAX_OFFERS,
+			'max_offers'       => $this->get_max_offers(),
 		);
 	}
 
@@ -336,7 +346,7 @@ class MEYVC_Offers_Admin_Ajax {
 	}
 
 	/**
-	 * AJAX: Create offer. POST body: offer (normalized object). Max 5 offers.
+	 * AJAX: Create offer. POST body: offer (normalized object). Respects max dynamic offer slots.
 	 */
 	public function handle_create() {
 		if ( ! current_user_can( 'manage_meyvora_convert' ) ) {
@@ -348,16 +358,30 @@ class MEYVC_Offers_Admin_Ajax {
 			return;
 		}
 		$offers = $this->get_offers_raw();
-		if ( $this->count_used( $offers ) >= self::MAX_OFFERS ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
+		if ( $this->count_used( $offers ) >= $this->get_max_offers() ) {
+			$this->send_error(
+				sprintf(
+					/* translators: %d: maximum number of dynamic offers */
+					__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+					$this->get_max_offers()
+				),
+				400
+			);
 			return;
 		}
 		$slot = $this->find_first_empty_slot( $offers );
 		if ( $slot === false ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
+			$this->send_error(
+				sprintf(
+					/* translators: %d: maximum number of dynamic offers */
+					__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+					$this->get_max_offers()
+				),
+				400
+			);
 			return;
 		}
-		$post_in = filter_input_array( INPUT_POST );
+		$post_in = wp_unslash( $_POST );
 		$input     = ( is_array( $post_in ) && isset( $post_in['offer'] ) ) ? wp_unslash( $post_in['offer'] ) : '';
 		if ( is_string( $input ) ) {
 			// Decode raw JSON input; individual fields are sanitised by MEYVC_Offer_Schema::sanitize_offer() below.
@@ -412,7 +436,7 @@ class MEYVC_Offers_Admin_Ajax {
 			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
-		$post_in = filter_input_array( INPUT_POST );
+		$post_in = wp_unslash( $_POST );
 		$input   = ( is_array( $post_in ) && isset( $post_in['offer'] ) ) ? wp_unslash( $post_in['offer'] ) : '';
 		if ( is_string( $input ) ) {
 			// Decode raw JSON input; individual fields are sanitised by MEYVC_Offer_Schema::sanitize_offer() below.
@@ -497,13 +521,27 @@ class MEYVC_Offers_Admin_Ajax {
 			$this->send_error( __( 'Offer not found.', 'meyvora-convert' ), 404 );
 			return;
 		}
-		if ( $this->count_used( $offers ) >= self::MAX_OFFERS ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
+		if ( $this->count_used( $offers ) >= $this->get_max_offers() ) {
+			$this->send_error(
+				sprintf(
+					/* translators: %d: maximum number of dynamic offers */
+					__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+					$this->get_max_offers()
+				),
+				400
+			);
 			return;
 		}
 		$slot = $this->find_first_empty_slot( $offers );
 		if ( $slot === false ) {
-			$this->send_error( __( 'Offer limit reached (5).', 'meyvora-convert' ), 400 );
+			$this->send_error(
+				sprintf(
+					/* translators: %d: maximum number of dynamic offers */
+					__( 'Offer limit reached (%d).', 'meyvora-convert' ),
+					$this->get_max_offers()
+				),
+				400
+			);
 			return;
 		}
 		$src  = $offers[ $index ];
@@ -567,7 +605,7 @@ class MEYVC_Offers_Admin_Ajax {
 			$this->send_error( __( 'Invalid nonce. Please refresh and try again.', 'meyvora-convert' ), 403 );
 			return;
 		}
-		$post_in = filter_input_array( INPUT_POST );
+		$post_in = wp_unslash( $_POST );
 		$order   = ( is_array( $post_in ) && isset( $post_in['order'] ) ) ? wp_unslash( $post_in['order'] ) : array();
 		if ( is_string( $order ) ) {
 			$order = json_decode( $order, true );
@@ -576,9 +614,10 @@ class MEYVC_Offers_Admin_Ajax {
 			$this->send_error( __( 'Invalid order.', 'meyvora-convert' ), 400 );
 			return;
 		}
-		$order = array_map( 'absint', $order );
-		$order = array_values( array_filter( $order, function ( $i ) {
-			return $i >= 0 && $i < self::MAX_OFFERS;
+		$order      = array_map( 'absint', $order );
+		$max_slots  = $this->get_max_offers();
+		$order      = array_values( array_filter( $order, function ( $i ) use ( $max_slots ) {
+			return $i >= 0 && $i < $max_slots;
 		} ) );
 		$offers = $this->get_offers_raw();
 		$used_indices = array();
@@ -709,23 +748,25 @@ class MEYVC_Offers_Admin_Ajax {
 	 * @return array
 	 */
 	private function get_test_context_from_request() {
-		$cart_total_raw = filter_input( INPUT_POST, 'cart_total', FILTER_UNSAFE_RAW );
-		$cart_total     = is_string( $cart_total_raw ) && is_numeric( $cart_total_raw ) ? (float) $cart_total_raw : 0.0;
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Admin AJAX; capability + offer AJAX nonce verified in caller.
+		$cart_total_raw = isset( $_POST['cart_total'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['cart_total'] ) ) : '';
+		$cart_total     = $cart_total_raw !== '' && is_numeric( $cart_total_raw ) ? (float) $cart_total_raw : 0.0;
 
-		$items_raw     = filter_input( INPUT_POST, 'cart_items_count', FILTER_UNSAFE_RAW );
-		$items_count   = is_string( $items_raw ) && is_numeric( $items_raw ) ? (int) $items_raw : 0;
+		$items_raw   = isset( $_POST['cart_items_count'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['cart_items_count'] ) ) : '';
+		$items_count = $items_raw !== '' && is_numeric( $items_raw ) ? (int) $items_raw : 0;
 
-		$logged_raw    = filter_input( INPUT_POST, 'is_logged_in', FILTER_UNSAFE_RAW );
-		$is_logged_in  = ! empty( $logged_raw );
+		$logged_raw   = isset( $_POST['is_logged_in'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['is_logged_in'] ) ) : '';
+		$is_logged_in = (bool) filter_var( $logged_raw, FILTER_VALIDATE_BOOLEAN );
 
-		$order_raw     = filter_input( INPUT_POST, 'order_count', FILTER_UNSAFE_RAW );
-		$order_count   = is_string( $order_raw ) && is_numeric( $order_raw ) ? (int) $order_raw : 0;
+		$order_raw   = isset( $_POST['order_count'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['order_count'] ) ) : '';
+		$order_count = $order_raw !== '' && is_numeric( $order_raw ) ? (int) $order_raw : 0;
 
-		$lifetime_raw  = filter_input( INPUT_POST, 'lifetime_spend', FILTER_UNSAFE_RAW );
-		$lifetime      = is_string( $lifetime_raw ) && is_numeric( $lifetime_raw ) ? (float) $lifetime_raw : 0.0;
+		$lifetime_raw = isset( $_POST['lifetime_spend'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['lifetime_spend'] ) ) : '';
+		$lifetime     = $lifetime_raw !== '' && is_numeric( $lifetime_raw ) ? (float) $lifetime_raw : 0.0;
 
-		$user_role_raw = filter_input( INPUT_POST, 'user_role', FILTER_UNSAFE_RAW );
-		$user_role     = is_string( $user_role_raw ) ? sanitize_text_field( $user_role_raw ) : '';
+		$user_role_raw = isset( $_POST['user_role'] ) ? sanitize_text_field( wp_unslash( (string) $_POST['user_role'] ) ) : '';
+		$user_role     = $user_role_raw;
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		if ( ! $is_logged_in ) {
 			$user_role = '';
 		}

@@ -18,7 +18,7 @@ if ( ! in_array( $meyvc_settings_tab, array( 'general', 'styles', 'analytics', '
 }
 
 // Handle save: each tab posts `meyvc_settings_tab` so we only update that section (avoids wiping other groups).
-if ( isset( $_POST['meyvc_save_settings'] ) && ! isset( $_POST['meyvc_save_ai_settings'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ?? '' ) ), 'meyvc_save_settings' ) ) {
+if ( isset( $_POST['meyvc_save_settings'] ) && ! isset( $_POST['meyvc_save_ai_settings'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ?? '' ) ), 'meyvc_save_settings' ) && current_user_can( 'manage_meyvora_convert' ) ) {
 	$save_tab = isset( $_POST['meyvc_settings_tab'] ) ? sanitize_key( wp_unslash( $_POST['meyvc_settings_tab'] ) ) : '';
 	if ( '' === $save_tab ) {
 		// Back-compat if an old cached form omits the hidden field.
@@ -128,7 +128,7 @@ if ( isset( $_POST['meyvc_save_settings'] ) && ! isset( $_POST['meyvc_save_ai_se
 }
 
 // AI settings (separate form; does not wipe API key when field left blank).
-if ( isset( $_POST['meyvc_save_ai_settings'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ?? '' ) ), 'meyvc_save_settings' ) ) {
+if ( isset( $_POST['meyvc_save_ai_settings'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ?? '' ) ), 'meyvc_save_settings' ) && current_user_can( 'manage_meyvora_convert' ) ) {
 	$key_input = isset( $_POST['anthropic_api_key'] ) ? sanitize_text_field( wp_unslash( $_POST['anthropic_api_key'] ) ) : '';
 	if ( '' !== $key_input ) {
 		$encrypted = class_exists( 'MEYVC_Security' ) ? MEYVC_Security::encrypt_secret( $key_input ) : $key_input;

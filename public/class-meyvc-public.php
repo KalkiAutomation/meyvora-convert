@@ -38,7 +38,27 @@ class MEYVC_Public {
 		if ( ! function_exists( 'is_woocommerce' ) ) {
 			return false;
 		}
-		return is_shop() || is_product() || is_product_category() || is_cart() || is_checkout();
+		if ( is_shop() || is_product() || is_product_category() || is_cart() || is_checkout() ) {
+			return true;
+		}
+		// FSE / block-theme fallback: WooCommerce conditionals may not be set yet at enqueue time.
+		$obj = get_queried_object();
+		if ( $obj instanceof WP_Post ) {
+			if ( in_array( $obj->post_type, array( 'product', 'product_variation' ), true ) ) {
+				return true;
+			}
+			if ( function_exists( 'wc_get_page_id' ) ) {
+				$woo_page_ids = array_filter( array(
+					(int) wc_get_page_id( 'cart' ),
+					(int) wc_get_page_id( 'checkout' ),
+					(int) wc_get_page_id( 'shop' ),
+				) );
+				if ( $obj->ID && in_array( $obj->ID, $woo_page_ids, true ) ) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -87,11 +107,37 @@ class MEYVC_Public {
 		}
 
 		$should = self::is_woo_relevant_page();
+
+		// FSE / block-theme fallback: WooCommerce page functions may return false on block templates.
+		if ( ! $should && function_exists( 'wc_get_product' ) ) {
+			$obj = get_queried_object();
+			if ( $obj instanceof WP_Post ) {
+				if ( in_array( $obj->post_type, array( 'product', 'product_variation' ), true ) ) {
+					$should = true;
+				}
+				if ( ! $should && function_exists( 'wc_get_page_id' ) ) {
+					$cart_id     = (int) wc_get_page_id( 'cart' );
+					$checkout_id = (int) wc_get_page_id( 'checkout' );
+					$shop_id     = (int) wc_get_page_id( 'shop' );
+					if ( $obj->ID && in_array( $obj->ID, array_filter( array( $cart_id, $checkout_id, $shop_id ) ), true ) ) {
+						$should = true;
+					}
+				}
+			}
+		}
+
 		if ( ! $should && self::is_campaign_preview_static() ) {
 			$should = true;
 		}
-		if ( ! $should && in_array( $context, array( 'global', 'campaigns', 'default' ), true ) && self::has_campaign_for_current_page() ) {
+		if ( ! $should && in_array( $context, array( 'global', 'campaigns', 'default', 'sticky_cart', 'shipping_bar' ), true ) && self::has_campaign_for_current_page() ) {
 			$should = true;
+		}
+		// Last-resort fallback for sticky_cart and shipping_bar: check global $post post_type.
+		if ( ! $should && in_array( $context, array( 'sticky_cart', 'shipping_bar' ), true ) ) {
+			global $post;
+			if ( $post instanceof WP_Post && in_array( $post->post_type, array( 'product', 'product_variation' ), true ) ) {
+				$should = true;
+			}
 		}
 
 		return apply_filters( 'meyvc_should_enqueue_assets', $should, $context );
@@ -127,11 +173,30 @@ class MEYVC_Public {
 		if ( null !== $result ) {
 			return $result;
 		}
+		// For preview requests, check the preview transient for the campaign template.
+		if ( self::is_campaign_preview_static() ) {
+			$preview_id = MEYVC_Security::get_query_var( 'preview_id' );
+			if ( $preview_id && preg_match( '/^meyvc_[a-zA-Z0-9]+$/', $preview_id ) ) {
+				$data = get_transient( 'meyvc_preview_' . $preview_id );
+				if ( is_array( $data ) ) {
+					$tpl = isset( $data['template'] ) ? $data['template'] : ( isset( $data['template_type'] ) ? $data['template_type'] : '' );
+					$tpl = str_replace( array( ' ', '_' ), '-', strtolower( (string) $tpl ) );
+					if ( 'gamified-wheel' === $tpl ) {
+						$result = true;
+						return true;
+					}
+					// Preview is a different template — no need to load wheel JS.
+					$result = false;
+					return false;
+				}
+			}
+		}
 		if ( class_exists( 'MEYVC_Cache' ) ) {
 			$campaigns = MEYVC_Cache::get_active_campaigns();
 			if ( is_array( $campaigns ) ) {
 				foreach ( $campaigns as $c ) {
 					$tpl = is_array( $c ) ? ( $c['template_type'] ?? '' ) : ( $c->template_type ?? '' );
+					$tpl = str_replace( array( ' ', '_' ), '-', strtolower( (string) $tpl ) );
 					if ( 'gamified-wheel' === $tpl ) {
 						$result = true;
 						return true;
@@ -507,7 +572,23 @@ class MEYVC_Public {
 		}
 
 		// Sticky cart (product pages only; respect conditional loading filter).
-		if ( meyvc_settings()->is_feature_enabled( 'sticky_cart' ) && self::should_enqueue_assets( 'sticky_cart' ) && function_exists( 'is_product' ) && is_product() ) {
+		$is_on_product_page = ( function_exists( 'is_product' ) && is_product() );
+		if ( ! $is_on_product_page ) {
+			$obj = get_queried_object();
+			if ( $obj instanceof WP_Post && in_array( $obj->post_type, array( 'product', 'product_variation' ), true ) ) {
+				$is_on_product_page = true;
+			}
+		}
+		if ( ! $is_on_product_page ) {
+			$qid = (int) get_queried_object_id();
+			if ( $qid ) {
+				$pt = get_post_type( $qid );
+				if ( $pt && in_array( $pt, array( 'product', 'product_variation' ), true ) ) {
+					$is_on_product_page = true;
+				}
+			}
+		}
+		if ( meyvc_settings()->is_feature_enabled( 'sticky_cart' ) && self::should_enqueue_assets( 'sticky_cart' ) && $is_on_product_page ) {
 			$scripts_needed[] = 'meyvc-sticky-cart';
 		}
 
@@ -516,7 +597,8 @@ class MEYVC_Public {
 			$load_shipping = ( function_exists( 'is_product' ) && is_product() )
 				|| ( function_exists( 'is_cart' ) && is_cart() )
 				|| ( function_exists( 'is_shop' ) && is_shop() )
-				|| ( function_exists( 'is_product_category' ) && is_product_category() );
+				|| ( function_exists( 'is_product_category' ) && is_product_category() )
+				|| $is_on_product_page;
 			if ( $load_shipping ) {
 				$scripts_needed[] = 'meyvc-shipping-bar';
 			}

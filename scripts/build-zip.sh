@@ -2,6 +2,9 @@
 # Build a client-ready distribution zip: staging dir with only runtime files.
 # Output: dist/meyvora-convert.zip with root entry meyvora-convert/
 #
+# Before packaging, regenerates public/*.min.js and public/*.min.css from sources
+# (scripts/minify-public-assets.sh; requires Node.js + npm).
+#
 # INCLUDE (copied into staging):
 #   meyvora-convert.php, readme.txt, uninstall.php
 #   includes/, admin/, public/, templates/, languages/, assets/
@@ -27,6 +30,11 @@ DIST_DIR="${PLUGIN_ROOT}/dist"
 echo "=== Meyvora Convert build-zip ==="
 echo "Plugin root: $PLUGIN_ROOT"
 echo "Staging:     $STAGING_DIR"
+echo ""
+
+# 0) Fresh minified public JS/CSS (production loads .min.*)
+echo "--- Minify public assets ---"
+"$SCRIPT_DIR/minify-public-assets.sh"
 echo ""
 
 # 1) Clean staging and create structure

@@ -12,6 +12,10 @@
 
 	var settings = meyvcShippingBar.settings;
 	var threshold = parseFloat( meyvcShippingBar.threshold, 10 );
+	if ( ! threshold && window.wc && window.wc.wcSettings && typeof window.wc.wcSettings.getSetting === "function" ) {
+		var blockData = window.wc.wcSettings.getSetting( "meyvora-convert_data", {} ) || {};
+		threshold = blockData.freeShippingThreshold || 0;
+	}
 	var hasTrackedProgress = false;
 
 	/**

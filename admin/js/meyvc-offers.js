@@ -50,7 +50,7 @@
 	var rewardAmountWrap = form.find('.meyvc-drawer-reward-amount-wrap');
 	var rewardSuffix = form.find('.meyvc-drawer-reward-suffix');
 
-	var maxOffers = parseInt(window.meyvcOffersMaxOffers, 10) || 5;
+	var maxOffers = parseInt(window.meyvcOffersMaxOffers, 10) || 50;
 	var offersData = Array.isArray(window.meyvcOffersData) ? window.meyvcOffersData : [];
 	var usedCount = parseInt(window.meyvcOffersUsedCount, 10) || 0;
 	if ( usedCount >= maxOffers ) {
@@ -657,7 +657,7 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 		if (usedCount >= maxOffers) {
 			container.find('.meyvc-offers-add-btn').prop('disabled', true).removeAttr('data-meyvc-drawer');
 			if (!container.find('.meyvc-offers-limit-note').length) {
-				container.find('.meyvc-offers-header-actions').prepend('<span class="meyvc-offers-limit-note">' + (i18n.limitReached || 'Offer limit reached (5).') + '</span>');
+				container.find('.meyvc-offers-header-actions').prepend('<span class="meyvc-offers-limit-note">' + (i18n.limitReached || 'Offer limit reached.') + '</span>');
 			}
 		} else {
 			container.find('.meyvc-offers-add-btn').prop('disabled', false).attr('data-meyvc-drawer', 'add');
@@ -825,7 +825,7 @@ var crossIcon = (i18n.crossIcon != null && i18n.crossIcon !== '') ? i18n.crossIc
 			});
 		});
 
-		// Duplicate offer via AJAX (max 5 enforced server-side)
+		// Duplicate offer via AJAX (max slots enforced server-side via meyvc_get_max_dynamic_offers)
 		$(document).on('click', '.meyvc-offer-card-duplicate', function () {
 			var id = $(this).data('meyvc-offer-id');
 			if (!id) return;

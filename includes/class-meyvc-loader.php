@@ -155,6 +155,7 @@ class MEYVC_Loader {
 		require_once MEYVC_PLUGIN_DIR . 'includes/class-meyvc-placeholders.php';
 
 		// Offers (model + tables: meyvc_offers, meyvc_offer_logs)
+		require_once MEYVC_PLUGIN_DIR . 'includes/offers/meyvc-offer-limits.php';
 		require_once MEYVC_PLUGIN_DIR . 'includes/offers/class-meyvc-offer-model.php';
 		require_once MEYVC_PLUGIN_DIR . 'includes/offers/class-meyvc-offer-rules.php';
 		require_once MEYVC_PLUGIN_DIR . 'includes/offers/class-meyvc-offer-engine.php';

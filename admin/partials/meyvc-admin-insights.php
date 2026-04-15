@@ -116,7 +116,6 @@ $icon_for_type = static function ( $type ) {
 };
 ?>
 
-<div class="meyvc-insights-page">
 	<div class="meyvc-insights-toolbar">
 		<p class="meyvc-insights-toolbar__label"><?php esc_html_e( 'Period', 'meyvora-convert' ); ?></p>
 		<div class="meyvc-insights-toolbar__presets">
@@ -577,4 +576,3 @@ $icon_for_type = static function ( $type ) {
 			</div>
 		</div>
 	</div>
-</div>

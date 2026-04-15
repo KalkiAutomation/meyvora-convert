@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Meyvora Convert – Conversion Rate Optimizer for WooCommerce
  * Description: Complete conversion rate optimization for WooCommerce — exit intent popups, abandoned cart recovery, sticky cart, shipping bar, trust badges, dynamic offers, A/B testing, and analytics. Built for Meyvora stores and beyond.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: kalkiautomation
  * Author URI: https://kalkiautomation.com/
  * License: GPL v2 or later
@@ -27,7 +27,7 @@ if ( ! function_exists( 'get_plugin_data' ) ) {
 	require_once ABSPATH . 'wp-admin/includes/plugin.php';
 }
 $meyvc_plugin_file_header = get_plugin_data( __FILE__, false, false );
-define( 'MEYVC_VERSION', ! empty( $meyvc_plugin_file_header['Version'] ) ? $meyvc_plugin_file_header['Version'] : '1.0.0' );
+define( 'MEYVC_VERSION', ! empty( $meyvc_plugin_file_header['Version'] ) ? $meyvc_plugin_file_header['Version'] : '1.0.1' );
 unset( $meyvc_plugin_file_header );
 define( 'MEYVC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'MEYVC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

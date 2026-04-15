@@ -134,8 +134,8 @@ class MEYVC_Tracker {
 		$source_type = in_array( $raw_source, self::SOURCE_TYPES, true ) ? $raw_source : 'campaign';
 		$source_id   = $source_type === 'campaign' ? $campaign_id : 0;
 
-		// jQuery may send event_data as a nested array (not JSON string); use filter_input_array to avoid raw $_POST.
-		$post_all = filter_input_array( INPUT_POST );
+		// jQuery may send event_data as a nested array (not JSON string); read full POST then pick event_data.
+		$post_all = wp_unslash( $_POST );
 		if ( ! is_array( $post_all ) ) {
 			$post_all = array();
 		}
@@ -503,8 +503,8 @@ class MEYVC_Tracker {
 			wp_send_json_error( array( 'message' => __( 'Decision engine not available.', 'meyvora-convert' ) ) );
 		}
 
-		$dc_raw = filter_input( INPUT_POST, 'decision_context', FILTER_UNSAFE_RAW );
-		$raw    = is_string( $dc_raw ) ? sanitize_textarea_field( wp_unslash( $dc_raw ) ) : '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_ajax_referer() above.
+		$raw = isset( $_POST['decision_context'] ) ? sanitize_textarea_field( wp_unslash( (string) $_POST['decision_context'] ) ) : '';
 		$body = array();
 		if ( is_string( $raw ) && $raw !== '' ) {
 			$decoded = json_decode( $raw, true );

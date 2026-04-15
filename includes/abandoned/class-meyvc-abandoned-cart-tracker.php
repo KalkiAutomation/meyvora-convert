@@ -764,16 +764,15 @@ class MEYVC_Abandoned_Cart_Tracker {
 	 * Validates a signed token, sets cart status to 'unsubscribed', and redirects.
 	 */
 	public static function handle_unsubscribe_request() {
-		$action = filter_input( INPUT_GET, 'meyvc_action', FILTER_UNSAFE_RAW );
-		$action = is_string( $action ) ? sanitize_key( $action ) : '';
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Signed token validates request; public unsubscribe link.
+		$action = isset( $_GET['meyvc_action'] ) ? sanitize_key( wp_unslash( (string) $_GET['meyvc_action'] ) ) : '';
 		if ( $action !== 'unsubscribe_cart' ) {
 			return;
 		}
 
-		$cart_id = filter_input( INPUT_GET, 'cart_id', FILTER_VALIDATE_INT );
-		$cart_id = $cart_id ? absint( $cart_id ) : 0;
-		$token_raw = filter_input( INPUT_GET, 'token', FILTER_UNSAFE_RAW );
-		$token     = is_string( $token_raw ) ? sanitize_text_field( wp_unslash( $token_raw ) ) : '';
+		$cart_id = isset( $_GET['cart_id'] ) ? absint( wp_unslash( $_GET['cart_id'] ) ) : 0;
+		$token   = isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( (string) $_GET['token'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		if ( ! $cart_id || ! $token ) {
 			return;
@@ -831,8 +830,9 @@ class MEYVC_Abandoned_Cart_Tracker {
 	 * Show a front-end confirmation banner after unsubscribing.
 	 */
 	public static function unsubscribe_notice() {
-		$flag = filter_input( INPUT_GET, 'meyvc_unsubscribed', FILTER_UNSAFE_RAW );
-		if ( ! is_string( $flag ) || sanitize_key( $flag ) !== '1' ) {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only confirmation flag.
+		$flag = isset( $_GET['meyvc_unsubscribed'] ) ? sanitize_key( wp_unslash( (string) $_GET['meyvc_unsubscribed'] ) ) : '';
+		if ( $flag !== '1' ) {
 			return;
 		}
 		echo '<div style="background:#d4edda;color:#155724;padding:12px 20px;text-align:center;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;font-size:14px;">'

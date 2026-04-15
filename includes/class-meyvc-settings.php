@@ -372,7 +372,7 @@ class MEYVC_Settings {
 		$tone = class_exists( 'MEYVC_Default_Copy' ) ? MEYVC_Default_Copy::TONE_NEUTRAL : 'neutral';
 		return array(
 			'enabled'             => false,
-			'show_on_mobile_only' => true,
+			'show_on_mobile_only' => false,
 			'show_after_scroll'   => 100,
 			'show_product_image'  => true,
 			'show_product_title'   => true,

@@ -14,7 +14,7 @@ defined( 'ABSPATH' ) || exit;
 $content     = is_array( $campaign ) ? ( $campaign['content'] ?? [] ) : ( $campaign->content ?? [] );
 $styling     = is_array( $campaign ) ? ( $campaign['styling'] ?? [] ) : ( $campaign->styling ?? [] );
 $campaign_id = is_array( $campaign ) ? ( $campaign['id'] ?? '' ) : ( $campaign->id ?? '' );
-$is_preview  = ! empty( $campaign['is_preview'] );
+$is_preview  = is_array( $campaign ) ? ! empty( $campaign['is_preview'] ) : ! empty( $campaign->is_preview );
 
 // Build classes
 $classes = [ 'meyvc-popup', 'meyvc-popup--image-right' ];

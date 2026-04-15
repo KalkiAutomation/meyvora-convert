@@ -7,6 +7,107 @@
     }
   }
 
+  /** data-campaign-id on DOM — jQuery .data("campaign-id") is undefined for hyphenated data-* attrs. */
+  function meyvcGamifiedCampaignIdFromPopup($popup) {
+    var el = $popup && $popup.length ? $popup[0] : null;
+    if (!el) {
+      return "preview";
+    }
+    return el.getAttribute("data-campaign-id") || "preview";
+  }
+
+  function meyvcParseWheelSlicesFromCanvas(canvas) {
+    if (!canvas) {
+      return [];
+    }
+    var raw =
+      canvas.getAttribute("data-slices") ||
+      canvas.dataset.slices ||
+      "[]";
+    try {
+      raw = String(raw).replace(/&quot;/g, '"');
+      var parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function meyvcDrawWheelCanvasAdmin(canvas) {
+    if (!canvas || !canvas.getContext) {
+      return;
+    }
+    var ctx = canvas.getContext("2d");
+    var slices = meyvcParseWheelSlicesFromCanvas(canvas);
+    if (!slices.length) {
+      slices = [
+        { label: "10% off", color: "#2563eb" },
+        { label: "Try again", color: "#e5e7eb" },
+        { label: "5% off", color: "#7c3aed" },
+        { label: "Try again", color: "#e5e7eb" },
+        { label: "Free ship", color: "#059669" },
+        { label: "Try again", color: "#e5e7eb" },
+      ];
+    }
+    var n = slices.length;
+    var sliceAngle = (2 * Math.PI) / n;
+    var cx = canvas.width / 2;
+    var cy = canvas.height / 2;
+    var r = cx - 4;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    var si;
+    for (si = 0; si < n; si++) {
+      var sa = si * sliceAngle;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, sa, sa + sliceAngle);
+      ctx.closePath();
+      ctx.fillStyle = slices[si].color || "#cccccc";
+      ctx.fill();
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(sa + sliceAngle / 2);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillText(slices[si].label || "", r - 10, 5);
+      ctx.restore();
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, 18, 0, 2 * Math.PI);
+    ctx.fillStyle = "#fff";
+    ctx.fill();
+  }
+
+  function meyvcInitGamifiedWheelInFrame($frame) {
+    var $pw = $frame.find(".meyvc-popup--gamified-wheel");
+    if (!$pw.length) {
+      return;
+    }
+    var cid = meyvcGamifiedCampaignIdFromPopup($pw);
+    setTimeout(function () {
+      meyvcDrawWheelCanvasAdmin(document.getElementById("meyvc-wheel-canvas-" + cid));
+    }, 50);
+  }
+
+  /** Split-mode iframe preview: HTML is in another document, so canvas init must run there. */
+  function meyvcInitGamifiedWheelInIframeDoc(doc) {
+    if (!doc || typeof jQuery === "undefined") {
+      return;
+    }
+    var $pw = jQuery(doc).find(".meyvc-popup--gamified-wheel");
+    if (!$pw.length) {
+      return;
+    }
+    var cid = meyvcGamifiedCampaignIdFromPopup($pw);
+    setTimeout(function () {
+      meyvcDrawWheelCanvasAdmin(doc.getElementById("meyvc-wheel-canvas-" + cid));
+    }, 50);
+  }
+
   if (typeof wp !== "undefined" && wp.apiFetch && typeof meyvcCampaignBuilder !== "undefined") {
     var wpApi = typeof window.wpApiSettings !== "undefined" ? window.wpApiSettings : null;
     if (!wpApi || !wpApi.nonce || !wpApi.root) {
@@ -954,6 +1055,10 @@
           "class",
           (classes + " meyvc-preview-frame--" + template).trim()
         );
+        // Draw spin wheel canvas after injection (admin has no meyvc-spin-wheel.js)
+        if (template === "gamified-wheel") {
+          meyvcInitGamifiedWheelInFrame($frame);
+        }
       }
       var self = this;
       clearTimeout(this._serverPreviewTimer);
@@ -982,6 +1087,9 @@
             doc.open();
             doc.write(html);
             doc.close();
+            if (template === "gamified-wheel") {
+              meyvcInitGamifiedWheelInIframeDoc(doc);
+            }
           } else if ($frame.length) {
             $frame.html(html);
             var cl = ($frame.attr("class") || "")
@@ -992,6 +1100,9 @@
               "class",
               (cl + " meyvc-preview-frame--" + template).trim()
             );
+            if (template === "gamified-wheel") {
+              meyvcInitGamifiedWheelInFrame($frame);
+            }
           }
         });
       }, 300);
@@ -1267,6 +1378,58 @@
           contentBlock +
           "\n    </div>\n</div>";
         return imgRight;
+      }
+
+      // Gamified Wheel: render canvas + email step (no generic content block)
+      if (template === "gamified-wheel") {
+        var defaultSlices = [
+          { label: "10% off", type: "win", color: "#2563eb" },
+          { label: "Try again", type: "lose", color: "#e5e7eb" },
+          { label: "5% off", type: "win", color: "#7c3aed" },
+          { label: "Try again", type: "lose", color: "#e5e7eb" },
+          { label: "Free ship", type: "win", color: "#059669" },
+          { label: "Try again", type: "lose", color: "#e5e7eb" }
+        ];
+        var wheelSlicesRaw = "";
+        try {
+          var $wj = $("#meyvc-wheel-slices-json");
+          if ($wj.length && $wj.val()) {
+            var parsedSlices = JSON.parse($wj.val());
+            if (Array.isArray(parsedSlices) && parsedSlices.length) {
+              wheelSlicesRaw = $wj.val();
+            }
+          }
+        } catch (sliceErr) {}
+        if (!wheelSlicesRaw) {
+          wheelSlicesRaw = JSON.stringify(defaultSlices);
+        }
+        var wHeadline = content.headline || "Try your luck!";
+        var wSub = content.subheadline || "Spin for a chance to win a discount";
+        var wCta = content.cta_text || "Spin now";
+        var wCampaignId = this.escapeHtml(String(campaignId));
+        return (
+          '<div class="meyvc-popup meyvc-popup--gamified-wheel meyvc-popup--active meyvc-popup--preview"' +
+          ' role="dialog" aria-modal="true" data-campaign-id="' + wCampaignId + '">' +
+          '<button type="button" class="' + closeClass + '" aria-label="Close" data-action="close">&#10005;</button>' +
+          '<div class="meyvc-wheel-body">' +
+          '<h2 class="meyvc-wheel-headline" id="meyvc-wheel-headline-' + wCampaignId + '">' + this.escapeHtml(wHeadline) + "</h2>" +
+          (wSub ? '<p class="meyvc-wheel-sub">' + this.escapeHtml(wSub) + "</p>" : "") +
+          '<div class="meyvc-wheel-wrap" aria-hidden="true">' +
+          '<canvas id="meyvc-wheel-canvas-' + wCampaignId + '" width="300" height="300"' +
+          ' data-slices="' + this.escapeHtml(wheelSlicesRaw) + '"></canvas>' +
+          '<div class="meyvc-wheel-pointer">&#9660;</div>' +
+          "</div>" +
+          '<div class="meyvc-wheel-email-step">' +
+          '<input type="email" class="meyvc-wheel-email" placeholder="Enter your email to spin" aria-label="Email address" />' +
+          '<button type="button" class="meyvc-popup__cta meyvc-wheel-spin-btn" data-campaign-id="' + wCampaignId + '">' +
+          this.escapeHtml(wCta) + "</button>" +
+          "</div>" +
+          '<div class="meyvc-wheel-result" style="display:none;" aria-live="polite">' +
+          '<p class="meyvc-wheel-result-text"></p>' +
+          '<p class="meyvc-wheel-coupon-code" style="display:none;"></p>' +
+          "</div>" +
+          "</div></div>"
+        );
       }
 
       // Minimal, slide-bottom: close, inner (no image)

@@ -16,7 +16,7 @@ $settings = meyvc_settings();
 
 // Handle form submission.
 $nonce_valid = isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'meyvc_cart_nonce' );
-if ( isset( $_POST['meyvc_save_cart'] ) && $nonce_valid ) {
+if ( isset( $_POST['meyvc_save_cart'] ) && $nonce_valid && current_user_can( 'manage_meyvora_convert' ) ) {
 
 	$settings->set( 'general', 'cart_optimizer_enabled', ! empty( $_POST['cart_enabled'] ) );
 
@@ -102,7 +102,7 @@ if ( isset( $_POST['meyvc_save_cart'] ) && $nonce_valid ) {
 		$exclude_prod = isset( $_POST['meyvc_exclude_products'] ) && is_array( $_POST['meyvc_exclude_products'] ) ? array_map( 'absint', wp_unslash( $_POST['meyvc_exclude_products'] ) ) : array();
 		$settings->set( 'abandoned_cart', 'exclude_products', array_values( array_filter( $exclude_prod ) ) );
 		$per_cat = array();
-		$post_all = filter_input_array( INPUT_POST );
+		$post_all = wp_unslash( $_POST );
 		if ( is_array( $post_all )
 			&& isset( $post_all['meyvc_per_category_discount_cat'], $post_all['meyvc_per_category_discount_amount'] )
 			&& is_array( $post_all['meyvc_per_category_discount_cat'] )

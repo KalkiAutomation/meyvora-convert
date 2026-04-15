@@ -1122,9 +1122,38 @@ body.meyvc-popup-open {
 
 /* Spin to win */
 .meyvc-popup--gamified-wheel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
   max-width: 420px;
+  width: calc(100vw - 32px);
   padding: 1.5rem 1.25rem 1.75rem;
   text-align: center;
+  z-index: 999999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+}
+.meyvc-popup--gamified-wheel.meyvc-popup--active {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Inline embed ([meyvc_campaign] / block): not a full-screen overlay — show without controller toggling --active */
+.meyvc-campaign-shortcode .meyvc-popup--gamified-wheel {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+  z-index: 1;
+  opacity: 1;
+  visibility: visible;
 }
 .meyvc-popup--gamified-wheel .meyvc-wheel-body {
   padding-top: 0.25rem;

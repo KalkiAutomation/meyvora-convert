@@ -1,7 +1,7 @@
 /**
  * Insights page: Attribution block and export UI.
  * Loaded only on admin.php?page=meyvc-insights.
- * Depends on meyvc-admin-design-system.css (cards, tokens, .meyvc-muted).
+ * Depends on meyvc-admin-ui.css (layout shell + design system: cards, tokens, .meyvc-muted).
  */
 
 /* Attribution block */
@@ -636,4 +636,70 @@
   margin: 8px 0 0;
   font-size: 12px;
   color: #646970;
+}
+
+/* ── Insights page wrapper ─────────────────────────────────── */
+.meyvc-insights-page {
+  max-width: 1400px;
+}
+
+.meyvc-insights-page .meyvc-insights-toolbar {
+  padding: 0;
+  margin-top: 8px;
+}
+
+/* Remove WordPress default h2 top margin inside insights page */
+.meyvc-insights-page .meyvc-insights-section__title {
+  font-size: 16px;
+  margin-top: 0;
+}
+
+/* ── KPI grid: add 3-col intermediate breakpoint ───────────── */
+@media (max-width: 1150px) and (min-width: 900px) {
+  .meyvc-period-kpi__row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ── Insight cards: collapse to 1-col on medium screens ────── */
+@media (max-width: 1150px) and (min-width: 900px) {
+  .meyvc-insight-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Abandoned cart grid: 2-col on medium screens ──────────── */
+@media (max-width: 1150px) and (min-width: 900px) {
+  .meyvc-ab-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ── Heatmap: prevent overflow clipping on smaller screens ─── */
+.meyvc-insights-section .meyvc-heatmap__grid {
+  min-width: 560px;
+}
+
+/* ── Funnel: tighter padding on medium screens ──────────────── */
+@media (max-width: 1150px) {
+  .meyvc-funnel__step {
+    min-width: 90px;
+    padding: 10px 12px;
+  }
+
+  .meyvc-funnel__count {
+    font-size: 18px;
+  }
+}
+
+/* ── KPI cards: prevent font squeeze on small values ────────── */
+.meyvc-period-kpi__current {
+  overflow-wrap: break-word;
+  word-break: break-all;
+}
+
+/* ── AI card: ensure it doesn't overflow card bounds ────────── */
+#meyvc-ai-insights-output {
+  max-width: 100%;
+  overflow-x: hidden;
 }

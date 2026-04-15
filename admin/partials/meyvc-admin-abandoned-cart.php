@@ -29,22 +29,9 @@ $opts    = wp_parse_args( $opts, array(
 $body_placeholder = $settings->get_abandoned_cart_email_body_default();
 $body_value       = trim( (string) $opts['email_body_template'] ) !== '' ? $opts['email_body_template'] : $body_placeholder;
 
-// Handle form save.
-$nonce_ok = isset( $_POST['_wpnonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ?? '' ) ), 'meyvc_abandoned_cart_save' );
-if ( isset( $_POST['meyvc_save_abandoned_cart'] ) && $nonce_ok ) {
-	$settings->set( 'abandoned_cart', 'enable_abandoned_cart_emails', ! empty( $_POST['meyvc_abandoned_cart_enabled'] ) );
-	$settings->set( 'abandoned_cart', 'require_opt_in', ! empty( $_POST['meyvc_abandoned_cart_require_opt_in'] ) );
-	$settings->set( 'abandoned_cart', 'email_1_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_1_delay_hours'] ?? 1 ) ) ) ) );
-	$settings->set( 'abandoned_cart', 'email_2_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_2_delay_hours'] ?? 24 ) ) ) ) );
-	$settings->set( 'abandoned_cart', 'email_3_delay_hours', max( 0, absint( sanitize_text_field( wp_unslash( $_POST['meyvc_email_3_delay_hours'] ?? 72 ) ) ) ) );
-	$settings->set( 'abandoned_cart', 'high_value_threshold', max( 0, (float) sanitize_text_field( wp_unslash( $_POST['meyvc_high_value_threshold'] ?? '100' ) ) ) );
-	$settings->set( 'abandoned_cart', 'email_subject_template', isset( $_POST['meyvc_email_subject_template'] ) ? sanitize_text_field( wp_unslash( $_POST['meyvc_email_subject_template'] ) ) : $opts['email_subject_template'] );
-	$settings->set( 'abandoned_cart', 'email_body_template', isset( $_POST['meyvc_email_body_template'] ) ? wp_kses_post( wp_unslash( $_POST['meyvc_email_body_template'] ) ) : '' );
-	$brand_hex = isset( $_POST['email_brand_color'] ) ? sanitize_hex_color( wp_unslash( $_POST['email_brand_color'] ) ) : '';
-	$settings->set( 'abandoned_cart', 'email_brand_color', $brand_hex ? $brand_hex : '#2563eb' );
-	$opts = $settings->get_abandoned_cart_settings();
-	$opts = wp_parse_args( $opts, array( 'email_subject_template' => '', 'email_body_template' => '' ) );
-	$body_value = trim( (string) $opts['email_body_template'] ) !== '' ? $opts['email_body_template'] : $body_placeholder;
+// POST save is handled in MEYVC_Admin::handle_abandoned_cart_email_settings_save() on load-meyvora-convert_page_meyvc-abandoned-cart (redirect back with query arg).
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only success flag after verified save + redirect.
+if ( isset( $_GET['meyvc_ac_saved'] ) && '1' === sanitize_key( wp_unslash( (string) $_GET['meyvc_ac_saved'] ) ) ) {
 	echo '<div class="meyvc-ui-notice meyvc-ui-toast-placeholder" role="status"><p>' . esc_html__( 'Abandoned cart email settings saved.', 'meyvora-convert' ) . '</p></div>';
 }
 
@@ -52,7 +39,7 @@ if ( isset( $_POST['meyvc_save_abandoned_cart'] ) && $nonce_ok ) {
 
 	<div id="meyvc-ui-toast-container" class="meyvc-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'meyvora-convert' ); ?>"></div>
 
-	<form method="post" id="meyvc-abandoned-cart-form">
+	<form method="post" id="meyvc-abandoned-cart-form" action="<?php echo esc_url( admin_url( 'admin.php?page=meyvc-abandoned-cart' ) ); ?>">
 		<?php wp_nonce_field( 'meyvc_abandoned_cart_save' ); ?>
 
 		<div class="meyvc-settings-section">

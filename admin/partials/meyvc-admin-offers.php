@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals -- Template/view: variables are file-local.
 require_once MEYVC_PLUGIN_DIR . 'admin/partials/meyvc-admin-ai-panel.php';
 
-$max_offers = 5;
+$max_offers = function_exists( 'meyvc_get_max_dynamic_offers' ) ? meyvc_get_max_dynamic_offers() : 50;
 $option_key = 'meyvc_dynamic_offers';
 
 /**
@@ -145,7 +145,8 @@ if ( ! $migration_done ) {
 }
 
 // Duplicate offer (POST fallback): copy to first empty slot. Enforce max_offers server-side.
-if ( isset( $_POST['meyvc_duplicate_offer'] ) && isset( $_POST['meyvc_offers_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_offers_nonce'] ) ), 'meyvc_offers_nonce' ) ) {
+// phpcs:disable WordPress.Security.NonceVerification.Missing -- Nonce verified in condition.
+if ( isset( $_POST['meyvc_duplicate_offer'] ) && current_user_can( 'manage_meyvora_convert' ) && isset( $_POST['meyvc_offers_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_offers_nonce'] ) ), 'meyvc_offers_nonce' ) ) {
 	$idx = isset( $_POST['meyvc_offer_index'] ) ? absint( $_POST['meyvc_offer_index'] ) : -1;
 	if ( $idx >= 0 && $idx < $max_offers ) {
 		$offers_raw = get_option( $option_key, array() );
@@ -184,7 +185,7 @@ if ( isset( $_POST['meyvc_duplicate_offer'] ) && isset( $_POST['meyvc_offers_non
 // Delete offer is handled via AJAX (meyvc_offer_delete); no POST fallback.
 
 // Toggle offer enabled.
-if ( isset( $_POST['meyvc_toggle_offer'] ) && isset( $_POST['meyvc_offers_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_offers_nonce'] ) ), 'meyvc_offers_nonce' ) ) {
+if ( isset( $_POST['meyvc_toggle_offer'] ) && current_user_can( 'manage_meyvora_convert' ) && isset( $_POST['meyvc_offers_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_offers_nonce'] ) ), 'meyvc_offers_nonce' ) ) {
 	$idx = isset( $_POST['meyvc_offer_index'] ) ? absint( $_POST['meyvc_offer_index'] ) : -1;
 	if ( $idx >= 0 && $idx < $max_offers ) {
 		$offers_raw = get_option( $option_key, array() );
@@ -200,6 +201,7 @@ if ( isset( $_POST['meyvc_toggle_offer'] ) && isset( $_POST['meyvc_offers_nonce'
 		}
 	}
 }
+// phpcs:enable WordPress.Security.NonceVerification.Missing
 
 $offers = get_option( $option_key, array() );
 if ( ! is_array( $offers ) ) {
@@ -282,7 +284,7 @@ for ( $idx = 0; $idx < $max_offers; $idx++ ) {
 		<div class="meyvc-ui-notice meyvc-ui-toast-placeholder" role="status"><p><?php esc_html_e( 'Offer status updated.', 'meyvora-convert' ); ?></p></div>
 	<?php endif; ?>
 	<?php if ( isset( $_GET['meyvc_error'] ) && sanitize_key( wp_unslash( $_GET['meyvc_error'] ) ) === 'limit' ) : ?>
-		<div class="meyvc-ui-notice meyvc-ui-notice--error" role="alert"><p><?php esc_html_e( 'Offer limit reached (5). Cannot duplicate.', 'meyvora-convert' ); ?></p></div>
+		<div class="meyvc-ui-notice meyvc-ui-notice--error" role="alert"><p><?php echo esc_html( sprintf( /* translators: %d: maximum number of dynamic offers */ __( 'Offer limit reached (%d). Cannot duplicate.', 'meyvora-convert' ), (int) $max_offers ) ); ?></p></div>
 	<?php endif; ?>
 
 	<div id="meyvc-ui-toast-container" class="meyvc-ui-toast-container" aria-live="polite" aria-label="<?php esc_attr_e( 'Notifications', 'meyvora-convert' ); ?>"></div>

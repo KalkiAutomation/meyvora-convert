@@ -1,0 +1,13 @@
+{
+  "name": "meyvora-convert",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Build tooling for Meyvora Convert (WordPress plugin). Runtime PHP does not use Node.",
+  "scripts": {
+    "minify": "bash scripts/minify-public-assets.sh"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "terser": "^5.36.0"
+  }
+}

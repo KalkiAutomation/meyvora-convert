@@ -102,7 +102,7 @@ class MEYVC_Admin_UI {
 	 *     @type string      $title           Page title (h1).
 	 *     @type string      $subtitle        Optional. Description under title.
 	 *     @type string      $active_tab      Current tab slug (e.g. meyvc-offers, meyvora-convert).
-	 *     @type array|null  $primary_action  Optional. { label, href } or { label, form_id } or { label, button_id [, attributes ] }.
+	 *     @type array|null  $primary_action  Optional. { label, href } or { label, form_id [, submit_name ] } or { label, button_id [, attributes ] }.
 	 *     @type string      $content_partial Path to partial (absolute or relative to plugin dir).
 	 *     @type string      $wrap_class      Optional. Extra class for .wrap.
 	 *     @type array       $header_pills     Optional. Array of pill label strings for right side (e.g. array( '3/5 offers used' )).
@@ -225,7 +225,12 @@ class MEYVC_Admin_UI {
 			if ( $cta_url !== '' ) {
 				echo '<a href="' . esc_url( $cta_url ) . '" class="button button-primary meyvc-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</a>';
 			} elseif ( ! empty( $primary_action['form_id'] ) ) {
-				echo '<button type="submit" form="' . esc_attr( $primary_action['form_id'] ) . '" class="button button-primary meyvc-ui-btn-primary">' . esc_html( $primary_action['label'] ) . '</button>';
+				$submit_name = isset( $primary_action['submit_name'] ) ? sanitize_key( (string) $primary_action['submit_name'] ) : '';
+				echo '<button type="submit" form="' . esc_attr( $primary_action['form_id'] ) . '" class="button button-primary meyvc-ui-btn-primary"';
+				if ( $submit_name !== '' ) {
+					echo ' name="' . esc_attr( $submit_name ) . '" value="1"';
+				}
+				echo '>' . esc_html( $primary_action['label'] ) . '</button>';
 			} elseif ( ! empty( $primary_action['button_id'] ) ) {
 				echo '<button type="button" id="' . esc_attr( $primary_action['button_id'] ) . '" class="button button-primary meyvc-ui-btn-primary"';
 				foreach ( $attrs as $attr_key => $attr_val ) {

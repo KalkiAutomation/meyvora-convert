@@ -47,15 +47,15 @@ class MEYVC_REST_API {
 	 */
 	public function allow_public_routes_without_auth( $result ) {
 		$path = '';
-		$req_uri = filter_input( INPUT_SERVER, 'REQUEST_URI', FILTER_UNSAFE_RAW );
-		if ( is_string( $req_uri ) && $req_uri !== '' ) {
-			$path = sanitize_text_field( wp_unslash( $req_uri ) );
+		if ( isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ) {
+			$path = sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) );
 		}
 		// Also check rest_route query param (e.g. ?rest_route=/meyvc/v1/decide)
-		$rest_route = filter_input( INPUT_GET, 'rest_route', FILTER_UNSAFE_RAW );
-		if ( is_string( $rest_route ) && $rest_route !== '' ) {
-			$path = '/' . ltrim( sanitize_text_field( wp_unslash( $rest_route ) ), '/' );
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- Public REST path probe only; not a mutating form POST.
+		if ( isset( $_GET['rest_route'] ) && is_string( $_GET['rest_route'] ) ) {
+			$path = '/' . ltrim( sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ), '/' );
 		}
+		// phpcs:enable
 		$path = preg_replace( '#\?.*$#', '', $path );
 		$is_public = strpos( $path, 'meyvc/v1/decide' ) !== false
 			|| strpos( $path, 'meyvc/v1/track' ) !== false

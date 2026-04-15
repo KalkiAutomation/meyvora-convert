@@ -35,7 +35,7 @@ $targeting = isset( $campaign['targeting_rules'] ) ? $campaign['targeting_rules'
 $targeting = wp_parse_args( $targeting, $default_targeting );
 
 // Handle save
-if ( isset( $_POST['meyvc_save_campaign'] ) && isset( $_POST['meyvc_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ) ), 'meyvc_save_campaign' ) ) {
+if ( isset( $_POST['meyvc_save_campaign'] ) && isset( $_POST['meyvc_nonce'] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['meyvc_nonce'] ) ), 'meyvc_save_campaign' ) && current_user_can( 'manage_meyvora_convert' ) ) {
 	$data = array(
 		'name'                   => sanitize_text_field( wp_unslash( $_POST['campaign_name'] ?? '' ) ),
 		'campaign_type'          => sanitize_text_field( wp_unslash( $_POST['campaign_type'] ?? 'exit_intent' ) ),

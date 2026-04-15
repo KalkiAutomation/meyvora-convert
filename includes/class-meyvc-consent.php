@@ -74,11 +74,14 @@ class MEYVC_Consent {
 				do_action( 'meyvc_borlabs_consent_api_error', $e );
 			}
 		}
-		$borlabs_cookie = filter_input( INPUT_COOKIE, '_borlabs-cookie', FILTER_UNSAFE_RAW );
-		if ( is_string( $borlabs_cookie ) && $borlabs_cookie !== '' ) {
-			$borlabs = urldecode( wp_unslash( $borlabs_cookie ) );
-			$raw     = json_decode( sanitize_text_field( $borlabs ), true );
-			return isset( $raw['consents']['marketing'] ) ? (bool) $raw['consents']['marketing'] : false;
+		$borlabs_cookie = isset( $_COOKIE['_borlabs-cookie'] ) ? sanitize_text_field( wp_unslash( (string) $_COOKIE['_borlabs-cookie'] ) ) : '';
+		if ( $borlabs_cookie !== '' ) {
+			$borlabs = urldecode( $borlabs_cookie );
+			$borlabs = is_string( $borlabs ) ? wp_check_invalid_utf8( $borlabs, true ) : '';
+			$raw     = ( $borlabs !== '' ) ? json_decode( $borlabs, true ) : null;
+			if ( is_array( $raw ) ) {
+				return isset( $raw['consents']['marketing'] ) ? (bool) $raw['consents']['marketing'] : false;
+			}
 		}
 
 		// 4. Cookiebot — CookieConsent object set as cookie.
